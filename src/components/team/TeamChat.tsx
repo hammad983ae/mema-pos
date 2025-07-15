@@ -1,0 +1,1 @@
+export { EnhancedTeamChat as TeamChat } from "./EnhancedTeamChat";
