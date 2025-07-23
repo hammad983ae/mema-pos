@@ -66,6 +66,7 @@ export type MutationVerifyEmailArgs = {
 
 export type Query = {
   __typename?: 'Query';
+  getCurrentMemberships: Array<UserBusinessMembership>;
   getCurrentUser: User;
   sayHello: Scalars['String']['output'];
 };
@@ -101,7 +102,7 @@ export type UserBusinessMembership = {
   __typename?: 'UserBusinessMembership';
   business: Business;
   created_at: Scalars['DateTime']['output'];
-  hired_date: Scalars['DateTime']['output'];
+  hired_date: Scalars['String']['output'];
   hourly_rate?: Maybe<Scalars['Float']['output']>;
   id: Scalars['ID']['output'];
   is_active: Scalars['Boolean']['output'];

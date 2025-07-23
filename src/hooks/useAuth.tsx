@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useLazyQuery, useMutation } from "@apollo/client";
 import {
+  GET_CURRENT_MEMBERSHIPS,
   GET_CURRENT_USER,
   LOGIN,
   Mutation,
@@ -21,8 +21,9 @@ import { useNavigate } from "react-router-dom";
 export const useAuth = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(
+    localStorage.getItem("accessToken"),
+  );
   const [hasBusinessAssociation, setHasBusinessAssociation] = useState(false);
   const { toast } = useToast();
   const [register, { loading: registering }] = useMutation<
@@ -39,6 +40,8 @@ export const useAuth = () => {
   >(VERIFY_EMAIL);
   const [getCurrentUser, { loading: fetchingUser }] =
     useLazyQuery<Query>(GET_CURRENT_USER);
+  const [getCurrentMemberships, { loading: fetchingMemberships }] =
+    useLazyQuery<Query>(GET_CURRENT_MEMBERSHIPS);
 
   useEffect(() => {
     if (token) {
@@ -46,37 +49,38 @@ export const useAuth = () => {
     }
   }, [token]);
 
+  useEffect(() => {
+    if (user) {
+      checkBusinessAssociation();
+    } else {
+      setHasBusinessAssociation(false);
+    }
+  }, [user]);
+
   const fetchCurrentUser = () => {
     getCurrentUser().then((res) => {
-      setUser(res.getCurrentUser);
+      console.log("user", user);
+      setUser(res.data.getCurrentUser);
     });
   };
 
-  // const checkBusinessAssociation = async (userId: string) => {
-  //   try {
-  //     console.log("Checking business association for user:", userId);
-  //     const { data, error } = await supabase
-  //       .from("user_business_memberships")
-  //       .select("id, business_id, role")
-  //       .eq("user_id", userId)
-  //       .eq("is_active", true)
-  //       .limit(1);
-  //
-  //     console.log("Business association query result:", { data, error });
-  //     const hasAssociation = !!data && data.length > 0 && !error;
-  //     console.log("Has business association:", hasAssociation);
-  //     setHasBusinessAssociation(hasAssociation);
-  //   } catch (error) {
-  //     console.error("Error checking business association:", error);
-  //     setHasBusinessAssociation(false);
-  //   }
-  // };
-  //
-  // const refreshBusinessAssociation = async () => {
-  //   if (user) {
-  //     await checkBusinessAssociation(user.id);
-  //   }
-  // };
+  const checkBusinessAssociation = () => {
+    console.log("Checking business association for user");
+    getCurrentMemberships()
+      .then((res) => {
+        if (res.data.getCurrentMemberships.length > 0)
+          setHasBusinessAssociation(true);
+      })
+      .catch(() => {
+        setHasBusinessAssociation(false);
+      });
+  };
+
+  const refreshBusinessAssociation = async () => {
+    if (user) {
+      await checkBusinessAssociation();
+    }
+  };
 
   // const signInEmployee = async (username: string, pin: string) => {
   //   try {
@@ -181,8 +185,8 @@ export const useAuth = () => {
         input,
       },
     }).then((res) => {
-      localStorage.setItem("accessToken", res.data.register.access_token);
-      setToken(res.data.register.access_token);
+      // localStorage.setItem("accessToken", res.data.register.access_token);
+      // setToken(res.data.register.access_token);
 
       onSuccess?.();
 
@@ -250,8 +254,13 @@ export const useAuth = () => {
 
   return {
     user,
-    session,
-    loading: registering || verifyingEmail || fetchingUser || loggingIn,
+    token,
+    loading:
+      registering ||
+      verifyingEmail ||
+      fetchingUser ||
+      loggingIn ||
+      fetchingMemberships,
     signOut,
     verifyEmail: handleVerifyEmail,
     fetchCurrentUser,
@@ -262,6 +271,6 @@ export const useAuth = () => {
     updatePassword,
     isAuthenticated: !!user,
     hasBusinessAssociation,
-    // refreshBusinessAssociation,
+    refreshBusinessAssociation,
   };
 };

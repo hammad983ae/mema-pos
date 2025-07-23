@@ -8,24 +8,24 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  Building, 
-  Mail, 
-  Phone, 
-  MapPin, 
+import {
+  Building,
+  Mail,
+  Phone,
+  MapPin,
   CheckCircle,
   ArrowRight,
   Loader2,
   Star,
-  CreditCard
+  CreditCard,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const BusinessSetup = () => {
   const navigate = useNavigate();
-  const { user, session, loading: authLoading } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  
+
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 5;
@@ -38,40 +38,43 @@ const BusinessSetup = () => {
     storeData: {
       storeName: "",
       storeAddress: "",
-      storePhone: ""
+      storePhone: "",
     },
     teamData: {
-      initialMembers: []
+      initialMembers: [],
     },
     inventoryData: {
-      initialProducts: []
+      initialProducts: [],
     },
     posData: {
-      configured: false
-    }
+      configured: false,
+    },
   });
-  
+
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   // Redirect if not authenticated
   useEffect(() => {
     // Only redirect if auth is not loading and user is null
     if (!authLoading && !user) {
-      navigate('/auth');
+      navigate("/auth");
     }
   }, [user, authLoading, navigate]);
 
   const validateBusinessInfo = () => {
     const newErrors: { [key: string]: string } = {};
-    
+
     if (!businessData.businessName.trim()) {
       newErrors.businessName = "Business name is required";
     }
-    
-    if (businessData.businessEmail && !/\S+@\S+\.\S+/.test(businessData.businessEmail)) {
+
+    if (
+      businessData.businessEmail &&
+      !/\S+@\S+\.\S+/.test(businessData.businessEmail)
+    ) {
       newErrors.businessEmail = "Email is invalid";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -102,22 +105,25 @@ const BusinessSetup = () => {
 
   const setupBusiness = async () => {
     if (!validateBusinessInfo()) return;
-    
+
     setLoading(true);
     setErrors({});
-    
+
     try {
-      const { data, error } = await supabase.functions.invoke('setup-business', {
-        body: businessData,
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`
-        }
-      });
+      const { data, error } = await supabase.functions.invoke(
+        "setup-business",
+        {
+          body: businessData,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
 
       if (error) throw error;
 
       if (!data?.success) {
-        throw new Error(data?.error || 'Failed to setup business');
+        throw new Error(data?.error || "Failed to setup business");
       }
 
       toast({
@@ -126,8 +132,7 @@ const BusinessSetup = () => {
       });
 
       // Navigate directly to manager dashboard
-      navigate('/manager');
-      
+      navigate("/manager");
     } catch (error: any) {
       setErrors({ general: error.message || "Failed to setup business" });
     } finally {
@@ -146,9 +151,9 @@ const BusinessSetup = () => {
         "1 Store Location",
         "Up to 500 Products",
         "Basic POS System",
-        "Email Support"
+        "Email Support",
       ],
-      highlighted: false
+      highlighted: false,
     },
     {
       name: "Professional",
@@ -160,9 +165,9 @@ const BusinessSetup = () => {
         "Up to 5 Store Locations",
         "Unlimited Products",
         "Advanced Analytics",
-        "Priority Support"
+        "Priority Support",
       ],
-      highlighted: true
+      highlighted: true,
     },
     {
       name: "Enterprise",
@@ -174,10 +179,10 @@ const BusinessSetup = () => {
         "Unlimited Locations",
         "White-label Solution",
         "Dedicated Support",
-        "Custom Features"
+        "Custom Features",
       ],
-      highlighted: false
-    }
+      highlighted: false,
+    },
   ];
 
   // Show loading while auth is being determined
@@ -223,13 +228,19 @@ const BusinessSetup = () => {
           <div className="flex items-center space-x-2">
             {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
               <div key={step} className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentStep >= step ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                }`}>
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    currentStep >= step
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
                   {step}
                 </div>
                 {step < totalSteps && (
-                  <div className={`w-8 h-0.5 ${currentStep > step ? 'bg-primary' : 'bg-muted'}`}></div>
+                  <div
+                    className={`w-8 h-0.5 ${currentStep > step ? "bg-primary" : "bg-muted"}`}
+                  ></div>
                 )}
               </div>
             ))}
@@ -247,7 +258,7 @@ const BusinessSetup = () => {
               {currentStep === 5 && "Complete Setup"}
             </CardTitle>
           </CardHeader>
-          
+
           <CardContent>
             {/* General Error Alert */}
             {errors.general && (
@@ -271,11 +282,18 @@ const BusinessSetup = () => {
                       placeholder="Enter your business name"
                       className="pl-10"
                       value={businessData.businessName}
-                      onChange={(e) => setBusinessData(prev => ({ ...prev, businessName: e.target.value }))}
+                      onChange={(e) =>
+                        setBusinessData((prev) => ({
+                          ...prev,
+                          businessName: e.target.value,
+                        }))
+                      }
                     />
                   </div>
                   {errors.businessName && (
-                    <p className="text-sm text-destructive">{errors.businessName}</p>
+                    <p className="text-sm text-destructive">
+                      {errors.businessName}
+                    </p>
                   )}
                 </div>
 
@@ -289,11 +307,18 @@ const BusinessSetup = () => {
                       placeholder="business@example.com"
                       className="pl-10"
                       value={businessData.businessEmail}
-                      onChange={(e) => setBusinessData(prev => ({ ...prev, businessEmail: e.target.value }))}
+                      onChange={(e) =>
+                        setBusinessData((prev) => ({
+                          ...prev,
+                          businessEmail: e.target.value,
+                        }))
+                      }
                     />
                   </div>
                   {errors.businessEmail && (
-                    <p className="text-sm text-destructive">{errors.businessEmail}</p>
+                    <p className="text-sm text-destructive">
+                      {errors.businessEmail}
+                    </p>
                   )}
                 </div>
 
@@ -307,7 +332,12 @@ const BusinessSetup = () => {
                       placeholder="(555) 123-4567"
                       className="pl-10"
                       value={businessData.businessPhone}
-                      onChange={(e) => setBusinessData(prev => ({ ...prev, businessPhone: e.target.value }))}
+                      onChange={(e) =>
+                        setBusinessData((prev) => ({
+                          ...prev,
+                          businessPhone: e.target.value,
+                        }))
+                      }
                     />
                   </div>
                 </div>
@@ -321,15 +351,17 @@ const BusinessSetup = () => {
                       placeholder="Enter your business address"
                       className="pl-10 min-h-[80px] resize-none"
                       value={businessData.businessAddress}
-                      onChange={(e) => setBusinessData(prev => ({ ...prev, businessAddress: e.target.value }))}
+                      onChange={(e) =>
+                        setBusinessData((prev) => ({
+                          ...prev,
+                          businessAddress: e.target.value,
+                        }))
+                      }
                     />
                   </div>
                 </div>
 
-                <Button 
-                  onClick={handleNext}
-                  className="w-full h-12"
-                >
+                <Button onClick={handleNext} className="w-full h-12">
                   Continue to Plan Selection
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
@@ -345,10 +377,15 @@ const BusinessSetup = () => {
                       key={plan.value}
                       className={`relative border rounded-lg p-4 cursor-pointer transition-all hover:shadow-md ${
                         businessData.subscriptionPlan === plan.value
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border'
-                      } ${plan.highlighted ? 'ring-2 ring-primary/20' : ''}`}
-                      onClick={() => setBusinessData(prev => ({ ...prev, subscriptionPlan: plan.value }))}
+                          ? "border-primary bg-primary/5"
+                          : "border-border"
+                      } ${plan.highlighted ? "ring-2 ring-primary/20" : ""}`}
+                      onClick={() =>
+                        setBusinessData((prev) => ({
+                          ...prev,
+                          subscriptionPlan: plan.value,
+                        }))
+                      }
                     >
                       {plan.highlighted && (
                         <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
@@ -358,15 +395,21 @@ const BusinessSetup = () => {
                           </span>
                         </div>
                       )}
-                      
+
                       <div className="text-center">
                         <h3 className="font-semibold text-lg">{plan.name}</h3>
                         <div className="my-2">
-                          <span className="text-2xl font-bold">{plan.price}</span>
-                          <span className="text-muted-foreground text-sm">{plan.period}</span>
+                          <span className="text-2xl font-bold">
+                            {plan.price}
+                          </span>
+                          <span className="text-muted-foreground text-sm">
+                            {plan.period}
+                          </span>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
-                        
+                        <p className="text-sm text-muted-foreground mb-4">
+                          {plan.description}
+                        </p>
+
                         <ul className="space-y-1 text-sm">
                           {plan.features.map((feature, index) => (
                             <li key={index} className="flex items-center">
@@ -381,17 +424,14 @@ const BusinessSetup = () => {
                 </div>
 
                 <div className="flex space-x-3">
-                  <Button 
+                  <Button
                     variant="outline"
                     onClick={handleBack}
                     className="flex-1 h-12"
                   >
                     Back
                   </Button>
-                  <Button 
-                    onClick={handleNext}
-                    className="flex-1 h-12"
-                  >
+                  <Button onClick={handleNext} className="flex-1 h-12">
                     Continue to Store Setup
                   </Button>
                 </div>
@@ -402,7 +442,9 @@ const BusinessSetup = () => {
             {currentStep === 3 && (
               <div className="space-y-4">
                 <div className="text-center mb-4">
-                  <p className="text-sm text-muted-foreground">Set up your first store location</p>
+                  <p className="text-sm text-muted-foreground">
+                    Set up your first store location
+                  </p>
                 </div>
 
                 <div className="space-y-4">
@@ -411,10 +453,15 @@ const BusinessSetup = () => {
                     <Input
                       id="store-name"
                       value={businessData.storeData.storeName}
-                      onChange={(e) => setBusinessData(prev => ({ 
-                        ...prev, 
-                        storeData: { ...prev.storeData, storeName: e.target.value }
-                      }))}
+                      onChange={(e) =>
+                        setBusinessData((prev) => ({
+                          ...prev,
+                          storeData: {
+                            ...prev.storeData,
+                            storeName: e.target.value,
+                          },
+                        }))
+                      }
                       placeholder="Main Location"
                     />
                   </div>
@@ -424,10 +471,15 @@ const BusinessSetup = () => {
                     <Input
                       id="store-address"
                       value={businessData.storeData.storeAddress}
-                      onChange={(e) => setBusinessData(prev => ({ 
-                        ...prev, 
-                        storeData: { ...prev.storeData, storeAddress: e.target.value }
-                      }))}
+                      onChange={(e) =>
+                        setBusinessData((prev) => ({
+                          ...prev,
+                          storeData: {
+                            ...prev.storeData,
+                            storeAddress: e.target.value,
+                          },
+                        }))
+                      }
                       placeholder="Store address"
                     />
                   </div>
@@ -437,27 +489,29 @@ const BusinessSetup = () => {
                     <Input
                       id="store-phone"
                       value={businessData.storeData.storePhone}
-                      onChange={(e) => setBusinessData(prev => ({ 
-                        ...prev, 
-                        storeData: { ...prev.storeData, storePhone: e.target.value }
-                      }))}
+                      onChange={(e) =>
+                        setBusinessData((prev) => ({
+                          ...prev,
+                          storeData: {
+                            ...prev.storeData,
+                            storePhone: e.target.value,
+                          },
+                        }))
+                      }
                       placeholder="(555) 123-4567"
                     />
                   </div>
                 </div>
 
                 <div className="flex space-x-3">
-                  <Button 
+                  <Button
                     variant="outline"
                     onClick={handleBack}
                     className="flex-1 h-12"
                   >
                     Back
                   </Button>
-                  <Button 
-                    onClick={handleNext}
-                    className="flex-1 h-12"
-                  >
+                  <Button onClick={handleNext} className="flex-1 h-12">
                     Continue to Team Setup
                   </Button>
                 </div>
@@ -468,7 +522,9 @@ const BusinessSetup = () => {
             {currentStep === 4 && (
               <div className="space-y-6">
                 <div className="text-center mb-4">
-                  <p className="text-sm text-muted-foreground">Optional: Add team members and initial inventory later</p>
+                  <p className="text-sm text-muted-foreground">
+                    Optional: Add team members and initial inventory later
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -496,17 +552,14 @@ const BusinessSetup = () => {
                 </div>
 
                 <div className="flex space-x-3">
-                  <Button 
+                  <Button
                     variant="outline"
                     onClick={handleBack}
                     className="flex-1 h-12"
                   >
                     Back
                   </Button>
-                  <Button 
-                    onClick={handleNext}
-                    className="flex-1 h-12"
-                  >
+                  <Button onClick={handleNext} className="flex-1 h-12">
                     Continue to Final Step
                   </Button>
                 </div>
@@ -518,7 +571,9 @@ const BusinessSetup = () => {
               <div className="space-y-6">
                 <div className="text-center mb-6">
                   <CheckCircle className="h-16 w-16 text-success mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">Ready to Launch!</h3>
+                  <h3 className="text-xl font-semibold mb-2">
+                    Ready to Launch!
+                  </h3>
                   <p className="text-muted-foreground">
                     Review your setup and complete your business registration
                   </p>
@@ -531,23 +586,27 @@ const BusinessSetup = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Plan:</span>
-                    <span className="capitalize">{businessData.subscriptionPlan}</span>
+                    <span className="capitalize">
+                      {businessData.subscriptionPlan}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Store Name:</span>
-                    <span>{businessData.storeData.storeName || "Main Location"}</span>
+                    <span>
+                      {businessData.storeData.storeName || "Main Location"}
+                    </span>
                   </div>
                 </div>
 
                 <div className="flex space-x-3">
-                  <Button 
+                  <Button
                     variant="outline"
                     onClick={handleBack}
                     className="flex-1 h-12"
                   >
                     Back
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleFinish}
                     disabled={loading}
                     className="flex-1 h-12"
@@ -569,12 +628,17 @@ const BusinessSetup = () => {
                 <Alert className="border-primary/50 bg-primary/10">
                   <CreditCard className="h-4 w-4" />
                   <AlertDescription className="text-primary">
-                    <strong>Payment Required:</strong> A valid payment method is required to activate your business account. You'll be prompted to add payment details after setup.
+                    <strong>Payment Required:</strong> A valid payment method is
+                    required to activate your business account. You'll be
+                    prompted to add payment details after setup.
                   </AlertDescription>
                 </Alert>
 
                 <div className="text-center text-sm text-muted-foreground">
-                  <p>You can always modify these settings later from your dashboard</p>
+                  <p>
+                    You can always modify these settings later from your
+                    dashboard
+                  </p>
                 </div>
               </div>
             )}

@@ -41,7 +41,6 @@ const Auth = () => {
 
   const [isLoading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [activeTab, setActiveTab] = useState("signin");
   const [authFlow, setAuthFlow] = useState<
     "main" | "signin" | "owner_signup" | "employee_join"
   >("main");
@@ -392,6 +391,16 @@ const Auth = () => {
         () => {
           setVerificationEmail(ownerSignUpData.email);
           setShowEmailVerification(true);
+          setOwnerSignUpData({
+            email: "",
+            password: "",
+            confirmPassword: "",
+            fullName: "",
+            businessName: "",
+            phone: "",
+            username: "",
+            pin: "",
+          });
         },
       );
 
@@ -596,7 +605,7 @@ const Auth = () => {
                   <Button
                     onClick={() => {
                       setShowEmailVerification(false);
-                      setActiveTab("signin");
+                      setAuthFlow("signin");
                     }}
                     className="w-full"
                   >
@@ -608,7 +617,7 @@ const Auth = () => {
                     onClick={() => {
                       setShowEmailVerification(false);
                       setVerificationEmail("");
-                      setActiveTab("owner_signup");
+                      setAuthFlow("owner_signup");
                     }}
                     className="w-full"
                   >

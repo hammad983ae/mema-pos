@@ -9,16 +9,17 @@ interface AuthGuardProps {
   requireBusiness?: boolean;
 }
 
-export const AuthGuard = ({ 
-  children, 
-  requireAuth = true, 
-  requireBusiness = false 
+export const AuthGuard = ({
+  children,
+  requireAuth = true,
+  requireBusiness = false,
 }: AuthGuardProps) => {
   const { user, loading, hasBusinessAssociation } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
+    console.log(loading, user, hasBusinessAssociation);
     if (loading) return;
 
     // If auth is required but user is not authenticated
@@ -52,11 +53,25 @@ export const AuthGuard = ({
     }
 
     // If user has no business but trying to access protected routes, redirect to onboarding
-    if (user && !hasBusinessAssociation && requireBusiness && location.pathname !== "/onboarding" && location.pathname !== "/auth") {
+    if (
+      user &&
+      !hasBusinessAssociation &&
+      requireBusiness &&
+      location.pathname !== "/onboarding" &&
+      location.pathname !== "/auth"
+    ) {
       navigate("/onboarding");
       return;
     }
-  }, [user, loading, hasBusinessAssociation, requireAuth, requireBusiness, navigate, location.pathname]);
+  }, [
+    user,
+    loading,
+    hasBusinessAssociation,
+    requireAuth,
+    requireBusiness,
+    navigate,
+    location.pathname,
+  ]);
 
   // Show loading spinner while checking auth
   if (loading) {
@@ -75,7 +90,7 @@ export const AuthGuard = ({
     return null;
   }
 
-  // If business is required but user doesn't have one, don't render children  
+  // If business is required but user doesn't have one, don't render children
   if (requireAuth && user && requireBusiness && !hasBusinessAssociation) {
     return null;
   }

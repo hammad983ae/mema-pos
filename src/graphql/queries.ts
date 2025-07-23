@@ -19,3 +19,21 @@ export const GET_CURRENT_USER = gql`
     }
   }
 `;
+
+export const GET_CURRENT_MEMBERSHIPS = gql`
+  query GetCurrentMemberships {
+    getCurrentMemberships {
+      id
+      business {
+        id
+        name
+      }
+      role
+      is_active
+      hired_date
+      hourly_rate
+      created_at
+      updated_at
+    }
+  }
+`;
