@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useLazyQuery, useMutation } from "@apollo/client";
+import { useLazyQuery, useMutation, useReactiveVar } from "@apollo/client";
 import {
+  AuthToken,
   GET_CURRENT_MEMBERSHIPS,
   GET_CURRENT_USER,
+  LoggedInUser,
   LOGIN,
   Mutation,
   MutationLoginArgs,
@@ -20,10 +22,8 @@ import { useNavigate } from "react-router-dom";
 
 export const useAuth = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(
-    localStorage.getItem("accessToken"),
-  );
+  const token = useReactiveVar(AuthToken);
+  const user = useReactiveVar(LoggedInUser);
   const [hasBusinessAssociation, setHasBusinessAssociation] = useState(false);
   const { toast } = useToast();
   const [register, { loading: registering }] = useMutation<
@@ -43,24 +43,9 @@ export const useAuth = () => {
   const [getCurrentMemberships, { loading: fetchingMemberships }] =
     useLazyQuery<Query>(GET_CURRENT_MEMBERSHIPS);
 
-  useEffect(() => {
-    if (token) {
-      fetchCurrentUser();
-    }
-  }, [token]);
-
-  useEffect(() => {
-    if (user) {
-      checkBusinessAssociation();
-    } else {
-      setHasBusinessAssociation(false);
-    }
-  }, [user]);
-
   const fetchCurrentUser = () => {
     getCurrentUser().then((res) => {
-      console.log("user", user);
-      setUser(res.data.getCurrentUser);
+      LoggedInUser(res.data.getCurrentUser);
     });
   };
 
@@ -184,10 +169,7 @@ export const useAuth = () => {
       variables: {
         input,
       },
-    }).then((res) => {
-      // localStorage.setItem("accessToken", res.data.register.access_token);
-      // setToken(res.data.register.access_token);
-
+    }).then(() => {
       onSuccess?.();
 
       showSuccess(
@@ -211,14 +193,21 @@ export const useAuth = () => {
         },
       },
     }).then((res) => {
+      AuthToken(res.data.login.access_token);
       localStorage.setItem("accessToken", res.data.login.access_token);
-      setToken(res.data.login.access_token);
 
       showSuccess("Welcome back!", "You have successfully signed in.");
+
+      setTimeout(() => {
+        fetchCurrentUser();
+        checkBusinessAssociation();
+      }, 500);
     });
   };
 
   const signOut = () => {
+    LoggedInUser(null);
+    AuthToken(null);
     localStorage.clear();
   };
 

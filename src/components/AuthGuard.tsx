@@ -19,7 +19,6 @@ export const AuthGuard = ({
   const location = useLocation();
 
   useEffect(() => {
-    console.log(loading, user, hasBusinessAssociation);
     if (loading) return;
 
     // If auth is required but user is not authenticated
@@ -69,7 +68,6 @@ export const AuthGuard = ({
     hasBusinessAssociation,
     requireAuth,
     requireBusiness,
-    navigate,
     location.pathname,
   ]);
 
