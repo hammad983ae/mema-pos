@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,12 +23,12 @@ const EmployeeInvitation = () => {
   const [loading, setLoading] = useState(false);
   const [invitationData, setInvitationData] = useState<any>(null);
   const [isExistingUser, setIsExistingUser] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
   });
 
   const inviteToken = searchParams.get("invite");
@@ -38,7 +44,8 @@ const EmployeeInvitation = () => {
     if (!inviteToken) {
       toast({
         title: "Invalid Invitation",
-        description: "No invitation code provided. Please check your invitation link.",
+        description:
+          "No invitation code provided. Please check your invitation link.",
         variant: "destructive",
       });
       navigate("/");
@@ -61,18 +68,18 @@ const EmployeeInvitation = () => {
           user_id: user.id,
           business_id: invitationData.business_id,
           role: invitationData.role,
-          is_active: true
+          is_active: true,
         });
 
       if (membershipError) throw membershipError;
 
       // Update user profile with position type if specified for employees
-      if (invitationData.role === 'employee' && invitationData.position_type) {
+      if (invitationData.role === "employee" && invitationData.position_type) {
         const { error: profileError } = await supabase
           .from("profiles")
           .update({ position_type: invitationData.position_type })
           .eq("user_id", user.id);
-        
+
         if (profileError) {
           console.warn("Could not update position type:", profileError);
         }
@@ -126,7 +133,7 @@ const EmployeeInvitation = () => {
       }
 
       setInvitationData(invitation);
-      setFormData(prev => ({ ...prev, email: invitation.email }));
+      setFormData((prev) => ({ ...prev, email: invitation.email }));
 
       // Check if user already exists
       const { data: authUser } = await supabase.auth.getUser();
@@ -145,7 +152,12 @@ const EmployeeInvitation = () => {
   };
 
   const handleSignUp = async () => {
-    if (!invitationData || !formData.fullName.trim() || !formData.email || !formData.password) {
+    if (
+      !invitationData ||
+      !formData.fullName.trim() ||
+      !formData.email ||
+      !formData.password
+    ) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -166,12 +178,12 @@ const EmployeeInvitation = () => {
     setLoading(true);
     try {
       const { error } = await signUp(
-        formData.email,
-        formData.password,
         {
-          full_name: formData.fullName
+          email: formData.email,
+          password: formData.password,
+          full_name: formData.fullName,
         },
-        `${window.location.origin}/join?invite=${inviteToken}`
+        `${window.location.origin}/join?invite=${inviteToken}`,
       );
 
       if (error) {
@@ -185,7 +197,8 @@ const EmployeeInvitation = () => {
 
       toast({
         title: "Account Created!",
-        description: "Please check your email to verify your account, then you'll be automatically added to the team.",
+        description:
+          "Please check your email to verify your account, then you'll be automatically added to the team.",
       });
     } catch (error: any) {
       toast({
@@ -253,35 +266,40 @@ const EmployeeInvitation = () => {
         <div className="max-w-md mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={() => navigate("/")}
               className="mb-4"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Home
             </Button>
-            
+
             <div className="flex items-center justify-center mb-4">
               <div className="bg-primary/10 p-3 rounded-full">
                 <UserPlus className="h-8 w-8 text-primary" />
               </div>
             </div>
-            
-            <h1 className="text-2xl font-bold mb-2">Join {invitationData.businesses?.name}</h1>
+
+            <h1 className="text-2xl font-bold mb-2">
+              Join {invitationData.businesses?.name}
+            </h1>
             <p className="text-muted-foreground">
-              You've been invited to join the team. {isExistingUser ? "Sign in" : "Create your account"} to get started.
+              You've been invited to join the team.{" "}
+              {isExistingUser ? "Sign in" : "Create your account"} to get
+              started.
             </p>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>{isExistingUser ? "Welcome Back!" : "Create Your Account"}</CardTitle>
+              <CardTitle>
+                {isExistingUser ? "Welcome Back!" : "Create Your Account"}
+              </CardTitle>
               <CardDescription>
-                {isExistingUser 
+                {isExistingUser
                   ? "Sign in to join your new team"
-                  : "Enter your details to create your account and join the team"
-                }
+                  : "Enter your details to create your account and join the team"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -294,7 +312,12 @@ const EmployeeInvitation = () => {
                       id="fullName"
                       type="text"
                       value={formData.fullName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          fullName: e.target.value,
+                        }))
+                      }
                       placeholder="Enter your full name"
                       className="pl-10"
                       required
@@ -311,7 +334,12 @@ const EmployeeInvitation = () => {
                     id="email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
                     placeholder="Enter your email"
                     className="pl-10"
                     disabled={!!invitationData?.email}
@@ -328,7 +356,12 @@ const EmployeeInvitation = () => {
                     id="password"
                     type="password"
                     value={formData.password}
-                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        password: e.target.value,
+                      }))
+                    }
                     placeholder="Enter your password"
                     className="pl-10"
                     required
@@ -345,7 +378,12 @@ const EmployeeInvitation = () => {
                       id="confirmPassword"
                       type="password"
                       value={formData.confirmPassword}
-                      onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          confirmPassword: e.target.value,
+                        }))
+                      }
                       placeholder="Confirm your password"
                       className="pl-10"
                       required
@@ -354,12 +392,16 @@ const EmployeeInvitation = () => {
                 </div>
               )}
 
-              <Button 
+              <Button
                 onClick={isExistingUser ? handleSignIn : handleSignUp}
                 disabled={loading}
                 className="w-full"
               >
-                {loading ? "Processing..." : (isExistingUser ? "Sign In & Join Team" : "Create Account & Join Team")}
+                {loading
+                  ? "Processing..."
+                  : isExistingUser
+                    ? "Sign In & Join Team"
+                    : "Create Account & Join Team"}
               </Button>
 
               <div className="text-center text-sm text-muted-foreground">

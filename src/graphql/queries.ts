@@ -1,0 +1,21 @@
+import { gql } from "@apollo/client";
+
+export const GET_CURRENT_USER = gql`
+  query GetCurrentUser {
+    getCurrentUser {
+      id
+      email
+      emailVerificationToken
+      isEmailVerified
+      full_name
+      username
+      avatar_url
+      phone
+      position
+      position_type
+      specialties
+      availability_preferences
+      performance_metrics
+    }
+  }
+`;
