@@ -35,3 +35,11 @@ export const UPDATE_BUSINESS = gql`
     updateBusiness(id: $id, input: $input)
   }
 `;
+
+export const CREATE_STORE_SESSION = gql`
+  mutation CreateStoreSession($input: StoreSessionInput!) {
+    createStoreSession(input: $input) {
+      id
+    }
+  }
+`;

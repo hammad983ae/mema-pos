@@ -15,6 +15,7 @@ import {
   Query,
   REGISTER,
   UserBusiness,
+  UserMembership,
   VERIFY_EMAIL,
 } from "@/graphql";
 import { showSuccess } from "@/hooks/useToastMessages.tsx";
@@ -23,6 +24,7 @@ export const useAuth = () => {
   const token = useReactiveVar(AuthToken);
   const user = useReactiveVar(LoggedInUser);
   const business = useReactiveVar(UserBusiness);
+  const membership = useReactiveVar(UserMembership);
   const [register, { loading: registering }] = useMutation<
     Mutation,
     MutationRegisterArgs
@@ -60,6 +62,7 @@ export const useAuth = () => {
     getCurrentMemberships()
       .then((res) => {
         if (res.data.getCurrentMemberships.length > 0) {
+          UserMembership(res.data.getCurrentMemberships?.[0]);
           fetchAssociatedBusiness();
         }
       })
@@ -265,6 +268,8 @@ export const useAuth = () => {
     updatePassword,
     isAuthenticated: !!user,
     hasBusinessAssociation: !!business,
+    business,
+    membership,
     refreshBusinessAssociation: checkBusinessAssociation,
   };
 };

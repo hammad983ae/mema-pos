@@ -60,6 +60,7 @@ export type Mutation = {
   __typename?: 'Mutation';
   createBusiness: Business;
   createStore: Store;
+  createStoreSession: StoreDaySession;
   login: LoginResponse;
   register: LoginResponse;
   updateBusiness: Scalars['Boolean']['output'];
@@ -75,6 +76,11 @@ export type MutationCreateBusinessArgs = {
 
 export type MutationCreateStoreArgs = {
   input: StoreInput;
+};
+
+
+export type MutationCreateStoreSessionArgs = {
+  input: StoreSessionInput;
 };
 
 
@@ -122,6 +128,11 @@ export type RegisterInput = {
   username: Scalars['String']['input'];
 };
 
+export enum SessionStatus {
+  Closed = 'CLOSED',
+  Open = 'OPEN'
+}
+
 export type Store = {
   __typename?: 'Store';
   address?: Maybe<Scalars['String']['output']>;
@@ -132,9 +143,30 @@ export type Store = {
   is_active: Scalars['Boolean']['output'];
   name: Scalars['String']['output'];
   phone?: Maybe<Scalars['String']['output']>;
-  status: Scalars['String']['output'];
+  status: StoreStatus;
   tax_rate: Scalars['Float']['output'];
   timezone: Scalars['String']['output'];
+  updated_at: Scalars['DateTime']['output'];
+};
+
+export type StoreDaySession = {
+  __typename?: 'StoreDaySession';
+  cash_variance?: Maybe<Scalars['Float']['output']>;
+  closed_at?: Maybe<Scalars['DateTime']['output']>;
+  closed_by?: Maybe<User>;
+  closing_cash_amount?: Maybe<Scalars['Float']['output']>;
+  created_at: Scalars['DateTime']['output'];
+  expected_cash_amount?: Maybe<Scalars['Float']['output']>;
+  id: Scalars['ID']['output'];
+  notes?: Maybe<Scalars['String']['output']>;
+  opened_at: Scalars['DateTime']['output'];
+  opened_by: User;
+  opening_cash_amount: Scalars['Float']['output'];
+  session_date: Scalars['DateTime']['output'];
+  status: SessionStatus;
+  store: Store;
+  total_sales: Scalars['Float']['output'];
+  total_transactions: Scalars['Int']['output'];
   updated_at: Scalars['DateTime']['output'];
 };
 
@@ -148,6 +180,18 @@ export type StoreInput = {
   status?: InputMaybe<StoreStatus>;
   tax_rate?: InputMaybe<Scalars['Float']['input']>;
   timezone?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type StoreSessionInput = {
+  cash_variance?: InputMaybe<Scalars['Float']['input']>;
+  closing_cash_amount?: InputMaybe<Scalars['Float']['input']>;
+  expected_cash_amount?: InputMaybe<Scalars['Float']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  opening_cash_amount?: Scalars['Float']['input'];
+  session_date: Scalars['DateTime']['input'];
+  status?: InputMaybe<SessionStatus>;
+  storeId: Scalars['ID']['input'];
+  total_sales?: Scalars['Float']['input'];
 };
 
 export enum StoreStatus {
@@ -189,7 +233,15 @@ export type UserBusinessMembership = {
   hourly_rate?: Maybe<Scalars['Float']['output']>;
   id: Scalars['ID']['output'];
   is_active: Scalars['Boolean']['output'];
-  role: Scalars['String']['output'];
+  role: UserRole;
   updated_at: Scalars['DateTime']['output'];
   user: User;
 };
+
+export enum UserRole {
+  BusinessOwner = 'BUSINESS_OWNER',
+  Employee = 'EMPLOYEE',
+  Manager = 'MANAGER',
+  Office = 'OFFICE',
+  Salesperson = 'SALESPERSON'
+}
