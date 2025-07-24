@@ -22,7 +22,7 @@ import { showSuccess } from "@/hooks/useToastMessages.tsx";
 export const useAuth = () => {
   const token = useReactiveVar(AuthToken);
   const user = useReactiveVar(LoggedInUser);
-  const [hasBusinessAssociation, setHasBusinessAssociation] = useState(false);
+  const business = useReactiveVar(UserBusiness);
   const [register, { loading: registering }] = useMutation<
     Mutation,
     MutationRegisterArgs
@@ -51,36 +51,34 @@ export const useAuth = () => {
   const fetchCurrentUser = () => {
     getCurrentUser().then((res) => {
       LoggedInUser(res.data.getCurrentUser);
-      refreshBusinessAssociation();
+      checkBusinessAssociation();
     });
   };
 
-  const checkBusinessAssociation = (onSuccess?: () => void) => {
+  const checkBusinessAssociation = () => {
     console.log("Checking business association for user");
     getCurrentMemberships()
       .then((res) => {
         if (res.data.getCurrentMemberships.length > 0) {
-          setHasBusinessAssociation(true);
-
-          onSuccess?.();
+          fetchAssociatedBusiness();
         }
       })
-      .catch(() => {
-        setHasBusinessAssociation(false);
-      });
+      .catch(() => {});
   };
 
   const fetchAssociatedBusiness = () => {
     console.log("Fetching owned business");
 
-    getOwnedBusiness().then((res) => {
-      UserBusiness(res.data.getOwnedBusiness);
-      localStorage.setItem("businessId", res.data.getOwnedBusiness.id);
-    });
-  };
+    getOwnedBusiness()
+      .then((res) => {
+        UserBusiness(res.data.getOwnedBusiness);
 
-  const refreshBusinessAssociation = () => {
-    checkBusinessAssociation(() => fetchAssociatedBusiness());
+        localStorage.setItem("businessId", res.data.getOwnedBusiness.id);
+      })
+      .catch(() => {
+        UserBusiness(undefined);
+        localStorage.removeItem("businessId");
+      });
   };
 
   // const signInEmployee = async (username: string, pin: string) => {
@@ -211,7 +209,7 @@ export const useAuth = () => {
 
       setTimeout(() => {
         fetchCurrentUser();
-        checkBusinessAssociation(() => fetchAssociatedBusiness());
+        checkBusinessAssociation();
       }, 500);
     });
   };
@@ -266,7 +264,7 @@ export const useAuth = () => {
     resetPassword,
     updatePassword,
     isAuthenticated: !!user,
-    hasBusinessAssociation,
-    refreshBusinessAssociation,
+    hasBusinessAssociation: !!business,
+    refreshBusinessAssociation: checkBusinessAssociation,
   };
 };
