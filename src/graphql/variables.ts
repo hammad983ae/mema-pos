@@ -1,5 +1,6 @@
 import { makeVar } from "@apollo/client";
-import { User } from "./__generatedTypes__";
+import { Business, User } from "./__generatedTypes__";
 
-export const LoggedInUser = makeVar<User | undefined>(undefined);
 export const AuthToken = makeVar<string | null>(null);
+export const LoggedInUser = makeVar<User | undefined>(undefined);
+export const UserBusiness = makeVar<Business | undefined>(undefined);

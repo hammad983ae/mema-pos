@@ -1,104 +1,118 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { Building2, Store, Users } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Building2, Store } from "lucide-react";
+import { useMutation, useReactiveVar } from "@apollo/client";
+import {
+  LoggedInUser,
+  Mutation,
+  MutationUpdateBusinessArgs,
+  UPDATE_BUSINESS,
+  UserBusiness,
+} from "@/graphql";
+import { showSuccess } from "@/hooks/useToastMessages.tsx";
 
 export default function Onboarding() {
-  const { user, refreshBusinessAssociation } = useAuth();
+  const user = useReactiveVar(LoggedInUser);
+  const business = useReactiveVar(UserBusiness);
+  const { refreshBusinessAssociation } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  
+  const [updateBusiness, { loading }] = useMutation<
+    Mutation,
+    MutationUpdateBusinessArgs
+  >(UPDATE_BUSINESS);
+
   const [businessData, setBusinessData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: ""
+    name: business?.name ?? "",
+    email: business?.email ?? "",
+    phone: business?.phone ?? "",
+    address: business?.address ?? "",
   });
 
   const handleCreateBusiness = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    setLoading(true);
-    try {
-      // Update user profile with full name if not set
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!profile?.full_name || profile.full_name === 'Business Owner') {
-        const fullName = user.user_metadata?.full_name || 
-                        user.user_metadata?.name || 
-                        businessData.name.split(' ')[0] || 
-                        'Business Owner';
-        
-        await supabase
-          .from('profiles')
-          .update({ full_name: fullName })
-          .eq('user_id', user.id);
-      }
-
-      // Create business
-      const { data: business, error: businessError } = await supabase
-        .from('businesses')
-        .insert({
+    updateBusiness({
+      variables: {
+        id: business.id,
+        input: {
           name: businessData.name,
           email: businessData.email,
           phone: businessData.phone,
           address: businessData.address,
-          owner_user_id: user.id,
-          invitation_code: Math.random().toString(36).substring(2, 10).toUpperCase()
-        })
-        .select()
-        .single();
+        },
+      },
+    }).then(() => {
+      refreshBusinessAssociation();
+      showSuccess("Your business is added successfully");
+      navigate("/dashboard");
+    });
 
-      if (businessError) throw businessError;
+    // Update user profile with full name if not set
+    // const { data: profile } = await supabase
+    //   .from("profiles")
+    //   .select("full_name")
+    //   .eq("user_id", user.id)
+    //   .single();
+    //
+    // // Create business
+    // const { data: business, error: businessError } = await supabase
+    //   .from("businesses")
+    //   .insert({
+    //     name: businessData.name,
+    //     email: businessData.email,
+    //     phone: businessData.phone,
+    //     address: businessData.address,
+    //     owner_user_id: user.id,
+    //     invitation_code: Math.random()
+    //       .toString(36)
+    //       .substring(2, 10)
+    //       .toUpperCase(),
+    //   })
+    //   .select()
+    //   .single();
+    //
+    // if (businessError) throw businessError;
+    //
+    // // Create a default store
+    // await supabase.from("stores").insert({
+    //   name: `${businessData.name} - Main Location`,
+    //   business_id: business.id,
+    //   address: businessData.address,
+    //   is_active: true,
+    // });
+    //
+    // // Refresh business association
+    // await refreshBusinessAssociation();
 
-      // Create a default store
-      await supabase
-        .from('stores')
-        .insert({
-          name: `${businessData.name} - Main Location`,
-          business_id: business.id,
-          address: businessData.address,
-          is_active: true
-        });
-
-      // Refresh business association
-      await refreshBusinessAssociation();
-
-      toast({
-        title: "Welcome to your business!",
-        description: "Your business has been created successfully.",
-      });
-
-      navigate('/dashboard');
-    } catch (error: any) {
-      console.error('Onboarding error:', error);
-      toast({
-        title: "Setup Error",
-        description: error.message || "Failed to create business",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    //  catch (error: any) {
+    //   console.error("Onboarding error:", error);
+    //   toast({
+    //     title: "Setup Error",
+    //     description: error.message || "Failed to create business",
+    //     variant: "destructive",
+    //   });
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   useEffect(() => {
     if (!user) {
-      navigate('/auth');
+      navigate("/auth");
     }
-  }, [user, navigate]);
+  }, [user]);
 
   if (!user) {
     return null;
@@ -124,7 +138,9 @@ export default function Onboarding() {
                 id="businessName"
                 placeholder="Enter your business name"
                 value={businessData.name}
-                onChange={(e) => setBusinessData({ ...businessData, name: e.target.value })}
+                onChange={(e) =>
+                  setBusinessData({ ...businessData, name: e.target.value })
+                }
                 required
               />
             </div>
@@ -136,7 +152,9 @@ export default function Onboarding() {
                 type="email"
                 placeholder="business@example.com"
                 value={businessData.email}
-                onChange={(e) => setBusinessData({ ...businessData, email: e.target.value })}
+                onChange={(e) =>
+                  setBusinessData({ ...businessData, email: e.target.value })
+                }
               />
             </div>
 
@@ -146,7 +164,9 @@ export default function Onboarding() {
                 id="businessPhone"
                 placeholder="(555) 123-4567"
                 value={businessData.phone}
-                onChange={(e) => setBusinessData({ ...businessData, phone: e.target.value })}
+                onChange={(e) =>
+                  setBusinessData({ ...businessData, phone: e.target.value })
+                }
               />
             </div>
 
@@ -156,12 +176,18 @@ export default function Onboarding() {
                 id="businessAddress"
                 placeholder="123 Main St, City, State 12345"
                 value={businessData.address}
-                onChange={(e) => setBusinessData({ ...businessData, address: e.target.value })}
+                onChange={(e) =>
+                  setBusinessData({ ...businessData, address: e.target.value })
+                }
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading || !businessData.name}>
-              {loading ? "Creating Business..." : "Create My Business"}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading || !businessData.name}
+            >
+              {loading ? "Saving Business..." : "Save My Business"}
             </Button>
 
             <div className="bg-muted/50 rounded-lg p-4 mt-6">

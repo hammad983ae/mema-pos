@@ -111,7 +111,7 @@ const Auth = () => {
 
   useEffect(() => {
     if (token) {
-      verifyEmail(token);
+      verifyEmail(token, () => navigate("/welcome", { replace: true }));
     }
   }, [token]);
 

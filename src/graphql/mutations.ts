@@ -21,3 +21,17 @@ export const VERIFY_EMAIL = gql`
     verifyEmail(token: $token)
   }
 `;
+
+export const CREATE_BUSINESS = gql`
+  mutation CreateBusiness($input: BusinessInput!) {
+    createBusiness(input: $input) {
+      id
+    }
+  }
+`;
+
+export const UPDATE_BUSINESS = gql`
+  mutation UpdateBusiness($id: String!, $input: BusinessInput!) {
+    updateBusiness(id: $id, input: $input)
+  }
+`;

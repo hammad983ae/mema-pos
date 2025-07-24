@@ -20,15 +20,29 @@ export type Business = {
   __typename?: 'Business';
   address?: Maybe<Scalars['String']['output']>;
   created_at: Scalars['DateTime']['output'];
+  email?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   invitation_code: Scalars['String']['output'];
   memberships: Array<UserBusinessMembership>;
   name: Scalars['String']['output'];
   owner: User;
+  phone?: Maybe<Scalars['String']['output']>;
   settings: Scalars['JSONObject']['output'];
+  stores: Array<Store>;
   subscription_plan: Scalars['String']['output'];
   subscription_status: Scalars['String']['output'];
   updated_at: Scalars['DateTime']['output'];
+};
+
+export type BusinessInput = {
+  address?: InputMaybe<Scalars['String']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  ownerId?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  settings?: InputMaybe<Scalars['JSONObject']['input']>;
+  subscription_plan?: InputMaybe<SubscriptionPlan>;
+  subscription_status?: InputMaybe<SubscriptionStatus>;
 };
 
 export type LoginInput = {
@@ -44,9 +58,23 @@ export type LoginResponse = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  createBusiness: Business;
+  createStore: Store;
   login: LoginResponse;
   register: LoginResponse;
+  updateBusiness: Scalars['Boolean']['output'];
+  updateStore: Scalars['Boolean']['output'];
   verifyEmail: Scalars['Boolean']['output'];
+};
+
+
+export type MutationCreateBusinessArgs = {
+  input: BusinessInput;
+};
+
+
+export type MutationCreateStoreArgs = {
+  input: StoreInput;
 };
 
 
@@ -60,6 +88,18 @@ export type MutationRegisterArgs = {
 };
 
 
+export type MutationUpdateBusinessArgs = {
+  id: Scalars['String']['input'];
+  input: BusinessInput;
+};
+
+
+export type MutationUpdateStoreArgs = {
+  id: Scalars['String']['input'];
+  input: StoreInput;
+};
+
+
 export type MutationVerifyEmailArgs = {
   token: Scalars['String']['input'];
 };
@@ -68,6 +108,7 @@ export type Query = {
   __typename?: 'Query';
   getCurrentMemberships: Array<UserBusinessMembership>;
   getCurrentUser: User;
+  getOwnedBusiness: Business;
   sayHello: Scalars['String']['output'];
 };
 
@@ -80,6 +121,48 @@ export type RegisterInput = {
   pos_pin: Scalars['String']['input'];
   username: Scalars['String']['input'];
 };
+
+export type Store = {
+  __typename?: 'Store';
+  address?: Maybe<Scalars['String']['output']>;
+  business: Business;
+  created_at: Scalars['DateTime']['output'];
+  email?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  is_active: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  phone?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  tax_rate: Scalars['Float']['output'];
+  timezone: Scalars['String']['output'];
+  updated_at: Scalars['DateTime']['output'];
+};
+
+export type StoreInput = {
+  address?: InputMaybe<Scalars['String']['input']>;
+  businessId?: InputMaybe<Scalars['String']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  is_active?: InputMaybe<Scalars['Boolean']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<StoreStatus>;
+  tax_rate?: InputMaybe<Scalars['Float']['input']>;
+  timezone?: InputMaybe<Scalars['String']['input']>;
+};
+
+export enum StoreStatus {
+  Active = 'ACTIVE',
+  Inactive = 'INACTIVE'
+}
+
+export enum SubscriptionPlan {
+  Starter = 'STARTER'
+}
+
+export enum SubscriptionStatus {
+  Active = 'ACTIVE',
+  Inactive = 'INACTIVE'
+}
 
 export type User = {
   __typename?: 'User';

@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { useLazyQuery, useMutation, useReactiveVar } from "@apollo/client";
 import {
   AuthToken,
   GET_CURRENT_MEMBERSHIPS,
   GET_CURRENT_USER,
+  GET_OWNED_BUSINESS,
   LoggedInUser,
   LOGIN,
   Mutation,
@@ -14,18 +14,15 @@ import {
   MutationVerifyEmailArgs,
   Query,
   REGISTER,
-  User,
+  UserBusiness,
   VERIFY_EMAIL,
 } from "@/graphql";
 import { showSuccess } from "@/hooks/useToastMessages.tsx";
-import { useNavigate } from "react-router-dom";
 
 export const useAuth = () => {
-  const navigate = useNavigate();
   const token = useReactiveVar(AuthToken);
   const user = useReactiveVar(LoggedInUser);
   const [hasBusinessAssociation, setHasBusinessAssociation] = useState(false);
-  const { toast } = useToast();
   const [register, { loading: registering }] = useMutation<
     Mutation,
     MutationRegisterArgs
@@ -38,33 +35,52 @@ export const useAuth = () => {
     Mutation,
     MutationVerifyEmailArgs
   >(VERIFY_EMAIL);
-  const [getCurrentUser, { loading: fetchingUser }] =
-    useLazyQuery<Query>(GET_CURRENT_USER);
+  const [getCurrentUser, { loading: fetchingUser }] = useLazyQuery<Query>(
+    GET_CURRENT_USER,
+    { fetchPolicy: "network-only" },
+  );
   const [getCurrentMemberships, { loading: fetchingMemberships }] =
-    useLazyQuery<Query>(GET_CURRENT_MEMBERSHIPS);
+    useLazyQuery<Query>(GET_CURRENT_MEMBERSHIPS, {
+      fetchPolicy: "network-only",
+    });
+  const [getOwnedBusiness, { loading: fetchingBusiness }] = useLazyQuery<Query>(
+    GET_OWNED_BUSINESS,
+    { fetchPolicy: "network-only" },
+  );
 
   const fetchCurrentUser = () => {
     getCurrentUser().then((res) => {
       LoggedInUser(res.data.getCurrentUser);
+      refreshBusinessAssociation();
     });
   };
 
-  const checkBusinessAssociation = () => {
+  const checkBusinessAssociation = (onSuccess?: () => void) => {
     console.log("Checking business association for user");
     getCurrentMemberships()
       .then((res) => {
-        if (res.data.getCurrentMemberships.length > 0)
+        if (res.data.getCurrentMemberships.length > 0) {
           setHasBusinessAssociation(true);
+
+          onSuccess?.();
+        }
       })
       .catch(() => {
         setHasBusinessAssociation(false);
       });
   };
 
-  const refreshBusinessAssociation = async () => {
-    if (user) {
-      await checkBusinessAssociation();
-    }
+  const fetchAssociatedBusiness = () => {
+    console.log("Fetching owned business");
+
+    getOwnedBusiness().then((res) => {
+      UserBusiness(res.data.getOwnedBusiness);
+      localStorage.setItem("businessId", res.data.getOwnedBusiness.id);
+    });
+  };
+
+  const refreshBusinessAssociation = () => {
+    checkBusinessAssociation(() => fetchAssociatedBusiness());
   };
 
   // const signInEmployee = async (username: string, pin: string) => {
@@ -177,11 +193,6 @@ export const useAuth = () => {
         "Please check your email to verify your account.",
       );
     });
-
-    toast({
-      title: "Account Created",
-      description: "Please check your email to verify your account.",
-    });
   };
 
   const signInOwner = (email: string, password: string) => {
@@ -200,7 +211,7 @@ export const useAuth = () => {
 
       setTimeout(() => {
         fetchCurrentUser();
-        checkBusinessAssociation();
+        checkBusinessAssociation(() => fetchAssociatedBusiness());
       }, 500);
     });
   };
@@ -211,19 +222,14 @@ export const useAuth = () => {
     localStorage.clear();
   };
 
-  const handleVerifyEmail = (token: string) => {
+  const handleVerifyEmail = (token: string, onSuccess: () => void) => {
     verifyEmail({
       variables: {
         token,
       },
     }).then(() => {
       showSuccess("Email Verified!");
-      navigate("/welcome", { replace: true });
-    });
-
-    toast({
-      title: "Account Created",
-      description: "Please check your email to verify your account.",
+      onSuccess();
     });
   };
 
@@ -249,7 +255,8 @@ export const useAuth = () => {
       verifyingEmail ||
       fetchingUser ||
       loggingIn ||
-      fetchingMemberships,
+      fetchingMemberships ||
+      fetchingBusiness,
     signOut,
     verifyEmail: handleVerifyEmail,
     fetchCurrentUser,

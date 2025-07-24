@@ -37,3 +37,19 @@ export const GET_CURRENT_MEMBERSHIPS = gql`
     }
   }
 `;
+
+export const GET_OWNED_BUSINESS = gql`
+  query GetOwnedBusiness {
+    getOwnedBusiness {
+      id
+      name
+      address
+      subscription_plan
+      subscription_status
+      invitation_code
+      settings
+      created_at
+      updated_at
+    }
+  }
+`;
