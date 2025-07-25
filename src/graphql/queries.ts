@@ -16,42 +16,19 @@ export const GET_CURRENT_USER = gql`
       specialties
       availability_preferences
       performance_metrics
-    }
-  }
-`;
-
-export const GET_CURRENT_MEMBERSHIPS = gql`
-  query GetCurrentMemberships {
-    getCurrentMemberships {
-      id
       business {
         id
         name
+        email
+        phone
+        address
+        subscription_plan
+        subscription_status
+        invitation_code
+        settings
+        created_at
+        updated_at
       }
-      role
-      is_active
-      hired_date
-      hourly_rate
-      created_at
-      updated_at
-    }
-  }
-`;
-
-export const GET_OWNED_BUSINESS = gql`
-  query GetOwnedBusiness {
-    getOwnedBusiness {
-      id
-      name
-      email
-      phone
-      address
-      subscription_plan
-      subscription_status
-      invitation_code
-      settings
-      created_at
-      updated_at
     }
   }
 `;

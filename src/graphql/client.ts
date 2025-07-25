@@ -70,13 +70,11 @@ const httpLink = new HttpLink({
 
 const authMiddleware = setContext((operation) => {
   const accessToken = localStorage.getItem("accessToken");
-  const businessId = localStorage.getItem("businessId");
 
   return {
     // Make sure to actually set the headers here
     headers: {
       authorization: accessToken ? `Bearer ${accessToken}` : null,
-      ...(businessId && { "x-business-id": businessId }),
     },
   };
 });

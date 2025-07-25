@@ -1,19 +1,17 @@
-import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLazyQuery, useMutation, useReactiveVar } from "@apollo/client";
 import {
   AuthToken,
-  GET_CURRENT_MEMBERSHIPS,
   GET_CURRENT_USER,
-  GET_OWNED_BUSINESS,
   LoggedInUser,
-  LOGIN,
+  LOGIN_BUSINESS_OWNER,
   Mutation,
-  MutationLoginArgs,
-  MutationRegisterArgs,
+  MutationLoginBusinessOwnerArgs,
+  MutationRegisterBusinessOwnerArgs,
   MutationVerifyEmailArgs,
   Query,
-  REGISTER,
+  REGISTER_BUSINESS_OWNER,
+  User,
   UserBusiness,
   UserMembership,
   VERIFY_EMAIL,
@@ -27,12 +25,12 @@ export const useAuth = () => {
   const membership = useReactiveVar(UserMembership);
   const [register, { loading: registering }] = useMutation<
     Mutation,
-    MutationRegisterArgs
-  >(REGISTER);
+    MutationRegisterBusinessOwnerArgs
+  >(REGISTER_BUSINESS_OWNER);
   const [login, { loading: loggingIn }] = useMutation<
     Mutation,
-    MutationLoginArgs
-  >(LOGIN);
+    MutationLoginBusinessOwnerArgs
+  >(LOGIN_BUSINESS_OWNER);
   const [verifyEmail, { loading: verifyingEmail }] = useMutation<
     Mutation,
     MutationVerifyEmailArgs
@@ -41,47 +39,14 @@ export const useAuth = () => {
     GET_CURRENT_USER,
     { fetchPolicy: "network-only" },
   );
-  const [getCurrentMemberships, { loading: fetchingMemberships }] =
-    useLazyQuery<Query>(GET_CURRENT_MEMBERSHIPS, {
-      fetchPolicy: "network-only",
-    });
-  const [getOwnedBusiness, { loading: fetchingBusiness }] = useLazyQuery<Query>(
-    GET_OWNED_BUSINESS,
-    { fetchPolicy: "network-only" },
-  );
 
   const fetchCurrentUser = () => {
     getCurrentUser().then((res) => {
-      LoggedInUser(res.data.getCurrentUser);
-      checkBusinessAssociation();
+      const { business, ...user } = res.data.getCurrentUser;
+
+      LoggedInUser(user as User);
+      UserBusiness(business);
     });
-  };
-
-  const checkBusinessAssociation = () => {
-    console.log("Checking business association for user");
-    getCurrentMemberships()
-      .then((res) => {
-        if (res.data.getCurrentMemberships.length > 0) {
-          UserMembership(res.data.getCurrentMemberships?.[0]);
-          fetchAssociatedBusiness();
-        }
-      })
-      .catch(() => {});
-  };
-
-  const fetchAssociatedBusiness = () => {
-    console.log("Fetching owned business");
-
-    getOwnedBusiness()
-      .then((res) => {
-        UserBusiness(res.data.getOwnedBusiness);
-
-        localStorage.setItem("businessId", res.data.getOwnedBusiness.id);
-      })
-      .catch(() => {
-        UserBusiness(undefined);
-        localStorage.removeItem("businessId");
-      });
   };
 
   // const signInEmployee = async (username: string, pin: string) => {
@@ -205,14 +170,16 @@ export const useAuth = () => {
         },
       },
     }).then((res) => {
-      AuthToken(res.data.login.access_token);
-      localStorage.setItem("accessToken", res.data.login.access_token);
+      AuthToken(res.data.loginBusinessOwner.access_token);
+      localStorage.setItem(
+        "accessToken",
+        res.data.loginBusinessOwner.access_token,
+      );
 
       showSuccess("Welcome back!", "You have successfully signed in.");
 
       setTimeout(() => {
         fetchCurrentUser();
-        checkBusinessAssociation();
       }, 500);
     });
   };
@@ -251,13 +218,7 @@ export const useAuth = () => {
   return {
     user,
     token,
-    loading:
-      registering ||
-      verifyingEmail ||
-      fetchingUser ||
-      loggingIn ||
-      fetchingMemberships ||
-      fetchingBusiness,
+    loading: registering || verifyingEmail || fetchingUser || loggingIn,
     signOut,
     verifyEmail: handleVerifyEmail,
     fetchCurrentUser,
@@ -270,6 +231,6 @@ export const useAuth = () => {
     hasBusinessAssociation: !!business,
     business,
     membership,
-    refreshBusinessAssociation: checkBusinessAssociation,
+    refreshBusinessAssociation: fetchCurrentUser,
   };
 };

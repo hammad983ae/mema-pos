@@ -23,15 +23,14 @@ export type Business = {
   email?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   invitation_code: Scalars['String']['output'];
-  memberships: Array<UserBusinessMembership>;
   name: Scalars['String']['output'];
-  owner: User;
   phone?: Maybe<Scalars['String']['output']>;
   settings: Scalars['JSONObject']['output'];
   stores: Array<Store>;
   subscription_plan: Scalars['String']['output'];
   subscription_status: Scalars['String']['output'];
   updated_at: Scalars['DateTime']['output'];
+  users: Array<User>;
 };
 
 export type BusinessInput = {
@@ -61,8 +60,8 @@ export type Mutation = {
   createBusiness: Business;
   createStore: Store;
   createStoreSession: StoreDaySession;
-  login: LoginResponse;
-  register: LoginResponse;
+  loginBusinessOwner: LoginResponse;
+  registerBusinessOwner: LoginResponse;
   updateBusiness: Scalars['Boolean']['output'];
   updateStore: Scalars['Boolean']['output'];
   verifyEmail: Scalars['Boolean']['output'];
@@ -84,12 +83,12 @@ export type MutationCreateStoreSessionArgs = {
 };
 
 
-export type MutationLoginArgs = {
+export type MutationLoginBusinessOwnerArgs = {
   input: LoginInput;
 };
 
 
-export type MutationRegisterArgs = {
+export type MutationRegisterBusinessOwnerArgs = {
   input: RegisterInput;
 };
 
@@ -112,9 +111,7 @@ export type MutationVerifyEmailArgs = {
 
 export type Query = {
   __typename?: 'Query';
-  getCurrentMemberships: Array<UserBusinessMembership>;
   getCurrentUser: User;
-  getOwnedBusiness: Business;
   sayHello: Scalars['String']['output'];
 };
 
@@ -212,30 +209,22 @@ export type User = {
   __typename?: 'User';
   availability_preferences?: Maybe<Scalars['JSONObject']['output']>;
   avatar_url?: Maybe<Scalars['String']['output']>;
+  business: Business;
   email: Scalars['String']['output'];
   emailVerificationToken?: Maybe<Scalars['String']['output']>;
   full_name?: Maybe<Scalars['String']['output']>;
+  hired_date: Scalars['String']['output'];
+  hourly_rate?: Maybe<Scalars['Float']['output']>;
   id: Scalars['ID']['output'];
   isEmailVerified: Scalars['Boolean']['output'];
+  is_active: Scalars['Boolean']['output'];
   performance_metrics?: Maybe<Scalars['JSONObject']['output']>;
   phone?: Maybe<Scalars['String']['output']>;
   position?: Maybe<Scalars['String']['output']>;
   position_type?: Maybe<Scalars['String']['output']>;
+  role: UserRole;
   specialties: Array<Scalars['String']['output']>;
   username?: Maybe<Scalars['String']['output']>;
-};
-
-export type UserBusinessMembership = {
-  __typename?: 'UserBusinessMembership';
-  business: Business;
-  created_at: Scalars['DateTime']['output'];
-  hired_date: Scalars['String']['output'];
-  hourly_rate?: Maybe<Scalars['Float']['output']>;
-  id: Scalars['ID']['output'];
-  is_active: Scalars['Boolean']['output'];
-  role: UserRole;
-  updated_at: Scalars['DateTime']['output'];
-  user: User;
 };
 
 export enum UserRole {

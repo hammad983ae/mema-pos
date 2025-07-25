@@ -1,16 +1,16 @@
 import { gql } from "@apollo/client";
 
-export const LOGIN = gql`
-  mutation Login($input: LoginInput!) {
-    login(input: $input) {
+export const LOGIN_BUSINESS_OWNER = gql`
+  mutation LoginBusinessOwner($input: LoginInput!) {
+    loginBusinessOwner(input: $input) {
       access_token
     }
   }
 `;
 
-export const REGISTER = gql`
-  mutation Register($input: RegisterInput!) {
-    register(input: $input) {
+export const REGISTER_BUSINESS_OWNER = gql`
+  mutation RegisterBusinessOwner($input: RegisterInput!) {
+    registerBusinessOwner(input: $input) {
       access_token
     }
   }
