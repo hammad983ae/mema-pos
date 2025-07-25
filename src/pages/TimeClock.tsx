@@ -2,14 +2,20 @@ import { useState, useEffect } from "react";
 import { EmployeeTimeClock } from "@/components/timeclock/EmployeeTimeClock";
 import { ManagerTimeClockDashboard } from "@/components/timeclock/ManagerTimeClockDashboard";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clock, Users, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { UserRole } from "@/graphql";
 
 const TimeClock = () => {
   const { user } = useAuth();
-  const [userRole, setUserRole] = useState<string>("employee");
   const [paymentType, setPaymentType] = useState<string>("hourly");
   const [loading, setLoading] = useState(true);
 
@@ -21,7 +27,7 @@ const TimeClock = () => {
 
   const fetchUserData = async () => {
     if (!user) return;
-    
+
     try {
       const { data: membership } = await supabase
         .from("user_business_memberships")
@@ -31,7 +37,6 @@ const TimeClock = () => {
         .single();
 
       if (membership) {
-        setUserRole(membership.role);
         setPaymentType(membership.commission_type || "hourly");
       }
     } catch (error) {
@@ -46,7 +51,9 @@ const TimeClock = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card>
           <CardContent className="p-8 text-center">
-            <p className="text-muted-foreground">Please log in to access the time clock</p>
+            <p className="text-muted-foreground">
+              Please log in to access the time clock
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -54,7 +61,7 @@ const TimeClock = () => {
   }
 
   // If user is manager or owner, show both views in tabs
-  if (userRole === "manager" || userRole === "business_owner") {
+  if (user.role === UserRole.BusinessOwner || user.role === UserRole.Manager) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto p-6">
@@ -100,12 +107,14 @@ const TimeClock = () => {
               <DollarSign className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle>Commission-Based Employee</CardTitle>
               <CardDescription>
-                You're paid on commission, so time tracking isn't required for your role.
+                You're paid on commission, so time tracking isn't required for
+                your role.
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center">
               <p className="text-sm text-muted-foreground">
-                Your earnings are based on sales performance. Check your commission reports in the analytics section.
+                Your earnings are based on sales performance. Check your
+                commission reports in the analytics section.
               </p>
             </CardContent>
           </Card>
@@ -121,7 +130,9 @@ const TimeClock = () => {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2">Time Clock</h1>
           <p className="text-muted-foreground">
-            {paymentType === "both" ? "Track your hours for hourly pay" : "Track your work hours"}
+            {paymentType === "both"
+              ? "Track your hours for hourly pay"
+              : "Track your work hours"}
           </p>
         </div>
         <EmployeeTimeClock />

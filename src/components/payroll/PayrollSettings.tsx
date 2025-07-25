@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { 
+import {
   Settings,
   Upload,
   Save,
@@ -16,12 +16,10 @@ import {
   Building2,
   Loader2,
   ExternalLink,
-  HelpCircle
+  HelpCircle,
 } from "lucide-react";
 
-interface PayrollSettingsProps {
-  userRole: string;
-}
+interface PayrollSettingsProps {}
 
 interface PayrollSettings {
   company_logo_url?: string;
@@ -37,7 +35,7 @@ interface PayrollSettings {
   reply_to_name?: string;
 }
 
-export const PayrollSettings = ({ userRole }: PayrollSettingsProps) => {
+export const PayrollSettings = ({}: PayrollSettingsProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [settings, setSettings] = useState<PayrollSettings>({});
@@ -94,12 +92,10 @@ export const PayrollSettings = ({ userRole }: PayrollSettingsProps) => {
 
       if (!membershipData) return;
 
-      const { error } = await supabase
-        .from("payroll_settings")
-        .upsert({
-          business_id: membershipData.business_id,
-          ...settings
-        });
+      const { error } = await supabase.from("payroll_settings").upsert({
+        business_id: membershipData.business_id,
+        ...settings,
+      });
 
       if (error) throw error;
 
@@ -120,7 +116,7 @@ export const PayrollSettings = ({ userRole }: PayrollSettingsProps) => {
   };
 
   const updateSetting = (field: string, value: string) => {
-    setSettings(prev => ({ ...prev, [field]: value }));
+    setSettings((prev) => ({ ...prev, [field]: value }));
   };
 
   if (loading) {
@@ -147,14 +143,16 @@ export const PayrollSettings = ({ userRole }: PayrollSettingsProps) => {
               <Building2 className="h-4 w-4" />
               <h3 className="font-medium">Company Information</h3>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="company-name">Company Name</Label>
                 <Input
                   id="company-name"
                   value={settings.company_name || ""}
-                  onChange={(e) => updateSetting("company_name", e.target.value)}
+                  onChange={(e) =>
+                    updateSetting("company_name", e.target.value)
+                  }
                   placeholder="Enter company name"
                 />
               </div>
@@ -164,7 +162,9 @@ export const PayrollSettings = ({ userRole }: PayrollSettingsProps) => {
                   id="company-email"
                   type="email"
                   value={settings.company_email || ""}
-                  onChange={(e) => updateSetting("company_email", e.target.value)}
+                  onChange={(e) =>
+                    updateSetting("company_email", e.target.value)
+                  }
                   placeholder="Enter company email"
                 />
               </div>
@@ -176,7 +176,9 @@ export const PayrollSettings = ({ userRole }: PayrollSettingsProps) => {
                 <Input
                   id="company-phone"
                   value={settings.company_phone || ""}
-                  onChange={(e) => updateSetting("company_phone", e.target.value)}
+                  onChange={(e) =>
+                    updateSetting("company_phone", e.target.value)
+                  }
                   placeholder="Enter company phone"
                 />
               </div>
@@ -185,7 +187,9 @@ export const PayrollSettings = ({ userRole }: PayrollSettingsProps) => {
                 <Input
                   id="company-logo"
                   value={settings.company_logo_url || ""}
-                  onChange={(e) => updateSetting("company_logo_url", e.target.value)}
+                  onChange={(e) =>
+                    updateSetting("company_logo_url", e.target.value)
+                  }
                   placeholder="Enter logo URL"
                 />
               </div>
@@ -196,7 +200,9 @@ export const PayrollSettings = ({ userRole }: PayrollSettingsProps) => {
               <Textarea
                 id="company-address"
                 value={settings.company_address || ""}
-                onChange={(e) => updateSetting("company_address", e.target.value)}
+                onChange={(e) =>
+                  updateSetting("company_address", e.target.value)
+                }
                 placeholder="Enter full company address"
                 rows={3}
               />
@@ -224,13 +230,21 @@ export const PayrollSettings = ({ userRole }: PayrollSettingsProps) => {
               <Label htmlFor="email-template">Email Template</Label>
               <Textarea
                 id="email-template"
-                value={settings.email_template || "Please find your payroll statement attached."}
-                onChange={(e) => updateSetting("email_template", e.target.value)}
+                value={
+                  settings.email_template ||
+                  "Please find your payroll statement attached."
+                }
+                onChange={(e) =>
+                  updateSetting("email_template", e.target.value)
+                }
                 placeholder="Enter email template"
                 rows={4}
               />
               <p className="text-sm text-muted-foreground">
-                Available variables: {"{employee_name}, {period_start}, {period_end}, {company_name}"}
+                Available variables:{" "}
+                {
+                  "{employee_name}, {period_start}, {period_end}, {company_name}"
+                }
               </p>
             </div>
           </div>
@@ -250,8 +264,9 @@ export const PayrollSettings = ({ userRole }: PayrollSettingsProps) => {
               </Button>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Configure the sender and reply-to email addresses for payroll emails. 
-              Note: You must verify your domain with Resend to send from custom email addresses.
+              Configure the sender and reply-to email addresses for payroll
+              emails. Note: You must verify your domain with Resend to send from
+              custom email addresses.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -261,7 +276,9 @@ export const PayrollSettings = ({ userRole }: PayrollSettingsProps) => {
                   id="sender-email"
                   type="email"
                   value={settings.sender_email || ""}
-                  onChange={(e) => updateSetting("sender_email", e.target.value)}
+                  onChange={(e) =>
+                    updateSetting("sender_email", e.target.value)
+                  }
                   placeholder="payroll@yourcompany.com"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -284,12 +301,16 @@ export const PayrollSettings = ({ userRole }: PayrollSettingsProps) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="reply-to-email">Reply-To Email (Optional)</Label>
+                <Label htmlFor="reply-to-email">
+                  Reply-To Email (Optional)
+                </Label>
                 <Input
                   id="reply-to-email"
                   type="email"
                   value={settings.reply_to_email || ""}
-                  onChange={(e) => updateSetting("reply_to_email", e.target.value)}
+                  onChange={(e) =>
+                    updateSetting("reply_to_email", e.target.value)
+                  }
                   placeholder="hr@yourcompany.com"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -301,7 +322,9 @@ export const PayrollSettings = ({ userRole }: PayrollSettingsProps) => {
                 <Input
                   id="reply-to-name"
                   value={settings.reply_to_name || ""}
-                  onChange={(e) => updateSetting("reply_to_name", e.target.value)}
+                  onChange={(e) =>
+                    updateSetting("reply_to_name", e.target.value)
+                  }
                   placeholder="HR Department"
                 />
                 <p className="text-xs text-muted-foreground">

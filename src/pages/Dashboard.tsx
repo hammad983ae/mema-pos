@@ -37,8 +37,11 @@ import {
   Mutation,
   MutationCreateStoreSessionArgs,
   UserRole,
+  Query,
+  QueryGetBusinessStatsArgs,
+  GET_BUSINESS_STATS,
 } from "@/graphql";
-import { useMutation } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 
 const Dashboard = () => {
   const { user, business, membership, signOut } = useAuth();
@@ -46,78 +49,18 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [businessInfo, setBusinessInfo] = useState<any>(null);
-  const [userRole, setUserRole] = useState<string>("");
-  const [stats, setStats] = useState({
-    totalProducts: 0,
-    totalStores: 0,
-    totalTeamMembers: 0,
-    todaysSales: 0,
+  const { data: statsData, loading } = useQuery<
+    Query,
+    QueryGetBusinessStatsArgs
+  >(GET_BUSINESS_STATS, {
+    variables: { id: business?.id },
+    skip: !business?.id,
+    fetchPolicy: "network-only",
   });
-  const [loading, setLoading] = useState(true);
   const [createStoreSession, { loading: creatingSession }] = useMutation<
     Mutation,
     MutationCreateStoreSessionArgs
   >(CREATE_STORE_SESSION);
-
-  const fetchDashboardData = async () => {
-    if (!user || !businessId) return;
-
-    try {
-      // Get user's business membership and business info
-      // const { data: membership } = await supabase
-      //   .from("user_business_memberships")
-      //   .select(`
-      //     role,
-      //     businesses (
-      //       name,
-      //       address,
-      //       phone,
-      //       email
-      //     )
-      //   `)
-      //   .eq("user_id", user.id)
-      //   .eq("business_id", businessId)
-      //   .eq("is_active", true)
-      //   .single();
-      //
-      // if (membership) {
-      //   setBusinessInfo(membership.businesses);
-      //   setUserRole(membership.role);
-      // }
-      //
-      // // Get dashboard stats
-      // // Count products
-      // const { count: productCount } = await supabase
-      //   .from("products")
-      //   .select("*", { count: "exact", head: true })
-      //   .eq("is_active", true);
-      //
-      // // Count stores
-      // const { count: storeCount } = await supabase
-      //   .from("stores")
-      //   .select("*", { count: "exact", head: true })
-      //   .eq("business_id", businessId)
-      //   .eq("status", "active");
-      //
-      // // Count team members
-      // const { count: teamCount } = await supabase
-      //   .from("user_business_memberships")
-      //   .select("*", { count: "exact", head: true })
-      //   .eq("business_id", businessId)
-      //   .eq("is_active", true);
-
-      setStats({
-        totalProducts: 0,
-        totalStores: 1,
-        totalTeamMembers: 1,
-        todaysSales: 0,
-      });
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -126,9 +69,9 @@ const Dashboard = () => {
   const handlePOSAccess = async () => {
     // Check if user is authorized for direct POS access
     const isAuthorized =
-      membership.role === UserRole.BusinessOwner ||
-      membership.role === UserRole.Manager ||
-      membership.role === UserRole.Office;
+      user.role === UserRole.BusinessOwner ||
+      user.role === UserRole.Manager ||
+      user.role === UserRole.Office;
 
     if (!isAuthorized) {
       navigate("/pos/login");
@@ -232,7 +175,18 @@ const Dashboard = () => {
 
   // Define sections based on user role
   const isOwnerOrManager =
-    userRole === "business_owner" || userRole === "manager";
+    user.role === UserRole.BusinessOwner || user.role === UserRole.Manager;
+
+  if (!user || !statsData || loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   const setupActions = [
     {
@@ -242,7 +196,7 @@ const Dashboard = () => {
       href: "/inventory",
       color: "text-green-600",
       bgColor: "bg-green-50",
-      urgent: stats.totalProducts === 0,
+      urgent: statsData.getBusinessStats.productsCount === 0,
       action: "Add Products",
     },
     {
@@ -252,7 +206,7 @@ const Dashboard = () => {
       href: "/store-management",
       color: "text-blue-600",
       bgColor: "bg-blue-50",
-      urgent: stats.totalStores <= 1,
+      urgent: statsData.getBusinessStats.storesCount <= 1,
       action: "Add Store",
     },
     {
@@ -262,7 +216,7 @@ const Dashboard = () => {
       href: "/team?action=add-member",
       color: "text-purple-600",
       bgColor: "bg-purple-50",
-      urgent: stats.totalTeamMembers <= 1,
+      urgent: statsData.getBusinessStats.membersCount <= 1,
       action: "Invite Team",
     },
   ];
@@ -329,17 +283,6 @@ const Dashboard = () => {
     },
   ];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading your dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -353,7 +296,8 @@ const Dashboard = () => {
                   {businessInfo?.name || "Your Business"}
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  {userRole
+                  {user.role
+                    .toLowerCase()
                     .replace("_", " ")
                     .replace(/\b\w/g, (l) => l.toUpperCase())}{" "}
                   Dashboard
@@ -378,7 +322,7 @@ const Dashboard = () => {
               <NotificationBell />
 
               <Badge variant="outline" className="capitalize">
-                {userRole.replace("_", " ")}
+                {user.role.toLowerCase().replace("_", " ")}
               </Badge>
               <Button variant="outline" size="sm" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4 mr-2" />
@@ -405,9 +349,11 @@ const Dashboard = () => {
                 <Package className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.totalProducts}</div>
+                <div className="text-2xl font-bold">
+                  {statsData.getBusinessStats.productsCount}
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  {stats.totalProducts === 0
+                  {statsData.getBusinessStats.productsCount === 0
                     ? "Add your first product"
                     : "In your catalog"}
                 </p>
@@ -420,7 +366,9 @@ const Dashboard = () => {
                 <Store className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.totalStores}</div>
+                <div className="text-2xl font-bold">
+                  {statsData.getBusinessStats.storesCount}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Active locations
                 </p>
@@ -436,7 +384,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {stats.totalTeamMembers}
+                  {statsData.getBusinessStats.membersCount}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Active employees
@@ -532,8 +480,8 @@ const Dashboard = () => {
                   </h4>
                   <p className="text-sm text-emerald-700">
                     Your POS system is loaded with{" "}
-                    {stats.totalProducts > 0
-                      ? `${stats.totalProducts} products`
+                    {statsData.getBusinessStats.productsCount > 0
+                      ? `${statsData.getBusinessStats.productsCount} products`
                       : "10 sample products"}{" "}
                     across 3 stores with 10 test employees
                   </p>

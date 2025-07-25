@@ -16,7 +16,7 @@ import ShippingRequestsList from "@/components/shipping/ShippingRequestsList";
 import { PosAuthDialog } from "@/components/auth/PosAuthDialog";
 import { Users, MessageSquare, Bot, Package } from "lucide-react";
 
-type ViewState = 'list' | 'profile' | 'form';
+type ViewState = "list" | "profile" | "form";
 
 interface CRMProps {
   onNavigateBack?: () => void; // Optional callback for when CRM needs to go back
@@ -25,23 +25,26 @@ interface CRMProps {
 const CRM = ({ onNavigateBack }: CRMProps = {}) => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [currentView, setCurrentView] = useState<ViewState>('list');
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [currentView, setCurrentView] = useState<ViewState>("list");
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
+    null,
+  );
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [activeTab, setActiveTab] = useState("customers");
   const [shippingTab, setShippingTab] = useState("requests");
-  const [selectedConversationId, setSelectedConversationId] = useState<string | undefined>();
+  const [selectedConversationId, setSelectedConversationId] = useState<
+    string | undefined
+  >();
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [showQuickAddDialog, setShowQuickAddDialog] = useState(false);
-  const [businessId, setBusinessId] = useState<string>('');
+  const [businessId, setBusinessId] = useState<string>("");
   const [showAuthDialog, setShowAuthDialog] = useState(true); // Show auth dialog by default
   const [isAuthenticated, setIsAuthenticated] = useState(false); // Track if user is authenticated for CRM access
-  const [userRole, setUserRole] = useState<string>('');
 
   useEffect(() => {
     const getBusinessContext = async () => {
       if (!user) return;
-      
+
       try {
         const { data } = await supabase
           .from("user_business_memberships")
@@ -49,10 +52,9 @@ const CRM = ({ onNavigateBack }: CRMProps = {}) => {
           .eq("user_id", user.id)
           .eq("is_active", true)
           .single();
-        
+
         if (data) {
           setBusinessId(data.business_id);
-          setUserRole(data.role);
         }
       } catch (error) {
         console.error("Error fetching business context:", error);
@@ -64,17 +66,17 @@ const CRM = ({ onNavigateBack }: CRMProps = {}) => {
 
   const handleSelectCustomer = (customerId: string) => {
     setSelectedCustomerId(customerId);
-    setCurrentView('profile');
+    setCurrentView("profile");
   };
 
   const handleEditCustomer = (customerId: string) => {
     setSelectedCustomerId(customerId);
-    setCurrentView('form');
+    setCurrentView("form");
   };
 
   const handleAddCustomer = () => {
     setSelectedCustomerId(null);
-    setCurrentView('form');
+    setCurrentView("form");
   };
 
   const handleQuickAddCustomer = () => {
@@ -83,27 +85,27 @@ const CRM = ({ onNavigateBack }: CRMProps = {}) => {
 
   const handleQuickCustomerCreated = (customer: any) => {
     setShowQuickAddDialog(false);
-    setRefreshTrigger(prev => prev + 1);
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   const handleSaveCustomer = () => {
-    setCurrentView('list');
+    setCurrentView("list");
     setSelectedCustomerId(null);
-    setRefreshTrigger(prev => prev + 1);
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   const handleCancelForm = () => {
-    setCurrentView('list');
+    setCurrentView("list");
     setSelectedCustomerId(null);
   };
 
   const handleCloseProfile = () => {
-    setCurrentView('list');
+    setCurrentView("list");
     setSelectedCustomerId(null);
   };
 
   const handleEditFromProfile = () => {
-    setCurrentView('form');
+    setCurrentView("form");
   };
 
   // Customer Service handlers
@@ -135,7 +137,9 @@ const CRM = ({ onNavigateBack }: CRMProps = {}) => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">CRM Access Required</h2>
-          <p className="text-muted-foreground mb-4">Please authenticate to access Customer Relationship Management</p>
+          <p className="text-muted-foreground mb-4">
+            Please authenticate to access Customer Relationship Management
+          </p>
         </div>
         <PosAuthDialog
           isOpen={showAuthDialog}
@@ -144,7 +148,7 @@ const CRM = ({ onNavigateBack }: CRMProps = {}) => {
             if (onNavigateBack) {
               onNavigateBack();
             } else {
-              navigate('/pos');
+              navigate("/pos");
             }
           }}
           onSuccess={handleAuthSuccess}
@@ -159,13 +163,19 @@ const CRM = ({ onNavigateBack }: CRMProps = {}) => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Customer Relationship Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Customer Relationship Management
+          </h1>
           <p className="text-muted-foreground">
             Manage customers and provide intelligent customer service support
           </p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={handleTabChange}
+          className="space-y-6"
+        >
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="customers" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
@@ -183,13 +193,17 @@ const CRM = ({ onNavigateBack }: CRMProps = {}) => {
           </TabsList>
 
           <TabsContent value="customers" className="space-y-6">
-            {currentView === 'list' && (
+            {currentView === "list" && (
               <div className="space-y-4">
                 <div className="flex gap-2">
                   <Button onClick={handleAddCustomer} size="sm">
                     Add Customer (Full Form)
                   </Button>
-                  <Button onClick={handleQuickAddCustomer} variant="outline" size="sm">
+                  <Button
+                    onClick={handleQuickAddCustomer}
+                    variant="outline"
+                    size="sm"
+                  >
                     Quick Add Customer
                   </Button>
                 </div>
@@ -202,7 +216,7 @@ const CRM = ({ onNavigateBack }: CRMProps = {}) => {
               </div>
             )}
 
-            {currentView === 'profile' && selectedCustomerId && (
+            {currentView === "profile" && selectedCustomerId && (
               <CustomerProfile
                 customerId={selectedCustomerId}
                 onEdit={handleEditFromProfile}
@@ -210,7 +224,7 @@ const CRM = ({ onNavigateBack }: CRMProps = {}) => {
               />
             )}
 
-            {currentView === 'form' && (
+            {currentView === "form" && (
               <CustomerForm
                 customerId={selectedCustomerId}
                 onSave={handleSaveCustomer}
@@ -228,7 +242,7 @@ const CRM = ({ onNavigateBack }: CRMProps = {}) => {
                   onNewConversation={handleNewConversation}
                 />
               </div>
-              
+
               <div className="lg:col-span-3">
                 <CustomerServiceChat
                   conversationId={selectedConversationId}
@@ -239,9 +253,16 @@ const CRM = ({ onNavigateBack }: CRMProps = {}) => {
           </TabsContent>
 
           <TabsContent value="shipping" className="space-y-6">
-            <Tabs value={shippingTab} onValueChange={setShippingTab} className="space-y-6">
+            <Tabs
+              value={shippingTab}
+              onValueChange={setShippingTab}
+              className="space-y-6"
+            >
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="requests" className="flex items-center gap-2">
+                <TabsTrigger
+                  value="requests"
+                  className="flex items-center gap-2"
+                >
                   Shipping Requests
                 </TabsTrigger>
                 <TabsTrigger value="create" className="flex items-center gap-2">
@@ -250,8 +271,7 @@ const CRM = ({ onNavigateBack }: CRMProps = {}) => {
               </TabsList>
 
               <TabsContent value="requests" className="space-y-6">
-                <ShippingRequestsList 
-                  userRole={userRole} 
+                <ShippingRequestsList
                   onCreateRequest={() => setShippingTab("create")}
                 />
               </TabsContent>

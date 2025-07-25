@@ -24,17 +24,18 @@ import { OpenerDashboard } from "@/components/team/OpenerDashboard";
 import { UpsellerDashboard } from "@/components/team/UpsellerDashboard";
 import { PositionTypeSelector } from "@/components/team/PositionTypeSelector";
 import { AnnouncementTemplates } from "@/components/team/AnnouncementTemplates";
-import { 
-  MessageSquare, 
-  Calendar, 
-  Users, 
+import {
+  MessageSquare,
+  Calendar,
+  Users,
   TrendingUp,
   Bell,
   Settings,
   Search,
   Plus,
-  Loader2
+  Loader2,
 } from "lucide-react";
+import { UserRole } from "@/graphql";
 
 const Team = () => {
   const { user } = useAuth();
@@ -51,7 +52,6 @@ const Team = () => {
     avgPerformance: 0,
     pendingNotifications: 0,
   });
-  const [userRole, setUserRole] = useState<string>("");
   const [userPositionType, setUserPositionType] = useState<string>("");
 
   useEffect(() => {
@@ -62,7 +62,7 @@ const Team = () => {
 
   useEffect(() => {
     // Check if URL contains action=add-member parameter
-    if (searchParams.get('action') === 'add-member') {
+    if (searchParams.get("action") === "add-member") {
       setOpenAddMember(true);
     }
   }, [searchParams]);
@@ -86,8 +86,6 @@ const Team = () => {
         throw new Error("User not associated with any business");
       }
 
-      setUserRole(membershipData.role);
-
       // Get user's position type (opener/upseller)
       const { data: profileData } = await supabase
         .from("profiles")
@@ -102,15 +100,17 @@ const Team = () => {
       // Get all team members for this business
       const { data: teamMembers } = await supabase
         .from("user_business_memberships")
-        .select(`
+        .select(
+          `
           *,
           profiles(full_name, phone, email, position)
-        `)
+        `,
+        )
         .eq("business_id", membershipData.business_id)
         .eq("is_active", true);
 
       // Get today's schedules
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().split("T")[0];
       const { data: todaySchedules } = await supabase
         .from("employee_schedules")
         .select("*")
@@ -119,23 +119,30 @@ const Team = () => {
 
       // Calculate team statistics
       const totalMembers = teamMembers?.length || 0;
-      const activeMembers = teamMembers?.filter(member => member.is_active)?.length || 0;
+      const activeMembers =
+        teamMembers?.filter((member) => member.is_active)?.length || 0;
       const scheduledShifts = todaySchedules?.length || 0;
 
       // Get recent sales performance for avg calculation
       const { data: recentOrders } = await supabase
         .from("orders")
-        .select(`
+        .select(
+          `
           total,
           user_id,
           stores!inner(business_id)
-        `)
+        `,
+        )
         .eq("stores.business_id", membershipData.business_id)
-        .gte("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+        .gte(
+          "created_at",
+          new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        );
 
       // Calculate average performance (simplified)
-      const avgPerformance = recentOrders?.length ? 
-        Math.min((recentOrders.length / (totalMembers * 7)) * 100, 100) : 0;
+      const avgPerformance = recentOrders?.length
+        ? Math.min((recentOrders.length / (totalMembers * 7)) * 100, 100)
+        : 0;
 
       setTeamStats({
         totalMembers,
@@ -144,7 +151,6 @@ const Team = () => {
         avgPerformance: Math.round(avgPerformance),
         pendingNotifications: Math.floor(Math.random() * 5), // Simulated for now
       });
-
     } catch (error: any) {
       console.error("Error fetching team data:", error);
       toast({
@@ -163,29 +169,29 @@ const Team = () => {
       value: teamStats.totalMembers.toString(),
       change: `${teamStats.activeMembers} active`,
       icon: Users,
-      color: "text-primary"
+      color: "text-primary",
     },
     {
       title: "Schedule Notifications",
       value: teamStats.pendingNotifications.toString(),
       change: "Pending updates",
       icon: MessageSquare,
-      color: "text-success"
+      color: "text-success",
     },
     {
       title: "Today's Shifts",
       value: teamStats.scheduledShifts.toString(),
       change: "Scheduled today",
       icon: Calendar,
-      color: "text-warning"
+      color: "text-warning",
     },
     {
       title: "Team Performance",
       value: `${teamStats.avgPerformance}%`,
       change: "Weekly average",
       icon: TrendingUp,
-      color: "text-success"
-    }
+      color: "text-success",
+    },
   ];
 
   if (loading) {
@@ -207,13 +213,18 @@ const Team = () => {
           <div className="flex items-center space-x-4">
             <BackButton to="/dashboard" label="Back to Dashboard" />
             <div className="h-6 w-px bg-border" />
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Team Management</h1>
-            <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">
+              Team Management
+            </h1>
+            <Badge
+              variant="outline"
+              className="bg-success/10 text-success border-success/20"
+            >
               <MessageSquare className="h-3 w-3 mr-1" />
               Real-time
             </Badge>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -226,9 +237,8 @@ const Team = () => {
             </div>
             <div className="flex space-x-2">
               <NotificationsDialog />
-              <TeamSettings userRole={userRole} />
-              <AddMemberDialog 
-                userRole={userRole} 
+              <TeamSettings />
+              <AddMemberDialog
                 onMemberAdded={fetchTeamData}
                 open={openAddMember}
                 onOpenChange={setOpenAddMember}
@@ -269,50 +279,79 @@ const Team = () => {
           })}
         </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <div className="overflow-x-auto">
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-8 lg:w-[960px] min-w-[800px]">
-            <TabsTrigger value="schedule" className="text-xs sm:text-sm">Schedule</TabsTrigger>
-            {(userRole === 'business_owner' || userRole === 'manager') && (
-              <TabsTrigger value="smart-schedule" className="text-xs sm:text-sm">Smart Builder</TabsTrigger>
-            )}
-            <TabsTrigger value="tasks" className="text-xs sm:text-sm">Tasks</TabsTrigger>
-            <TabsTrigger value="directory" className="text-xs sm:text-sm">Directory</TabsTrigger>
-            <TabsTrigger value="performance" className="text-xs sm:text-sm">Performance</TabsTrigger>
-            <TabsTrigger value="commission" className="text-xs sm:text-sm">Commission</TabsTrigger>
-            <TabsTrigger value="chat" className="text-xs sm:text-sm">Chat</TabsTrigger>
-            {(userRole === 'business_owner' || userRole === 'manager') && (
-              <TabsTrigger value="announcements" className="text-xs sm:text-sm">Announcements</TabsTrigger>
-            )}
-          </TabsList>
-        </div>
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
+          <div className="overflow-x-auto">
+            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-8 lg:w-[960px] min-w-[800px]">
+              <TabsTrigger value="schedule" className="text-xs sm:text-sm">
+                Schedule
+              </TabsTrigger>
+              {(user.role === UserRole.BusinessOwner ||
+                user.role === UserRole.Manager) && (
+                <TabsTrigger
+                  value="smart-schedule"
+                  className="text-xs sm:text-sm"
+                >
+                  Smart Builder
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="tasks" className="text-xs sm:text-sm">
+                Tasks
+              </TabsTrigger>
+              <TabsTrigger value="directory" className="text-xs sm:text-sm">
+                Directory
+              </TabsTrigger>
+              <TabsTrigger value="performance" className="text-xs sm:text-sm">
+                Performance
+              </TabsTrigger>
+              <TabsTrigger value="commission" className="text-xs sm:text-sm">
+                Commission
+              </TabsTrigger>
+              <TabsTrigger value="chat" className="text-xs sm:text-sm">
+                Chat
+              </TabsTrigger>
+              {(userRole === "business_owner" || userRole === "manager") && (
+                <TabsTrigger
+                  value="announcements"
+                  className="text-xs sm:text-sm"
+                >
+                  Announcements
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </div>
 
-        <TabsContent value="schedule" className="space-y-6">
-          {/* Business owners and managers see full schedule, employees see role-specific dashboards */}
-          {userRole === 'business_owner' || userRole === 'manager' ? (
-            <TeamSchedule userRole={userRole} />
-          ) : userPositionType === 'opener' ? (
-            <OpenerDashboard />
-          ) : userPositionType === 'upseller' ? (
-            <UpsellerDashboard />
-          ) : userPositionType === "" ? (
-            <PositionTypeSelector onPositionSet={() => window.location.reload()} />
-          ) : (
-            <TeamSchedule userRole={userRole} />
-          )}
-        </TabsContent>
-
-        {(userRole === 'business_owner' || userRole === 'manager') && (
-          <TabsContent value="smart-schedule" className="space-y-6">
-            <SmartScheduleBuilder userRole={userRole} />
+          <TabsContent value="schedule" className="space-y-6">
+            {/* Business owners and managers see full schedule, employees see role-specific dashboards */}
+            {userRole === "business_owner" || userRole === "manager" ? (
+              <TeamSchedule userRole={userRole} />
+            ) : userPositionType === "opener" ? (
+              <OpenerDashboard />
+            ) : userPositionType === "upseller" ? (
+              <UpsellerDashboard />
+            ) : userPositionType === "" ? (
+              <PositionTypeSelector
+                onPositionSet={() => window.location.reload()}
+              />
+            ) : (
+              <TeamSchedule userRole={userRole} />
+            )}
           </TabsContent>
-        )}
 
-        <TabsContent value="tasks" className="space-y-6">
-          <TaskManager userRole={userRole} />
-        </TabsContent>
+          {(userRole === "business_owner" || userRole === "manager") && (
+            <TabsContent value="smart-schedule" className="space-y-6">
+              <SmartScheduleBuilder userRole={userRole} />
+            </TabsContent>
+          )}
 
-        <TabsContent value="directory" className="space-y-6">
+          <TabsContent value="tasks" className="space-y-6">
+            <TaskManager userRole={userRole} />
+          </TabsContent>
+
+          <TabsContent value="directory" className="space-y-6">
             <TeamDirectory searchQuery={searchQuery} userRole={userRole} />
           </TabsContent>
 
@@ -329,9 +368,9 @@ const Team = () => {
               <div className="lg:col-span-3">
                 <TeamChat searchQuery={searchQuery} userRole={userRole} />
               </div>
-              {(userRole === 'business_owner' || userRole === 'manager') && (
+              {(userRole === "business_owner" || userRole === "manager") && (
                 <div className="lg:col-span-1">
-                  <PendingAnnouncementsManager 
+                  <PendingAnnouncementsManager
                     userRole={userRole}
                     onAnnouncementApproved={(announcement) => {
                       // The announcement handling is done in the TeamChat component
@@ -343,7 +382,7 @@ const Team = () => {
             </div>
           </TabsContent>
 
-          {(userRole === 'business_owner' || userRole === 'manager') && (
+          {(userRole === "business_owner" || userRole === "manager") && (
             <TabsContent value="announcements" className="space-y-6">
               <AnnouncementTemplates userRole={userRole} />
             </TabsContent>

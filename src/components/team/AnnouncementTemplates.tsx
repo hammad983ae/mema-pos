@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Edit, Trash2, DollarSign, Sparkles } from "lucide-react";
+import { Edit, Sparkles, Trash2 } from "lucide-react";
+import { UserRole } from "@/graphql";
 
 interface AnnouncementTemplate {
   id: string;
@@ -25,16 +26,15 @@ interface AnnouncementTemplate {
   is_active: boolean;
 }
 
-interface AnnouncementTemplatesProps {
-  userRole: string;
-}
+interface AnnouncementTemplatesProps {}
 
-export const AnnouncementTemplates = ({ userRole }: AnnouncementTemplatesProps) => {
+export const AnnouncementTemplates = ({}: AnnouncementTemplatesProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [templates, setTemplates] = useState<AnnouncementTemplate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingTemplate, setEditingTemplate] = useState<AnnouncementTemplate | null>(null);
+  const [editingTemplate, setEditingTemplate] =
+    useState<AnnouncementTemplate | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     min_amount: "",
@@ -47,10 +47,13 @@ export const AnnouncementTemplates = ({ userRole }: AnnouncementTemplatesProps) 
   });
 
   useEffect(() => {
-    if (user && (userRole === 'business_owner' || userRole === 'manager')) {
+    if (
+      user &&
+      (user.role === UserRole.BusinessOwner || user.role === UserRole.Manager)
+    ) {
       fetchTemplates();
     }
-  }, [user, userRole]);
+  }, [user]);
 
   const fetchTemplates = async () => {
     if (!user) return;
@@ -96,13 +99,16 @@ export const AnnouncementTemplates = ({ userRole }: AnnouncementTemplatesProps) 
         .eq("is_active", true)
         .single();
 
-      if (!membershipData) throw new Error("User not associated with any business");
+      if (!membershipData)
+        throw new Error("User not associated with any business");
 
       const templateData = {
         business_id: membershipData.business_id,
         title: formData.title,
         min_amount: parseFloat(formData.min_amount),
-        max_amount: formData.max_amount ? parseFloat(formData.max_amount) : null,
+        max_amount: formData.max_amount
+          ? parseFloat(formData.max_amount)
+          : null,
         announcement_text: formData.announcement_text,
         emoji: formData.emoji,
         custom_message: formData.custom_message,
@@ -195,7 +201,7 @@ export const AnnouncementTemplates = ({ userRole }: AnnouncementTemplatesProps) 
     });
   };
 
-  if (userRole !== 'business_owner' && userRole !== 'manager') {
+  if (user.role !== UserRole.BusinessOwner && user.role !== UserRole.Manager) {
     return null;
   }
 
@@ -244,7 +250,9 @@ export const AnnouncementTemplates = ({ userRole }: AnnouncementTemplatesProps) 
                             <h3 className="font-semibold">{template.title}</h3>
                             <p className="text-sm text-muted-foreground">
                               ${template.min_amount}
-                              {template.max_amount ? ` - $${template.max_amount}` : '+'}
+                              {template.max_amount
+                                ? ` - $${template.max_amount}`
+                                : "+"}
                             </p>
                           </div>
                         </div>
@@ -265,24 +273,32 @@ export const AnnouncementTemplates = ({ userRole }: AnnouncementTemplatesProps) 
                           </Button>
                         </div>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <div className="bg-muted/50 rounded p-3">
-                          <p className="text-sm font-medium">Announcement Text:</p>
-                          <p className="text-sm">{template.announcement_text}</p>
+                          <p className="text-sm font-medium">
+                            Announcement Text:
+                          </p>
+                          <p className="text-sm">
+                            {template.announcement_text}
+                          </p>
                         </div>
-                        
+
                         {template.custom_message && (
                           <div className="bg-muted/50 rounded p-3">
-                            <p className="text-sm font-medium">Custom Message:</p>
+                            <p className="text-sm font-medium">
+                              Custom Message:
+                            </p>
                             <p className="text-sm">{template.custom_message}</p>
                           </div>
                         )}
-                        
+
                         {template.supports_gif && template.gif_url && (
                           <div className="flex items-center gap-2">
                             <Badge variant="secondary">GIF Enabled</Badge>
-                            <span className="text-sm text-muted-foreground">{template.gif_url}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {template.gif_url}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -300,7 +316,9 @@ export const AnnouncementTemplates = ({ userRole }: AnnouncementTemplatesProps) 
                     id="title"
                     placeholder="e.g., BOOM, Great Sale, Legendary"
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
                   />
                 </div>
 
@@ -310,7 +328,9 @@ export const AnnouncementTemplates = ({ userRole }: AnnouncementTemplatesProps) 
                     id="emoji"
                     placeholder="🎉"
                     value={formData.emoji}
-                    onChange={(e) => setFormData({ ...formData, emoji: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, emoji: e.target.value })
+                    }
                   />
                 </div>
 
@@ -321,18 +341,24 @@ export const AnnouncementTemplates = ({ userRole }: AnnouncementTemplatesProps) 
                     type="number"
                     placeholder="1500"
                     value={formData.min_amount}
-                    onChange={(e) => setFormData({ ...formData, min_amount: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, min_amount: e.target.value })
+                    }
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="max_amount">Maximum Sale Amount ($) - Optional</Label>
+                  <Label htmlFor="max_amount">
+                    Maximum Sale Amount ($) - Optional
+                  </Label>
                   <Input
                     id="max_amount"
                     type="number"
                     placeholder="Leave empty for no limit"
                     value={formData.max_amount}
-                    onChange={(e) => setFormData({ ...formData, max_amount: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, max_amount: e.target.value })
+                    }
                   />
                 </div>
               </div>
@@ -343,10 +369,16 @@ export const AnnouncementTemplates = ({ userRole }: AnnouncementTemplatesProps) 
                   id="announcement_text"
                   placeholder="Use {names} for employee names and {amount} for sale amount"
                   value={formData.announcement_text}
-                  onChange={(e) => setFormData({ ...formData, announcement_text: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      announcement_text: e.target.value,
+                    })
+                  }
                 />
                 <p className="text-sm text-muted-foreground">
-                  Available placeholders: {"{names}"} (employee names), {"{amount}"} (sale amount)
+                  Available placeholders: {"{names}"} (employee names),{" "}
+                  {"{amount}"} (sale amount)
                 </p>
               </div>
 
@@ -356,7 +388,9 @@ export const AnnouncementTemplates = ({ userRole }: AnnouncementTemplatesProps) 
                   id="custom_message"
                   placeholder="e.g., Great job guys keep going!"
                   value={formData.custom_message}
-                  onChange={(e) => setFormData({ ...formData, custom_message: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, custom_message: e.target.value })
+                  }
                 />
               </div>
 
@@ -364,7 +398,9 @@ export const AnnouncementTemplates = ({ userRole }: AnnouncementTemplatesProps) 
                 <Switch
                   id="supports_gif"
                   checked={formData.supports_gif}
-                  onCheckedChange={(checked) => setFormData({ ...formData, supports_gif: checked })}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, supports_gif: checked })
+                  }
                 />
                 <Label htmlFor="supports_gif">Enable GIF Support</Label>
               </div>
@@ -376,7 +412,9 @@ export const AnnouncementTemplates = ({ userRole }: AnnouncementTemplatesProps) 
                     id="gif_url"
                     placeholder="https://giphy.com/your-gif-url"
                     value={formData.gif_url}
-                    onChange={(e) => setFormData({ ...formData, gif_url: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, gif_url: e.target.value })
+                    }
                   />
                 </div>
               )}

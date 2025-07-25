@@ -7,6 +7,7 @@ export const GET_CURRENT_USER = gql`
       email
       emailVerificationToken
       isEmailVerified
+      role
       full_name
       username
       avatar_url
@@ -29,6 +30,16 @@ export const GET_CURRENT_USER = gql`
         created_at
         updated_at
       }
+    }
+  }
+`;
+
+export const GET_BUSINESS_STATS = gql`
+  query GetBusinessStats($id: String!) {
+    getBusinessStats(id: $id) {
+      productsCount
+      storesCount
+      membersCount
     }
   }
 `;

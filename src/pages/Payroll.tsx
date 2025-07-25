@@ -11,7 +11,7 @@ import { PayrollGenerator } from "@/components/payroll/PayrollGenerator";
 import { PayrollSettings } from "@/components/payroll/PayrollSettings";
 import { PayrollHistory } from "@/components/payroll/PayrollHistory";
 import { BulkPayrollManager } from "@/components/payroll/BulkPayrollManager";
-import { 
+import {
   FileText,
   Users,
   Settings,
@@ -19,8 +19,9 @@ import {
   Download,
   Mail,
   Loader2,
-  Search
+  Search,
 } from "lucide-react";
+import { UserRole } from "@/graphql";
 
 const Payroll = () => {
   const { user } = useAuth();
@@ -33,7 +34,7 @@ const Payroll = () => {
     totalEmployees: 0,
     pendingPayrolls: 0,
     sentThisMonth: 0,
-    totalPayrollValue: 0
+    totalPayrollValue: 0,
   });
 
   useEffect(() => {
@@ -78,17 +79,19 @@ const Payroll = () => {
         .gte("created_at", `${currentMonth}-01`);
 
       const totalEmployees = teamMembers?.length || 0;
-      const pendingPayrolls = payrollData?.filter(p => p.status === 'draft').length || 0;
-      const sentThisMonth = payrollData?.filter(p => p.status === 'sent').length || 0;
-      const totalPayrollValue = payrollData?.reduce((sum, p) => sum + (p.gross_pay || 0), 0) || 0;
+      const pendingPayrolls =
+        payrollData?.filter((p) => p.status === "draft").length || 0;
+      const sentThisMonth =
+        payrollData?.filter((p) => p.status === "sent").length || 0;
+      const totalPayrollValue =
+        payrollData?.reduce((sum, p) => sum + (p.gross_pay || 0), 0) || 0;
 
       setPayrollStats({
         totalEmployees,
         pendingPayrolls,
         sentThisMonth,
-        totalPayrollValue
+        totalPayrollValue,
       });
-
     } catch (error: any) {
       console.error("Error fetching payroll data:", error);
       toast({
@@ -102,7 +105,14 @@ const Payroll = () => {
   };
 
   // Check if user has permission to access payroll
-  if (!loading && !['business_owner', 'manager', 'office'].includes(userRole)) {
+  if (
+    !loading &&
+    !(
+      user.role === UserRole.BusinessOwner ||
+      user.role === UserRole.Manager ||
+      user.role === UserRole.Office
+    )
+  ) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md mx-auto">
@@ -124,29 +134,29 @@ const Payroll = () => {
       value: payrollStats.totalEmployees.toString(),
       change: "Active team members",
       icon: Users,
-      color: "text-primary"
+      color: "text-primary",
     },
     {
       title: "Pending Payrolls",
       value: payrollStats.pendingPayrolls.toString(),
       change: "Awaiting generation",
       icon: FileText,
-      color: "text-warning"
+      color: "text-warning",
     },
     {
       title: "Sent This Month",
       value: payrollStats.sentThisMonth.toString(),
       change: "Payrolls processed",
       icon: Mail,
-      color: "text-success"
+      color: "text-success",
     },
     {
       title: "Total Value",
       value: `$${payrollStats.totalPayrollValue.toLocaleString()}`,
       change: "This month",
       icon: Download,
-      color: "text-success"
-    }
+      color: "text-success",
+    },
   ];
 
   if (loading) {
@@ -166,13 +176,18 @@ const Payroll = () => {
       <div className="border-b bg-card">
         <div className="flex flex-col sm:flex-row h-auto sm:h-16 items-start sm:items-center justify-between px-4 sm:px-6 py-4 sm:py-0 gap-4 sm:gap-0">
           <div className="flex items-center space-x-4">
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Payroll Management</h1>
-            <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">
+              Payroll Management
+            </h1>
+            <Badge
+              variant="outline"
+              className="bg-success/10 text-success border-success/20"
+            >
               <FileText className="h-3 w-3 mr-1" />
               Automated
             </Badge>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -218,35 +233,44 @@ const Payroll = () => {
           })}
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
           <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 lg:w-[600px]">
-            <TabsTrigger value="generate" className="text-xs sm:text-sm">Generate</TabsTrigger>
-            <TabsTrigger value="bulk" className="text-xs sm:text-sm">Bulk Process</TabsTrigger>
-            <TabsTrigger value="history" className="text-xs sm:text-sm">History</TabsTrigger>
-            <TabsTrigger value="settings" className="text-xs sm:text-sm">Settings</TabsTrigger>
+            <TabsTrigger value="generate" className="text-xs sm:text-sm">
+              Generate
+            </TabsTrigger>
+            <TabsTrigger value="bulk" className="text-xs sm:text-sm">
+              Bulk Process
+            </TabsTrigger>
+            <TabsTrigger value="history" className="text-xs sm:text-sm">
+              History
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="text-xs sm:text-sm">
+              Settings
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="generate" className="space-y-6">
-            <PayrollGenerator 
-              searchQuery={searchQuery} 
+            <PayrollGenerator
+              searchQuery={searchQuery}
               userRole={userRole}
               onPayrollGenerated={fetchPayrollData}
             />
           </TabsContent>
 
           <TabsContent value="bulk" className="space-y-6">
-            <BulkPayrollManager 
-              searchQuery={searchQuery} 
+            <BulkPayrollManager
+              searchQuery={searchQuery}
               userRole={userRole}
               onBulkProcessed={fetchPayrollData}
             />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6">
-            <PayrollHistory 
-              searchQuery={searchQuery} 
-              userRole={userRole}
-            />
+            <PayrollHistory searchQuery={searchQuery} userRole={userRole} />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">

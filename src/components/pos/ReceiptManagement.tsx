@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,18 +9,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { EditOrderModal } from "./EditOrderModal";
 import { ActivityLogsModal } from "./ActivityLogsModal";
-import { 
-  Search, 
-  Receipt, 
-  Edit, 
-  Activity, 
-  User, 
+import {
+  Activity,
   Calendar,
   DollarSign,
+  Edit,
+  Eye,
   Filter,
-  Eye
+  Receipt,
+  Search,
+  User,
 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { UserRole } from "@/graphql";
 
 interface Order {
   id: string;
@@ -44,14 +51,12 @@ interface Order {
   };
 }
 
-interface ReceiptManagementProps {
-  userRole?: string;
-}
+interface ReceiptManagementProps {}
 
-export const ReceiptManagement = ({ userRole }: ReceiptManagementProps) => {
+export const ReceiptManagement = ({}: ReceiptManagementProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -60,11 +65,17 @@ export const ReceiptManagement = ({ userRole }: ReceiptManagementProps) => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
-  const [selectedOrderForLogs, setSelectedOrderForLogs] = useState<string | null>(null);
+  const [selectedOrderForLogs, setSelectedOrderForLogs] = useState<
+    string | null
+  >(null);
 
   // Check permissions
-  const canEdit = userRole && ['business_owner', 'manager'].includes(userRole);
-  const canView = userRole && ['business_owner', 'manager', 'office'].includes(userRole);
+  const canEdit =
+    user.role === UserRole.BusinessOwner || user.role === UserRole.Manager;
+  const canView =
+    user.role === UserRole.BusinessOwner ||
+    user.role === UserRole.Manager ||
+    user.role === UserRole.Office;
 
   useEffect(() => {
     if (canView) {
@@ -79,7 +90,8 @@ export const ReceiptManagement = ({ userRole }: ReceiptManagementProps) => {
     try {
       let query = supabase
         .from("orders")
-        .select(`
+        .select(
+          `
           id,
           order_number,
           total,
@@ -89,7 +101,8 @@ export const ReceiptManagement = ({ userRole }: ReceiptManagementProps) => {
           user_id,
           status,
           notes
-        `)
+        `,
+        )
         .order("created_at", { ascending: false })
         .limit(100);
 
@@ -98,47 +111,53 @@ export const ReceiptManagement = ({ userRole }: ReceiptManagementProps) => {
         const startDate = new Date(selectedDate);
         const endDate = new Date(selectedDate);
         endDate.setDate(endDate.getDate() + 1);
-        
+
         query = query
           .gte("created_at", startDate.toISOString())
           .lt("created_at", endDate.toISOString());
       }
 
       // Apply status filter
-      if (selectedStatus !== 'all') {
+      if (selectedStatus !== "all") {
         query = query.eq("status", selectedStatus);
       }
 
       const { data: ordersData, error } = await query;
 
       if (error) throw error;
-      
+
       // Fetch related data separately
       const orders = ordersData || [];
-      
+
       // Get customers
-      const customerIds = [...new Set(orders.map(o => o.customer_id).filter(Boolean))];
-      const { data: customersData } = customerIds.length > 0 ? await supabase
-        .from("customers")
-        .select("id, first_name, last_name, phone, email")
-        .in("id", customerIds) : { data: null };
-      
+      const customerIds = [
+        ...new Set(orders.map((o) => o.customer_id).filter(Boolean)),
+      ];
+      const { data: customersData } =
+        customerIds.length > 0
+          ? await supabase
+              .from("customers")
+              .select("id, first_name, last_name, phone, email")
+              .in("id", customerIds)
+          : { data: null };
+
       // Get user profiles
-      const userIds = [...new Set(orders.map(o => o.user_id))];
+      const userIds = [...new Set(orders.map((o) => o.user_id))];
       const { data: profilesData } = await supabase
         .from("profiles")
         .select("user_id, full_name, email")
         .in("user_id", userIds);
-      
-      // Map related data to orders
-      const ordersWithData = orders.map(order => ({
-        ...order,
-        customers: customersData?.find(c => c.id === order.customer_id) || null,
-        profiles: profilesData?.find(p => p.user_id === order.user_id) || null
-      }));
-      
-      setOrders(ordersWithData);
 
+      // Map related data to orders
+      const ordersWithData = orders.map((order) => ({
+        ...order,
+        customers:
+          customersData?.find((c) => c.id === order.customer_id) || null,
+        profiles:
+          profilesData?.find((p) => p.user_id === order.user_id) || null,
+      }));
+
+      setOrders(ordersWithData);
     } catch (error: any) {
       console.error("Error fetching orders:", error);
       toast({
@@ -151,14 +170,21 @@ export const ReceiptManagement = ({ userRole }: ReceiptManagementProps) => {
     }
   };
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = !searchTerm || 
+  const filteredOrders = orders.filter((order) => {
+    const matchesSearch =
+      !searchTerm ||
       order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (order.customers?.first_name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (order.customers?.last_name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (order.customers?.phone?.includes(searchTerm)) ||
-      (order.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+      order.customers?.first_name
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      order.customers?.last_name
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      order.customers?.phone?.includes(searchTerm) ||
+      order.profiles?.full_name
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase());
+
     return matchesSearch;
   });
 
@@ -174,7 +200,7 @@ export const ReceiptManagement = ({ userRole }: ReceiptManagementProps) => {
 
   const getTotalSales = () => {
     return filteredOrders
-      .filter(order => order.status === 'completed')
+      .filter((order) => order.status === "completed")
       .reduce((sum, order) => sum + order.total, 0);
   };
 
@@ -220,7 +246,11 @@ export const ReceiptManagement = ({ userRole }: ReceiptManagementProps) => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                <Button variant="outline" onClick={fetchOrders} disabled={loading}>
+                <Button
+                  variant="outline"
+                  onClick={fetchOrders}
+                  disabled={loading}
+                >
                   <Search className="h-4 w-4" />
                 </Button>
               </div>
@@ -252,7 +282,11 @@ export const ReceiptManagement = ({ userRole }: ReceiptManagementProps) => {
 
             <div>
               <Label>Actions</Label>
-              <Button onClick={fetchOrders} disabled={loading} className="w-full mt-1">
+              <Button
+                onClick={fetchOrders}
+                disabled={loading}
+                className="w-full mt-1"
+              >
                 <Filter className="h-4 w-4 mr-2" />
                 Apply Filters
               </Button>
@@ -271,23 +305,27 @@ export const ReceiptManagement = ({ userRole }: ReceiptManagementProps) => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-success">${getTotalSales().toFixed(2)}</div>
+              <div className="text-2xl font-bold text-success">
+                ${getTotalSales().toFixed(2)}
+              </div>
               <div className="text-sm text-muted-foreground">Total Sales</div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="text-center">
               <div className="text-2xl font-bold">
-                {filteredOrders.filter(o => o.status === 'completed').length}
+                {filteredOrders.filter((o) => o.status === "completed").length}
               </div>
-              <div className="text-sm text-muted-foreground">Completed Orders</div>
+              <div className="text-sm text-muted-foreground">
+                Completed Orders
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -308,20 +346,31 @@ export const ReceiptManagement = ({ userRole }: ReceiptManagementProps) => {
               </div>
             ) : (
               filteredOrders.map((order) => (
-                <Card key={order.id} className="hover:shadow-md transition-shadow">
+                <Card
+                  key={order.id}
+                  className="hover:shadow-md transition-shadow"
+                >
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-start gap-4 flex-1">
                         <Receipt className="h-5 w-5 text-primary mt-1" />
-                        
+
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <span className="font-bold">{order.order_number}</span>
-                            <Badge variant={order.status === 'completed' ? 'default' : 'secondary'}>
+                            <span className="font-bold">
+                              {order.order_number}
+                            </span>
+                            <Badge
+                              variant={
+                                order.status === "completed"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                            >
                               {order.status}
                             </Badge>
                           </div>
-                          
+
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                             <div>
                               <div className="flex items-center gap-1 text-muted-foreground">
@@ -329,10 +378,9 @@ export const ReceiptManagement = ({ userRole }: ReceiptManagementProps) => {
                                 Customer
                               </div>
                               <div className="font-medium">
-                                {order.customers 
+                                {order.customers
                                   ? `${order.customers.first_name} ${order.customers.last_name}`
-                                  : "Walk-in Customer"
-                                }
+                                  : "Walk-in Customer"}
                               </div>
                               {order.customers?.phone && (
                                 <div className="text-xs text-muted-foreground">
@@ -340,33 +388,38 @@ export const ReceiptManagement = ({ userRole }: ReceiptManagementProps) => {
                                 </div>
                               )}
                             </div>
-                            
+
                             <div>
                               <div className="flex items-center gap-1 text-muted-foreground">
                                 <User className="h-3 w-3" />
                                 Salesperson
                               </div>
                               <div className="font-medium">
-                                {order.profiles?.full_name || 'Unknown'}
+                                {order.profiles?.full_name || "Unknown"}
                               </div>
                             </div>
-                            
+
                             <div>
                               <div className="flex items-center gap-1 text-muted-foreground">
                                 <Calendar className="h-3 w-3" />
                                 Date
                               </div>
                               <div className="font-medium">
-                                {new Date(order.created_at).toLocaleDateString()}
+                                {new Date(
+                                  order.created_at,
+                                ).toLocaleDateString()}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {new Date(order.created_at).toLocaleTimeString([], { 
-                                  hour: '2-digit', 
-                                  minute: '2-digit' 
-                                })}
+                                {new Date(order.created_at).toLocaleTimeString(
+                                  [],
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  },
+                                )}
                               </div>
                             </div>
-                            
+
                             <div>
                               <div className="flex items-center gap-1 text-muted-foreground">
                                 <DollarSign className="h-3 w-3" />
@@ -391,7 +444,7 @@ export const ReceiptManagement = ({ userRole }: ReceiptManagementProps) => {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        
+
                         {canEdit && (
                           <Button
                             variant="outline"

@@ -44,6 +44,14 @@ export type BusinessInput = {
   subscription_status?: InputMaybe<SubscriptionStatus>;
 };
 
+/** Business stats */
+export type BusinessStats = {
+  __typename?: 'BusinessStats';
+  membersCount: Scalars['Float']['output'];
+  productsCount: Scalars['Float']['output'];
+  storesCount: Scalars['Float']['output'];
+};
+
 export type LoginInput = {
   email: Scalars['String']['input'];
   password: Scalars['String']['input'];
@@ -111,8 +119,14 @@ export type MutationVerifyEmailArgs = {
 
 export type Query = {
   __typename?: 'Query';
+  getBusinessStats: BusinessStats;
   getCurrentUser: User;
   sayHello: Scalars['String']['output'];
+};
+
+
+export type QueryGetBusinessStatsArgs = {
+  id: Scalars['String']['input'];
 };
 
 export type RegisterInput = {

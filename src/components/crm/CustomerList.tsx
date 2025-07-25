@@ -1,38 +1,60 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { PosAuthDialog } from "@/components/auth/PosAuthDialog";
-import { 
-  Search, 
-  Plus, 
-  Filter, 
-  Star, 
+import {
   Calendar,
   DollarSign,
-  Gift,
-  MoreVertical,
-  Eye,
   Edit,
-  Phone,
+  Eye,
+  Filter,
+  Gift,
   Mail,
-  Trash2
+  MoreVertical,
+  Phone,
+  Plus,
+  Search,
+  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
+import { UserRole } from "@/graphql";
 
 interface Customer {
   id: string;
@@ -57,11 +79,11 @@ interface CustomerListProps {
   refreshTrigger?: number;
 }
 
-export const CustomerList = ({ 
-  onSelectCustomer, 
-  onEditCustomer, 
+export const CustomerList = ({
+  onSelectCustomer,
+  onEditCustomer,
   onAddCustomer,
-  refreshTrigger 
+  refreshTrigger,
 }: CustomerListProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -71,7 +93,6 @@ export const CustomerList = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("last_visit_date");
   const [filterBy, setFilterBy] = useState("all");
-  const [userRole, setUserRole] = useState<string>("");
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [authAction, setAuthAction] = useState<() => void>(() => {});
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -79,31 +100,11 @@ export const CustomerList = ({
 
   useEffect(() => {
     fetchCustomers();
-    fetchUserRole();
   }, [user, refreshTrigger]);
 
   useEffect(() => {
     filterAndSortCustomers();
   }, [customers, searchQuery, sortBy, filterBy]);
-
-  const fetchUserRole = async () => {
-    if (!user) return;
-
-    try {
-      const { data } = await supabase
-        .from("user_business_memberships")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .single();
-
-      if (data) {
-        setUserRole(data.role);
-      }
-    } catch (error) {
-      console.error('Error fetching user role:', error);
-    }
-  };
 
   const fetchCustomers = async () => {
     if (!user) return;
@@ -122,15 +123,15 @@ export const CustomerList = ({
       if (!membershipData) return;
 
       const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('business_id', membershipData.business_id)
-        .order('created_at', { ascending: false });
+        .from("customers")
+        .select("*")
+        .eq("business_id", membershipData.business_id)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setCustomers(data || []);
     } catch (error: any) {
-      console.error('Error fetching customers:', error);
+      console.error("Error fetching customers:", error);
       toast({
         title: "Error",
         description: "Failed to load customers",
@@ -146,32 +147,41 @@ export const CustomerList = ({
 
     // Apply search filter
     if (searchQuery) {
-      filtered = filtered.filter(customer => 
-        `${customer.first_name} ${customer.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        customer.phone?.includes(searchQuery)
+      filtered = filtered.filter(
+        (customer) =>
+          `${customer.first_name} ${customer.last_name}`
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          customer.phone?.includes(searchQuery),
       );
     }
 
     // Apply category filter
     switch (filterBy) {
-      case 'recent':
+      case "recent":
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        filtered = filtered.filter(customer => 
-          customer.last_visit_date && new Date(customer.last_visit_date) > thirtyDaysAgo
+        filtered = filtered.filter(
+          (customer) =>
+            customer.last_visit_date &&
+            new Date(customer.last_visit_date) > thirtyDaysAgo,
         );
         break;
-      case 'high_value':
-        filtered = filtered.filter(customer => (customer.total_spent || 0) > 500);
+      case "high_value":
+        filtered = filtered.filter(
+          (customer) => (customer.total_spent || 0) > 500,
+        );
         break;
-      case 'loyalty':
-        filtered = filtered.filter(customer => (customer.loyalty_points || 0) > 100);
+      case "loyalty":
+        filtered = filtered.filter(
+          (customer) => (customer.loyalty_points || 0) > 100,
+        );
         break;
-      case 'birthdays':
+      case "birthdays":
         const today = new Date();
         const currentMonth = today.getMonth();
-        filtered = filtered.filter(customer => {
+        filtered = filtered.filter((customer) => {
           if (!customer.date_of_birth) return false;
           const birthMonth = new Date(customer.date_of_birth).getMonth();
           return birthMonth === currentMonth;
@@ -182,18 +192,23 @@ export const CustomerList = ({
     // Apply sorting
     filtered.sort((a, b) => {
       switch (sortBy) {
-        case 'name':
-          return `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
-        case 'total_spent':
+        case "name":
+          return `${a.first_name} ${a.last_name}`.localeCompare(
+            `${b.first_name} ${b.last_name}`,
+          );
+        case "total_spent":
           return (b.total_spent || 0) - (a.total_spent || 0);
-        case 'visit_count':
+        case "visit_count":
           return (b.visit_count || 0) - (a.visit_count || 0);
-        case 'last_visit_date':
+        case "last_visit_date":
         default:
           if (!a.last_visit_date && !b.last_visit_date) return 0;
           if (!a.last_visit_date) return 1;
           if (!b.last_visit_date) return -1;
-          return new Date(b.last_visit_date).getTime() - new Date(a.last_visit_date).getTime();
+          return (
+            new Date(b.last_visit_date).getTime() -
+            new Date(a.last_visit_date).getTime()
+          );
       }
     });
 
@@ -202,7 +217,7 @@ export const CustomerList = ({
 
   const requiresAuth = (action: () => void) => {
     // If user is business owner, allow without additional auth
-    if (userRole === 'business_owner') {
+    if (user.role === UserRole.BusinessOwner) {
       action();
       return;
     }
@@ -215,9 +230,9 @@ export const CustomerList = ({
   const handleDeleteCustomer = async (customerId: string) => {
     try {
       const { error } = await supabase
-        .from('customers')
+        .from("customers")
         .delete()
-        .eq('id', customerId);
+        .eq("id", customerId);
 
       if (error) throw error;
 
@@ -229,7 +244,7 @@ export const CustomerList = ({
       // Refresh the customer list
       fetchCustomers();
     } catch (error: any) {
-      console.error('Error deleting customer:', error);
+      console.error("Error deleting customer:", error);
       toast({
         title: "Error",
         description: "Failed to delete customer",
@@ -245,19 +260,29 @@ export const CustomerList = ({
 
   const getCustomerStatus = (customer: Customer) => {
     const now = new Date();
-    const lastVisit = customer.last_visit_date ? new Date(customer.last_visit_date) : null;
-    
-    if (!lastVisit) return { status: 'new', color: 'bg-blue-500' };
-    
-    const daysSinceLastVisit = Math.floor((now.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (daysSinceLastVisit <= 30) return { status: 'active', color: 'bg-green-500' };
-    if (daysSinceLastVisit <= 90) return { status: 'regular', color: 'bg-yellow-500' };
-    return { status: 'inactive', color: 'bg-red-500' };
+    const lastVisit = customer.last_visit_date
+      ? new Date(customer.last_visit_date)
+      : null;
+
+    if (!lastVisit) return { status: "new", color: "bg-blue-500" };
+
+    const daysSinceLastVisit = Math.floor(
+      (now.getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    if (daysSinceLastVisit <= 30)
+      return { status: "active", color: "bg-green-500" };
+    if (daysSinceLastVisit <= 90)
+      return { status: "regular", color: "bg-yellow-500" };
+    return { status: "inactive", color: "bg-red-500" };
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64">Loading customers...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        Loading customers...
+      </div>
+    );
   }
 
   return (
@@ -287,7 +312,7 @@ export const CustomerList = ({
             className="pl-10"
           />
         </div>
-        
+
         <Select value={filterBy} onValueChange={setFilterBy}>
           <SelectTrigger className="w-[180px]">
             <Filter className="h-4 w-4 mr-2" />
@@ -334,18 +359,24 @@ export const CustomerList = ({
             {filteredCustomers.map((customer) => {
               const status = getCustomerStatus(customer);
               const customerName = `${customer.first_name} ${customer.last_name}`;
-              
+
               return (
-                <TableRow key={customer.id} className="cursor-pointer hover:bg-muted/50">
+                <TableRow
+                  key={customer.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                >
                   <TableCell>
                     <div className="flex items-center space-x-3">
                       <div className="relative">
                         <Avatar className="h-10 w-10">
                           <AvatarFallback>
-                            {customer.first_name?.charAt(0)}{customer.last_name?.charAt(0)}
+                            {customer.first_name?.charAt(0)}
+                            {customer.last_name?.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
-                        <div className={`absolute -bottom-1 -right-1 h-3 w-3 rounded-full ${status.color}`} />
+                        <div
+                          className={`absolute -bottom-1 -right-1 h-3 w-3 rounded-full ${status.color}`}
+                        />
                       </div>
                       <div>
                         <p className="font-medium">{customerName}</p>
@@ -399,10 +430,12 @@ export const CustomerList = ({
 
                   <TableCell>
                     <span className="text-sm">
-                      {customer.last_visit_date 
-                        ? format(new Date(customer.last_visit_date), 'MMM dd, yyyy')
-                        : 'Never'
-                      }
+                      {customer.last_visit_date
+                        ? format(
+                            new Date(customer.last_visit_date),
+                            "MMM dd, yyyy",
+                          )
+                        : "Never"}
                     </span>
                   </TableCell>
 
@@ -444,7 +477,9 @@ export const CustomerList = ({
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation();
-                              requiresAuth(() => confirmDeleteCustomer(customer.id));
+                              requiresAuth(() =>
+                                confirmDeleteCustomer(customer.id),
+                              );
                             }}
                             className="text-red-600"
                           >
@@ -496,7 +531,8 @@ export const CustomerList = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Customer</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this customer? This action cannot be undone.
+              Are you sure you want to delete this customer? This action cannot
+              be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

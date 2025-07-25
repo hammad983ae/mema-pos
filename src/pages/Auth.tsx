@@ -1,28 +1,28 @@
-import { useState, useEffect } from "react";
-import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Mail,
-  Lock,
-  User,
-  Eye,
-  EyeOff,
+  AlertCircle,
   ArrowLeft,
   Building,
   CheckCircle,
-  AlertCircle,
-  Loader2,
+  Eye,
+  EyeOff,
   KeyRound,
+  Loader2,
+  Lock,
+  Mail,
+  User,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { showSuccess } from "@/hooks/useToastMessages.tsx";
+import { UserRole } from "@/graphql";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -118,68 +118,17 @@ const Auth = () => {
 
   useEffect(() => {
     if (user) {
-      // Smart routing based on role using optimized function
-      const checkUserRoleAndRoute = async () => {
-        try {
-          // Use the new optimized function to get user context
-          const { data: context, error } = await supabase.rpc(
-            "get_user_business_context",
-          );
-
-          if (error) {
-            console.error("Error getting user context:", error);
-            // Fallback to profile check
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("position")
-              .eq("user_id", user.id)
-              .maybeSingle();
-
-            const userPosition = profile?.position;
-            if (userPosition === "Business Owner") {
-              navigate("/dashboard");
-            } else {
-              navigate("/employee");
-            }
-            return;
-          }
-
-          if (context && context.length > 0) {
-            const userRole = context[0].user_role;
-
-            // Smart routing logic
-            if (userRole === "business_owner") {
-              navigate("/dashboard");
-            } else if (userRole === "manager") {
-              navigate("/manager");
-            } else if (userRole === "office") {
-              navigate("/crm"); // Office staff access CRM/shipping
-            } else {
-              navigate("/employee");
-            }
-          } else {
-            // No business membership found, check if business owner without membership
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("position")
-              .eq("user_id", user.id)
-              .maybeSingle();
-
-            if (profile?.position === "Business Owner") {
-              navigate("/business-setup");
-            } else {
-              navigate("/employee");
-            }
-          }
-        } catch (error) {
-          console.error("Error checking user role:", error);
-          navigate("/employee"); // Fallback to employee dashboard
-        }
-      };
-
-      checkUserRoleAndRoute();
+      if (user.role === UserRole.BusinessOwner) {
+        navigate("/dashboard");
+      } else if (user.role === UserRole.Manager) {
+        navigate("/manager");
+      } else if (user.role === UserRole.Office) {
+        navigate("/crm"); // Office staff access CRM/shipping
+      } else {
+        navigate("/employee");
+      }
     }
-  }, [user, navigate]);
+  }, [user]);
 
   const validateEmployeeSignIn = () => {
     const newErrors: { [key: string]: string } = {};
