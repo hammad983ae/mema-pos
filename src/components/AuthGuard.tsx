@@ -14,16 +14,17 @@ export const AuthGuard = ({
   requireAuth = true,
   requireBusiness = false,
 }: AuthGuardProps) => {
-  const { user, loading, hasBusinessAssociation } = useAuth();
+  const { user, loading, business, hasBusinessAssociation } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
     if (loading) return;
 
+    const currentPath = location.pathname;
+
     // If auth is required but user is not authenticated
     if (requireAuth && !user) {
-      const currentPath = location.pathname;
       if (currentPath !== "/auth") {
         navigate(`/auth?redirect=${encodeURIComponent(currentPath)}`);
       }
@@ -31,8 +32,12 @@ export const AuthGuard = ({
     }
 
     // If business association is required but user doesn't have one
-    if (requireAuth && user && requireBusiness && !hasBusinessAssociation) {
-      const currentPath = location.pathname;
+    if (
+      requireAuth &&
+      user &&
+      requireBusiness &&
+      (!hasBusinessAssociation || !business?.address)
+    ) {
       if (currentPath !== "/onboarding") {
         navigate("/onboarding");
       }
@@ -54,7 +59,7 @@ export const AuthGuard = ({
     // If user has no business but trying to access protected routes, redirect to onboarding
     if (
       user &&
-      !hasBusinessAssociation &&
+      (!hasBusinessAssociation || !business?.address) &&
       requireBusiness &&
       location.pathname !== "/onboarding" &&
       location.pathname !== "/auth"

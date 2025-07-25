@@ -43,6 +43,8 @@ export const GET_OWNED_BUSINESS = gql`
     getOwnedBusiness {
       id
       name
+      email
+      phone
       address
       subscription_plan
       subscription_status

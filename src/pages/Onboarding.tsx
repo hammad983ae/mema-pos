@@ -56,7 +56,9 @@ export default function Onboarding() {
     }).then(() => {
       refreshBusinessAssociation();
       showSuccess("Your business is added successfully");
-      navigate("/dashboard");
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 500);
     });
 
     // Update user profile with full name if not set

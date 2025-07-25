@@ -36,6 +36,7 @@ const Auth = () => {
     updatePassword,
     verifyEmail,
     loading,
+    business,
   } = useAuth();
   const { toast } = useToast();
 
