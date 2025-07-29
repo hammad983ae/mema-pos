@@ -3,37 +3,50 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { LabelWithTooltip } from "@/components/ui/label-with-tooltip";
-import { 
-  Package2, 
-  AlertTriangle, 
-  Plus, 
-  Edit, 
+import {
+  Package2,
+  AlertTriangle,
+  Plus,
+  Edit,
   Trash2,
   Search,
-  Filter,
-  Download,
-  Barcode,
   TrendingUp,
   TrendingDown,
   RefreshCw,
-  Eye,
-  Settings,
-  Bell,
-  Zap,
-  ShoppingCart
+  ShoppingCart,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useMutation, useQuery } from "@apollo/client";
+import {
+  CREATE_PRODUCT,
+  GET_INVENTORY,
+  Mutation,
+  MutationCreateProductArgs,
+  Query,
+} from "@/graphql";
+import { showSuccess } from "@/hooks/useToastMessages.tsx";
 
 interface Product {
   id: string;
@@ -74,78 +87,91 @@ interface StockMovement {
   products: { name: string; sku: string };
 }
 
-export const SmartInventoryManager = () => {
+type Props = {
+  refetchStats: () => void;
+};
+
+export const SmartInventoryManager = ({ refetchStats }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  
-  const [loading, setLoading] = useState(false);
+
+  // const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [lowStockItems, setLowStockItems] = useState<InventoryItem[]>([]);
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
   const [selectedStore, setSelectedStore] = useState("all");
-  
+
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
-  const [productToDelete, setProductToDelete] = useState<InventoryItem | null>(null);
-  
+  const [productToDelete, setProductToDelete] = useState<InventoryItem | null>(
+    null,
+  );
+  const { data, loading, refetch } = useQuery<Query>(GET_INVENTORY, {
+    fetchPolicy: "network-only",
+  });
+  const [createProduct, { loading: creatingProduct }] = useMutation<
+    Mutation,
+    MutationCreateProductArgs
+  >(CREATE_PRODUCT);
+
   const [productForm, setProductForm] = useState({
-    name: '',
-    sku: '',
-    barcode: '',
-    price: '',
-    cost: '',
-    minimumPrice: '',
-    description: '',
-    image_url: '',
-    low_stock_threshold: '10',
-    max_stock_level: '',
-    initial_quantity: '0'
+    name: "",
+    sku: "",
+    barcode: "",
+    price: "",
+    cost: "",
+    minimumPrice: "",
+    description: "",
+    image_url: "",
+    low_stock_threshold: "10",
+    max_stock_level: "",
+    initial_quantity: "0",
   });
 
   const [adjustmentForm, setAdjustmentForm] = useState({
-    adjustment_type: 'manual',
-    quantity_change: '',
-    reason: '',
-    notes: ''
+    adjustment_type: "manual",
+    quantity_change: "",
+    reason: "",
+    notes: "",
   });
 
   const stockFilters = [
-    { value: 'all', label: 'All Items' },
-    { value: 'low_stock', label: 'Low Stock' },
-    { value: 'out_of_stock', label: 'Out of Stock' },
-    { value: 'in_stock', label: 'In Stock' },
-    { value: 'overstocked', label: 'Overstocked' }
+    { value: "all", label: "All Items" },
+    { value: "low_stock", label: "Low Stock" },
+    { value: "out_of_stock", label: "Out of Stock" },
+    { value: "in_stock", label: "In Stock" },
+    { value: "overstocked", label: "Overstocked" },
   ];
 
   const movementTypes = [
-    { value: 'manual', label: 'Manual Adjustment' },
-    { value: 'sale', label: 'Sale' },
-    { value: 'purchase', label: 'Purchase' },
-    { value: 'return', label: 'Return' },
-    { value: 'damage', label: 'Damage/Loss' },
-    { value: 'transfer', label: 'Store Transfer' }
+    { value: "manual", label: "Manual Adjustment" },
+    { value: "sale", label: "Sale" },
+    { value: "purchase", label: "Purchase" },
+    { value: "return", label: "Return" },
+    { value: "damage", label: "Damage/Loss" },
+    { value: "transfer", label: "Store Transfer" },
   ];
 
   useEffect(() => {
     loadInventoryData();
     loadRecentMovements();
-    
+
     // Set up real-time subscription for low stock alerts
     const inventorySubscription = supabase
-      .channel('inventory-changes')
+      .channel("inventory-changes")
       .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'inventory' },
+        "postgres_changes",
+        { event: "*", schema: "public", table: "inventory" },
         () => {
           loadInventoryData();
-        }
+        },
       )
       .subscribe();
 
@@ -156,18 +182,21 @@ export const SmartInventoryManager = () => {
 
   const loadInventoryData = async () => {
     try {
-      setLoading(true);
-      
-      const { data: userContext } = await supabase.rpc('get_user_business_context', {
-        user_uuid: user?.id
-      });
-
-      if (!userContext || userContext.length === 0) return;
+      //
+      // const { data: userContext } = await supabase.rpc(
+      //   "get_user_business_context",
+      //   {
+      //     user_uuid: user?.id,
+      //   },
+      // );
+      //
+      // if (!userContext || userContext.length === 0) return;
 
       // Load inventory with product details
       const { data: inventoryData, error } = await supabase
-        .from('inventory')
-        .select(`
+        .from("inventory")
+        .select(
+          `
           *,
           products!inner(
             id, name, sku, barcode, price, cost, 
@@ -175,35 +204,40 @@ export const SmartInventoryManager = () => {
             image_url, description
           ),
           stores!inner(name, business_id)
-        `)
-        .eq('stores.business_id', userContext[0].business_id)
-        .eq('products.is_active', true)
-        .order('name', { foreignTable: 'products', ascending: true });
+        `,
+        )
+        .eq("stores.business_id", userContext[0].business_id)
+        .eq("products.is_active", true)
+        .order("name", { foreignTable: "products", ascending: true });
 
       if (error) throw error;
 
       setInventory(inventoryData || []);
-      
+
       // Extract unique products
-      const uniqueProducts = inventoryData?.reduce((acc, item) => {
-        const product = item.products;
-        if (!acc.find(p => p.id === product.id)) {
-          acc.push(product);
-        }
-        return acc;
-      }, [] as Product[]) || [];
-      
+      const uniqueProducts =
+        inventoryData?.reduce((acc, item) => {
+          const product = item.products;
+          if (!acc.find((p) => p.id === product.id)) {
+            acc.push(product);
+          }
+          return acc;
+        }, [] as Product[]) || [];
+
       setProducts(uniqueProducts);
 
       // Identify low stock items
-      const lowStock = inventoryData?.filter(item => 
-        item.quantity_on_hand <= item.low_stock_threshold
-      ) || [];
-      
+      const lowStock =
+        inventoryData?.filter(
+          (item) => item.quantity_on_hand <= item.low_stock_threshold,
+        ) || [];
+
       setLowStockItems(lowStock);
 
       // Send notifications for critical low stock
-      const criticalItems = lowStock.filter(item => item.quantity_on_hand === 0);
+      const criticalItems = lowStock.filter(
+        (item) => item.quantity_on_hand === 0,
+      );
       if (criticalItems.length > 0) {
         toast({
           title: "Critical Stock Alert",
@@ -211,109 +245,101 @@ export const SmartInventoryManager = () => {
           variant: "destructive",
         });
       }
-
     } catch (error) {
-      console.error('Error loading inventory:', error);
+      console.error("Error loading inventory:", error);
       toast({
         title: "Error",
         description: "Failed to load inventory data",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      // setLoading(false);
     }
   };
 
   const loadRecentMovements = async () => {
     try {
-      const { data: userContext } = await supabase.rpc('get_user_business_context', {
-        user_uuid: user?.id
-      });
+      const { data: userContext } = await supabase.rpc(
+        "get_user_business_context",
+        {
+          user_uuid: user?.id,
+        },
+      );
 
       if (!userContext || userContext.length === 0) return;
 
       const { data, error } = await supabase
-        .from('inventory_movements')
-        .select(`
+        .from("inventory_movements")
+        .select(
+          `
           *,
           products!inner(name, sku),
           stores!inner(business_id)
-        `)
-        .eq('stores.business_id', userContext[0].business_id)
-        .order('created_at', { ascending: false })
+        `,
+        )
+        .eq("stores.business_id", userContext[0].business_id)
+        .order("created_at", { ascending: false })
         .limit(50);
 
       if (error) throw error;
       setMovements(data || []);
     } catch (error) {
-      console.error('Error loading movements:', error);
+      console.error("Error loading movements:", error);
     }
   };
 
-  const handleAddProduct = async () => {
-    try {
-      const { data: userContext } = await supabase.rpc('get_user_business_context', {
-        user_uuid: user?.id
-      });
+  const handleAddProduct = () => {
+    const {
+      name,
+      sku,
+      barcode,
+      price,
+      cost,
+      minimum_price,
+      description,
+      initial_quantity,
+      low_stock_threshold,
+    } = productForm;
 
-      if (!userContext || userContext.length === 0) return;
+    createProduct({
+      variables: {
+        input: {
+          name,
+          sku,
+          barcode,
+          price: parseFloat(price),
+          cost: parseFloat(cost),
+          minimum_price,
+          description,
+          is_active: true,
+        },
+        inventory: {
+          quantity_on_hand: parseInt(initial_quantity),
+          low_stock_threshold: parseInt(low_stock_threshold),
+        },
+      },
+    }).then(() => {
+      showSuccess("Success", "Product added successfully");
 
-      // Create product
-      const { data: product, error: productError } = await supabase
-        .from('products')
-        .insert({
-          name: productForm.name,
-          sku: productForm.sku,
-          barcode: productForm.barcode || null,
-          price: parseFloat(productForm.price),
-          cost: productForm.cost ? parseFloat(productForm.cost) : null,
-          minimum_price: productForm.minimumPrice ? parseFloat(productForm.minimumPrice) : null,
-          description: productForm.description || null,
-          image_url: productForm.image_url || null,
-          track_inventory: true,
-          is_active: true
-        })
-        .select()
-        .single();
+      refetch();
+      refetchStats();
 
-      if (productError) throw productError;
-
-      // Create inventory record for each store
-      const storeIds = userContext[0].store_ids;
-      const inventoryRecords = storeIds.map(storeId => ({
-        product_id: product.id,
-        store_id: storeId,
-        quantity_on_hand: parseInt(productForm.initial_quantity),
-        low_stock_threshold: parseInt(productForm.low_stock_threshold),
-        max_stock_level: productForm.max_stock_level ? parseInt(productForm.max_stock_level) : null
-      }));
-
-      const { error: inventoryError } = await supabase
-        .from('inventory')
-        .insert(inventoryRecords);
-
-      if (inventoryError) throw inventoryError;
-
-      toast({
-        title: "Success",
-        description: "Product added successfully",
+      setProductForm({
+        name: "",
+        sku: "",
+        barcode: "",
+        price: "",
+        cost: "",
+        minimumPrice: "",
+        description: "",
+        image_url: "",
+        low_stock_threshold: "10",
+        max_stock_level: "",
+        initial_quantity: "0",
       });
 
       setIsAddDialogOpen(false);
-      setProductForm({
-        name: '', sku: '', barcode: '', price: '', cost: '', minimumPrice: '',
-        description: '', image_url: '', low_stock_threshold: '10', 
-        max_stock_level: '', initial_quantity: '0'
-      });
-      
-      loadInventoryData();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add product",
-        variant: "destructive",
-      });
-    }
+    });
   };
 
   const handleDeleteProduct = async () => {
@@ -322,17 +348,17 @@ export const SmartInventoryManager = () => {
     try {
       // First delete inventory records for this product
       const { error: inventoryError } = await supabase
-        .from('inventory')
+        .from("inventory")
         .delete()
-        .eq('product_id', productToDelete.product_id);
+        .eq("product_id", productToDelete.product_id);
 
       if (inventoryError) throw inventoryError;
 
       // Then delete the product itself
       const { error: productError } = await supabase
-        .from('products')
+        .from("products")
         .delete()
-        .eq('id', productToDelete.product_id);
+        .eq("id", productToDelete.product_id);
 
       if (productError) throw productError;
 
@@ -371,18 +397,18 @@ export const SmartInventoryManager = () => {
 
       // Update inventory
       const { error: updateError } = await supabase
-        .from('inventory')
-        .update({ 
+        .from("inventory")
+        .update({
           quantity_on_hand: newQuantity,
-          last_count_date: new Date().toISOString()
+          last_count_date: new Date().toISOString(),
         })
-        .eq('id', selectedItem.id);
+        .eq("id", selectedItem.id);
 
       if (updateError) throw updateError;
 
       // Record movement
       const { error: movementError } = await supabase
-        .from('inventory_movements')
+        .from("inventory_movements")
         .insert({
           store_id: selectedItem.store_id,
           product_id: selectedItem.product_id,
@@ -391,7 +417,7 @@ export const SmartInventoryManager = () => {
           previous_quantity: selectedItem.quantity_on_hand,
           new_quantity: newQuantity,
           notes: adjustmentForm.notes || adjustmentForm.reason,
-          created_by: user?.id
+          created_by: user?.id,
         });
 
       if (movementError) throw movementError;
@@ -404,10 +430,10 @@ export const SmartInventoryManager = () => {
       setIsAdjustDialogOpen(false);
       setSelectedItem(null);
       setAdjustmentForm({
-        adjustment_type: 'manual',
-        quantity_change: '',
-        reason: '',
-        notes: ''
+        adjustment_type: "manual",
+        quantity_change: "",
+        reason: "",
+        notes: "",
       });
 
       loadInventoryData();
@@ -423,32 +449,44 @@ export const SmartInventoryManager = () => {
 
   const getStockStatus = (item: InventoryItem) => {
     if (item.quantity_on_hand === 0) {
-      return { status: 'Out of Stock', color: 'destructive', icon: AlertTriangle };
+      return {
+        status: "Out of Stock",
+        color: "destructive",
+        icon: AlertTriangle,
+      };
     } else if (item.quantity_on_hand <= item.low_stock_threshold) {
-      return { status: 'Low Stock', color: 'warning', icon: AlertTriangle };
-    } else if (item.max_stock_level && item.quantity_on_hand > item.max_stock_level) {
-      return { status: 'Overstocked', color: 'secondary', icon: TrendingUp };
+      return { status: "Low Stock", color: "warning", icon: AlertTriangle };
+    } else if (
+      item.max_stock_level &&
+      item.quantity_on_hand > item.max_stock_level
+    ) {
+      return { status: "Overstocked", color: "secondary", icon: TrendingUp };
     } else {
-      return { status: 'In Stock', color: 'default', icon: Package2 };
+      return { status: "In Stock", color: "default", icon: Package2 };
     }
   };
 
-  const filteredInventory = inventory.filter(item => {
-    const matchesSearch = 
+  const filteredInventory = inventory.filter((item) => {
+    const matchesSearch =
       item.products.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.products.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.products.barcode && item.products.barcode.toLowerCase().includes(searchQuery.toLowerCase()));
+      (item.products.barcode &&
+        item.products.barcode
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()));
 
     const matchesStockFilter = (() => {
       switch (stockFilter) {
-        case 'low_stock':
+        case "low_stock":
           return item.quantity_on_hand <= item.low_stock_threshold;
-        case 'out_of_stock':
+        case "out_of_stock":
           return item.quantity_on_hand === 0;
-        case 'in_stock':
+        case "in_stock":
           return item.quantity_on_hand > item.low_stock_threshold;
-        case 'overstocked':
-          return item.max_stock_level && item.quantity_on_hand > item.max_stock_level;
+        case "overstocked":
+          return (
+            item.max_stock_level && item.quantity_on_hand > item.max_stock_level
+          );
         default:
           return true;
       }
@@ -457,13 +495,16 @@ export const SmartInventoryManager = () => {
     return matchesSearch && matchesStockFilter;
   });
 
+  console.log(productForm);
   return (
     <div className="space-y-6">
       {/* Header with Smart Alerts */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Smart Inventory Manager</h2>
-          <p className="text-muted-foreground">Real-time stock tracking with automated alerts</p>
+          <p className="text-muted-foreground">
+            Real-time stock tracking with automated alerts
+          </p>
         </div>
         <div className="flex items-center space-x-2">
           {lowStockItems.length > 0 && (
@@ -496,13 +537,13 @@ export const SmartInventoryManager = () => {
             className="pl-10"
           />
         </div>
-        
+
         <Select value={stockFilter} onValueChange={setStockFilter}>
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Filter by stock" />
           </SelectTrigger>
           <SelectContent>
-            {stockFilters.map(filter => (
+            {stockFilters.map((filter) => (
               <SelectItem key={filter.value} value={filter.value}>
                 {filter.label}
               </SelectItem>
@@ -536,16 +577,19 @@ export const SmartInventoryManager = () => {
             {filteredInventory.map((item) => {
               const stockStatus = getStockStatus(item);
               const StatusIcon = stockStatus.icon;
-              
+
               return (
-                <Card key={item.id} className="hover:shadow-card transition-all">
+                <Card
+                  key={item.id}
+                  className="hover:shadow-card transition-all"
+                >
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div className="h-16 w-16 rounded-lg bg-muted flex items-center justify-center">
                           {item.products.image_url ? (
-                            <img 
-                              src={item.products.image_url} 
+                            <img
+                              src={item.products.image_url}
                               alt={item.products.name}
                               className="h-full w-full object-cover rounded-lg"
                             />
@@ -555,13 +599,20 @@ export const SmartInventoryManager = () => {
                         </div>
                         <div>
                           <div className="flex items-center space-x-2">
-                            <h3 className="font-medium">{item.products.name}</h3>
-                            <Badge variant={stockStatus.color as any} className="flex items-center space-x-1">
+                            <h3 className="font-medium">
+                              {item.products.name}
+                            </h3>
+                            <Badge
+                              variant={stockStatus.color as any}
+                              className="flex items-center space-x-1"
+                            >
                               <StatusIcon className="h-3 w-3" />
                               <span>{stockStatus.status}</span>
                             </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground">SKU: {item.products.sku}</p>
+                          <p className="text-sm text-muted-foreground">
+                            SKU: {item.products.sku}
+                          </p>
                           <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-1">
                             <span>Stock: {item.quantity_on_hand}</span>
                             <span>Threshold: {item.low_stock_threshold}</span>
@@ -588,8 +639,8 @@ export const SmartInventoryManager = () => {
                           <ShoppingCart className="h-4 w-4 mr-2" />
                           Reorder
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => {
                             setProductToDelete(item);
@@ -625,16 +676,24 @@ export const SmartInventoryManager = () => {
                         )}
                       </div>
                       <div>
-                        <h4 className="font-medium">{movement.products.name}</h4>
+                        <h4 className="font-medium">
+                          {movement.products.name}
+                        </h4>
                         <p className="text-sm text-muted-foreground">
-                          {movement.movement_type.replace('_', ' ').charAt(0).toUpperCase() + 
-                           movement.movement_type.slice(1).replace('_', ' ')}
+                          {movement.movement_type
+                            .replace("_", " ")
+                            .charAt(0)
+                            .toUpperCase() +
+                            movement.movement_type.slice(1).replace("_", " ")}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={`font-medium ${movement.quantity_change > 0 ? 'text-success' : 'text-destructive'}`}>
-                        {movement.quantity_change > 0 ? '+' : ''}{movement.quantity_change}
+                      <p
+                        className={`font-medium ${movement.quantity_change > 0 ? "text-success" : "text-destructive"}`}
+                      >
+                        {movement.quantity_change > 0 ? "+" : ""}
+                        {movement.quantity_change}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {new Date(movement.created_at).toLocaleDateString()}
@@ -658,7 +717,7 @@ export const SmartInventoryManager = () => {
             {lowStockItems.map((item) => {
               const stockStatus = getStockStatus(item);
               const StatusIcon = stockStatus.icon;
-              
+
               return (
                 <Card key={item.id} className="border-l-4 border-l-warning">
                   <CardContent className="p-6">
@@ -668,10 +727,13 @@ export const SmartInventoryManager = () => {
                         <div>
                           <h4 className="font-medium">{item.products.name}</h4>
                           <p className="text-sm text-muted-foreground">
-                            Current stock: {item.quantity_on_hand} / Threshold: {item.low_stock_threshold}
+                            Current stock: {item.quantity_on_hand} / Threshold:{" "}
+                            {item.low_stock_threshold}
                           </p>
                           <p className="text-sm text-warning">
-                            {item.quantity_on_hand === 0 ? 'OUT OF STOCK' : 'LOW STOCK ALERT'}
+                            {item.quantity_on_hand === 0
+                              ? "OUT OF STOCK"
+                              : "LOW STOCK ALERT"}
                           </p>
                         </div>
                       </div>
@@ -697,13 +759,15 @@ export const SmartInventoryManager = () => {
                 </Card>
               );
             })}
-            
+
             {lowStockItems.length === 0 && (
               <Card>
                 <CardContent className="p-12 text-center">
                   <Package2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="font-medium mb-2">All Stock Levels Normal</h3>
-                  <p className="text-muted-foreground">No low stock alerts at this time</p>
+                  <p className="text-muted-foreground">
+                    No low stock alerts at this time
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -723,7 +787,12 @@ export const SmartInventoryManager = () => {
                 <Label>Product Name</Label>
                 <Input
                   value={productForm.name}
-                  onChange={(e) => setProductForm(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({
+                      ...prev,
+                      name: e.target.value,
+                    }))
+                  }
                   placeholder="Product name"
                 />
               </div>
@@ -731,7 +800,9 @@ export const SmartInventoryManager = () => {
                 <Label>SKU</Label>
                 <Input
                   value={productForm.sku}
-                  onChange={(e) => setProductForm(prev => ({ ...prev, sku: e.target.value }))}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({ ...prev, sku: e.target.value }))
+                  }
                   placeholder="Product SKU"
                 />
               </div>
@@ -744,7 +815,12 @@ export const SmartInventoryManager = () => {
                   type="number"
                   step="0.01"
                   value={productForm.price}
-                  onChange={(e) => setProductForm(prev => ({ ...prev, price: e.target.value }))}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({
+                      ...prev,
+                      price: e.target.value,
+                    }))
+                  }
                   placeholder="0.00"
                 />
               </div>
@@ -754,13 +830,18 @@ export const SmartInventoryManager = () => {
                   type="number"
                   step="0.01"
                   value={productForm.cost}
-                  onChange={(e) => setProductForm(prev => ({ ...prev, cost: e.target.value }))}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({
+                      ...prev,
+                      cost: e.target.value,
+                    }))
+                  }
                   placeholder="0.00"
                 />
               </div>
               <div className="space-y-2">
-                <LabelWithTooltip 
-                  htmlFor="minimumPrice" 
+                <LabelWithTooltip
+                  htmlFor="minimumPrice"
                   tooltip="Sales Person Minimum - Sets the minimum price employees can sell this product for"
                   required
                 >
@@ -771,7 +852,12 @@ export const SmartInventoryManager = () => {
                   type="number"
                   step="0.01"
                   value={productForm.minimumPrice}
-                  onChange={(e) => setProductForm(prev => ({ ...prev, minimumPrice: e.target.value }))}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({
+                      ...prev,
+                      minimumPrice: e.target.value,
+                    }))
+                  }
                   placeholder="0.00"
                 />
               </div>
@@ -780,7 +866,12 @@ export const SmartInventoryManager = () => {
                 <Input
                   type="number"
                   value={productForm.initial_quantity}
-                  onChange={(e) => setProductForm(prev => ({ ...prev, initial_quantity: e.target.value }))}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({
+                      ...prev,
+                      initial_quantity: e.target.value,
+                    }))
+                  }
                   placeholder="0"
                 />
               </div>
@@ -792,7 +883,12 @@ export const SmartInventoryManager = () => {
                 <Input
                   type="number"
                   value={productForm.low_stock_threshold}
-                  onChange={(e) => setProductForm(prev => ({ ...prev, low_stock_threshold: e.target.value }))}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({
+                      ...prev,
+                      low_stock_threshold: e.target.value,
+                    }))
+                  }
                   placeholder="10"
                 />
               </div>
@@ -801,7 +897,12 @@ export const SmartInventoryManager = () => {
                 <Input
                   type="number"
                   value={productForm.max_stock_level}
-                  onChange={(e) => setProductForm(prev => ({ ...prev, max_stock_level: e.target.value }))}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({
+                      ...prev,
+                      max_stock_level: e.target.value,
+                    }))
+                  }
                   placeholder="100"
                 />
               </div>
@@ -809,7 +910,9 @@ export const SmartInventoryManager = () => {
 
             <ImageUpload
               value={productForm.image_url}
-              onChange={(url) => setProductForm(prev => ({ ...prev, image_url: url || '' }))}
+              onChange={(url) =>
+                setProductForm((prev) => ({ ...prev, image_url: url || "" }))
+              }
               bucket="product-images"
               path="products/"
             />
@@ -818,17 +921,25 @@ export const SmartInventoryManager = () => {
               <Label>Description</Label>
               <Textarea
                 value={productForm.description}
-                onChange={(e) => setProductForm(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) =>
+                  setProductForm((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
                 placeholder="Product description"
                 rows={3}
               />
             </div>
 
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsAddDialogOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleAddProduct}>
+              <Button onClick={handleAddProduct} loading={creatingProduct}>
                 Add Product
               </Button>
             </div>
@@ -840,13 +951,25 @@ export const SmartInventoryManager = () => {
       <Dialog open={isAdjustDialogOpen} onOpenChange={setIsAdjustDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Adjust Stock - {selectedItem?.products.name}</DialogTitle>
+            <DialogTitle>
+              Adjust Stock - {selectedItem?.products.name}
+            </DialogTitle>
           </DialogHeader>
           {selectedItem && (
             <div className="space-y-4">
               <div className="p-4 bg-muted/50 rounded-lg">
-                <p className="text-sm">Current Stock: <span className="font-medium">{selectedItem.quantity_on_hand}</span></p>
-                <p className="text-sm">Low Stock Threshold: <span className="font-medium">{selectedItem.low_stock_threshold}</span></p>
+                <p className="text-sm">
+                  Current Stock:{" "}
+                  <span className="font-medium">
+                    {selectedItem.quantity_on_hand}
+                  </span>
+                </p>
+                <p className="text-sm">
+                  Low Stock Threshold:{" "}
+                  <span className="font-medium">
+                    {selectedItem.low_stock_threshold}
+                  </span>
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -854,13 +977,18 @@ export const SmartInventoryManager = () => {
                   <Label>Adjustment Type</Label>
                   <Select
                     value={adjustmentForm.adjustment_type}
-                    onValueChange={(value) => setAdjustmentForm(prev => ({ ...prev, adjustment_type: value }))}
+                    onValueChange={(value) =>
+                      setAdjustmentForm((prev) => ({
+                        ...prev,
+                        adjustment_type: value,
+                      }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {movementTypes.map(type => (
+                      {movementTypes.map((type) => (
                         <SelectItem key={type.value} value={type.value}>
                           {type.label}
                         </SelectItem>
@@ -873,7 +1001,12 @@ export const SmartInventoryManager = () => {
                   <Input
                     type="number"
                     value={adjustmentForm.quantity_change}
-                    onChange={(e) => setAdjustmentForm(prev => ({ ...prev, quantity_change: e.target.value }))}
+                    onChange={(e) =>
+                      setAdjustmentForm((prev) => ({
+                        ...prev,
+                        quantity_change: e.target.value,
+                      }))
+                    }
                     placeholder="Enter +/- amount"
                   />
                 </div>
@@ -883,7 +1016,12 @@ export const SmartInventoryManager = () => {
                 <Label>Notes</Label>
                 <Textarea
                   value={adjustmentForm.notes}
-                  onChange={(e) => setAdjustmentForm(prev => ({ ...prev, notes: e.target.value }))}
+                  onChange={(e) =>
+                    setAdjustmentForm((prev) => ({
+                      ...prev,
+                      notes: e.target.value,
+                    }))
+                  }
                   placeholder="Reason for adjustment"
                   rows={3}
                 />
@@ -892,20 +1030,23 @@ export const SmartInventoryManager = () => {
               {adjustmentForm.quantity_change && (
                 <div className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-sm">
-                    New Stock Level: <span className="font-medium">
-                      {selectedItem.quantity_on_hand + parseInt(adjustmentForm.quantity_change || '0')}
+                    New Stock Level:{" "}
+                    <span className="font-medium">
+                      {selectedItem.quantity_on_hand +
+                        parseInt(adjustmentForm.quantity_change || "0")}
                     </span>
                   </p>
                 </div>
               )}
 
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsAdjustDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAdjustDialogOpen(false)}
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleStockAdjustment}>
-                  Update Stock
-                </Button>
+                <Button onClick={handleStockAdjustment}>Update Stock</Button>
               </div>
             </div>
           )}
@@ -925,18 +1066,26 @@ export const SmartInventoryManager = () => {
                   Are you sure you want to delete this product?
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  This action cannot be undone. All inventory records for this product will also be deleted.
+                  This action cannot be undone. All inventory records for this
+                  product will also be deleted.
                 </p>
               </div>
-              
+
               <div className="p-4 bg-muted/50 rounded-lg">
                 <h4 className="font-medium">{productToDelete.products.name}</h4>
-                <p className="text-sm text-muted-foreground">SKU: {productToDelete.products.sku}</p>
-                <p className="text-sm text-muted-foreground">Current Stock: {productToDelete.quantity_on_hand}</p>
+                <p className="text-sm text-muted-foreground">
+                  SKU: {productToDelete.products.sku}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Current Stock: {productToDelete.quantity_on_hand}
+                </p>
               </div>
 
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDeleteDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button variant="destructive" onClick={handleDeleteProduct}>

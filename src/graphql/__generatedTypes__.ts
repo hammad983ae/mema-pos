@@ -16,6 +16,11 @@ export type Scalars = {
   JSONObject: { input: any; output: any; }
 };
 
+export enum AlertLevel {
+  Critical = 'CRITICAL',
+  Low = 'LOW'
+}
+
 export type Business = {
   __typename?: 'Business';
   address?: Maybe<Scalars['String']['output']>;
@@ -52,6 +57,85 @@ export type BusinessStats = {
   storesCount: Scalars['Float']['output'];
 };
 
+export type CreateInventoryInput = {
+  /** Count timestamp (defaults to now) */
+  last_counted_at?: InputMaybe<Scalars['DateTime']['input']>;
+  low_stock_threshold?: Scalars['Int']['input'];
+  /** Product UUID */
+  productId?: InputMaybe<Scalars['ID']['input']>;
+  quantity_on_hand?: Scalars['Int']['input'];
+  quantity_reserved?: Scalars['Int']['input'];
+  reorder_point?: Scalars['Int']['input'];
+  reorder_quantity?: Scalars['Int']['input'];
+  /** Store UUID */
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type CreateProductInput = {
+  barcode?: InputMaybe<Scalars['String']['input']>;
+  /** Category UUID */
+  categoryId?: InputMaybe<Scalars['ID']['input']>;
+  cost?: Scalars['Float']['input'];
+  description?: InputMaybe<Scalars['String']['input']>;
+  image_url?: InputMaybe<Scalars['String']['input']>;
+  is_active?: InputMaybe<Scalars['Boolean']['input']>;
+  minimum_price?: Scalars['Float']['input'];
+  name: Scalars['String']['input'];
+  price?: Scalars['Float']['input'];
+  sku: Scalars['String']['input'];
+};
+
+export type Inventory = {
+  __typename?: 'Inventory';
+  created_at: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  last_counted_at: Scalars['DateTime']['output'];
+  low_stock_threshold: Scalars['Float']['output'];
+  product: Product;
+  quantity_available: Scalars['Float']['output'];
+  quantity_on_hand: Scalars['Float']['output'];
+  quantity_reserved: Scalars['Float']['output'];
+  reorder_point: Scalars['Float']['output'];
+  reorder_quantity: Scalars['Float']['output'];
+  store: Store;
+  updated_at: Scalars['DateTime']['output'];
+};
+
+export type InventoryAlert = {
+  __typename?: 'InventoryAlert';
+  alert_type: InventoryAlertType;
+  created_at: Scalars['DateTime']['output'];
+  current_quantity: Scalars['Float']['output'];
+  id: Scalars['ID']['output'];
+  is_resolved: Scalars['Boolean']['output'];
+  message?: Maybe<Scalars['String']['output']>;
+  product: Product;
+  resolved_at?: Maybe<Scalars['DateTime']['output']>;
+  resolved_by?: Maybe<User>;
+  store: Store;
+  threshold_quantity: Scalars['Float']['output'];
+};
+
+export type InventoryAlertInput = {
+  message?: InputMaybe<Scalars['String']['input']>;
+};
+
+export enum InventoryAlertType {
+  LowStock = 'LOW_STOCK',
+  OutOfStock = 'OUT_OF_STOCK',
+  Overstocked = 'OVERSTOCKED',
+  ReorderPoint = 'REORDER_POINT'
+}
+
+/** Inventory stats */
+export type InventoryStats = {
+  __typename?: 'InventoryStats';
+  lowStockItemsCount: Scalars['Float']['output'];
+  outOfStockCount: Scalars['Float']['output'];
+  productsCount: Scalars['Float']['output'];
+  totalValue: Scalars['Float']['output'];
+};
+
 export type LoginInput = {
   email: Scalars['String']['input'];
   password: Scalars['String']['input'];
@@ -63,14 +147,40 @@ export type LoginResponse = {
   user: User;
 };
 
+export type LowStockAlert = {
+  __typename?: 'LowStockAlert';
+  alert_level: AlertLevel;
+  created_at: Scalars['DateTime']['output'];
+  current_stock: Scalars['Float']['output'];
+  id: Scalars['ID']['output'];
+  min_stock: Scalars['Float']['output'];
+  product: Product;
+  product_name: Scalars['String']['output'];
+  resolved: Scalars['Boolean']['output'];
+};
+
+export type LowStockAlertInput = {
+  min_stock?: InputMaybe<Scalars['Float']['input']>;
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   createBusiness: Business;
+  createInventory: Inventory;
+  createInventoryAlert: InventoryAlert;
+  createLowStockAlert: LowStockAlert;
+  createProduct: Scalars['Boolean']['output'];
+  createProductCategory: ProductCategory;
   createStore: Store;
   createStoreSession: StoreDaySession;
   loginBusinessOwner: LoginResponse;
   registerBusinessOwner: LoginResponse;
   updateBusiness: Scalars['Boolean']['output'];
+  updateInventory: Scalars['Boolean']['output'];
+  updateInventoryAlert: Scalars['Boolean']['output'];
+  updateLowStockAlert: Scalars['Boolean']['output'];
+  updateProduct: Scalars['Boolean']['output'];
+  updateProductCategory: Scalars['Boolean']['output'];
   updateStore: Scalars['Boolean']['output'];
   verifyEmail: Scalars['Boolean']['output'];
 };
@@ -78,6 +188,32 @@ export type Mutation = {
 
 export type MutationCreateBusinessArgs = {
   input: BusinessInput;
+};
+
+
+export type MutationCreateInventoryArgs = {
+  input: CreateInventoryInput;
+};
+
+
+export type MutationCreateInventoryAlertArgs = {
+  input: InventoryAlertInput;
+};
+
+
+export type MutationCreateLowStockAlertArgs = {
+  input: LowStockAlertInput;
+};
+
+
+export type MutationCreateProductArgs = {
+  input: CreateProductInput;
+  inventory: CreateInventoryInput;
+};
+
+
+export type MutationCreateProductCategoryArgs = {
+  input: ProductCategoryInput;
 };
 
 
@@ -107,6 +243,36 @@ export type MutationUpdateBusinessArgs = {
 };
 
 
+export type MutationUpdateInventoryArgs = {
+  id: Scalars['String']['input'];
+  input: UpdateInventoryInput;
+};
+
+
+export type MutationUpdateInventoryAlertArgs = {
+  id: Scalars['String']['input'];
+  input: InventoryAlertInput;
+};
+
+
+export type MutationUpdateLowStockAlertArgs = {
+  id: Scalars['String']['input'];
+  input: LowStockAlertInput;
+};
+
+
+export type MutationUpdateProductArgs = {
+  id: Scalars['String']['input'];
+  input: UpdateProductInput;
+};
+
+
+export type MutationUpdateProductCategoryArgs = {
+  id: Scalars['String']['input'];
+  input: ProductCategoryInput;
+};
+
+
 export type MutationUpdateStoreArgs = {
   id: Scalars['String']['input'];
   input: StoreInput;
@@ -117,10 +283,42 @@ export type MutationVerifyEmailArgs = {
   token: Scalars['String']['input'];
 };
 
+export type Product = {
+  __typename?: 'Product';
+  barcode?: Maybe<Scalars['String']['output']>;
+  category?: Maybe<ProductCategory>;
+  cost: Scalars['Float']['output'];
+  created_at: Scalars['DateTime']['output'];
+  description?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  image_url?: Maybe<Scalars['String']['output']>;
+  is_active: Scalars['Boolean']['output'];
+  minimum_price: Scalars['Float']['output'];
+  name: Scalars['String']['output'];
+  price: Scalars['Float']['output'];
+  sku: Scalars['String']['output'];
+  updated_at: Scalars['DateTime']['output'];
+};
+
+export type ProductCategory = {
+  __typename?: 'ProductCategory';
+  description?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  is_active: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  products: Array<Product>;
+};
+
+export type ProductCategoryInput = {
+  name?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type Query = {
   __typename?: 'Query';
   getBusinessStats: BusinessStats;
   getCurrentUser: User;
+  getInventoryByBusiness: Array<Inventory>;
+  getInventoryStats: InventoryStats;
   sayHello: Scalars['String']['output'];
 };
 
@@ -218,6 +416,38 @@ export enum SubscriptionStatus {
   Active = 'ACTIVE',
   Inactive = 'INACTIVE'
 }
+
+export type UpdateInventoryInput = {
+  /** Inventory UUID to update */
+  id: Scalars['ID']['input'];
+  /** Count timestamp (defaults to now) */
+  last_counted_at?: InputMaybe<Scalars['DateTime']['input']>;
+  low_stock_threshold?: InputMaybe<Scalars['Int']['input']>;
+  /** Product UUID */
+  productId?: InputMaybe<Scalars['ID']['input']>;
+  quantity_on_hand?: InputMaybe<Scalars['Int']['input']>;
+  quantity_reserved?: InputMaybe<Scalars['Int']['input']>;
+  reorder_point?: InputMaybe<Scalars['Int']['input']>;
+  reorder_quantity?: InputMaybe<Scalars['Int']['input']>;
+  /** Store UUID */
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type UpdateProductInput = {
+  barcode?: InputMaybe<Scalars['String']['input']>;
+  /** Category UUID */
+  categoryId?: InputMaybe<Scalars['ID']['input']>;
+  cost?: InputMaybe<Scalars['Float']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  /** Product UUID to update */
+  id: Scalars['ID']['input'];
+  image_url?: InputMaybe<Scalars['String']['input']>;
+  is_active?: InputMaybe<Scalars['Boolean']['input']>;
+  minimum_price?: InputMaybe<Scalars['Float']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  price?: InputMaybe<Scalars['Float']['input']>;
+  sku?: InputMaybe<Scalars['String']['input']>;
+};
 
 export type User = {
   __typename?: 'User';

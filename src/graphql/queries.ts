@@ -43,3 +43,36 @@ export const GET_BUSINESS_STATS = gql`
     }
   }
 `;
+
+export const GET_INVENTORY_STATS = gql`
+  query GetInventoryStats {
+    getInventoryStats {
+      productsCount
+      lowStockItemsCount
+      outOfStockCount
+      totalValue
+    }
+  }
+`;
+
+export const GET_INVENTORY = gql`
+  query GetInventoryByBusiness {
+    getInventoryByBusiness {
+      id
+      product {
+        id
+        name
+        sku
+        barcode
+        cost
+        price
+        category {
+          id
+        }
+        image_url
+        description
+        is_active
+      }
+    }
+  }
+`;

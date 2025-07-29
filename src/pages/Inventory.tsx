@@ -1,156 +1,43 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/ui/back-button";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { ProductInventory } from "@/components/inventory/ProductInventory";
 import { StockAlerts } from "@/components/inventory/StockAlerts";
 import { SupplierManagement } from "@/components/inventory/SupplierManagement";
 import { InventoryReports } from "@/components/inventory/InventoryReports";
 import { SmartInventoryManager } from "@/components/inventory/SmartInventoryManager";
 import { PurchaseOrderManager } from "@/components/inventory/PurchaseOrderManager";
-import { 
-  Package, 
-  AlertTriangle, 
-  Search, 
-  Plus, 
-  Download, 
+import {
+  Package,
+  AlertTriangle,
+  Search,
+  Download,
   Upload,
   Truck,
   BarChart3,
   DollarSign,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
 } from "lucide-react";
-
-interface InventoryStats {
-  totalProducts: number;
-  lowStockItems: number;
-  outOfStockItems: number;
-  totalValue: number;
-}
+import { useQuery } from "@apollo/client";
+import { GET_INVENTORY_STATS, Query } from "@/graphql";
 
 const Inventory = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStore, setSelectedStore] = useState("all");
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<InventoryStats>({
-    totalProducts: 0,
-    lowStockItems: 0,
-    outOfStockItems: 0,
-    totalValue: 0
+  const {
+    data: statsData,
+    loading,
+    refetch: refetchStats,
+  } = useQuery<Query>(GET_INVENTORY_STATS, {
+    fetchPolicy: "network-only",
   });
 
-  useEffect(() => {
-    if (user) {
-      fetchInventoryStats();
-    }
-  }, [user]);
-
-  const fetchInventoryStats = async () => {
-    if (!user) return;
-
-    try {
-      setLoading(true);
-
-      // Get user's business context to filter by stores
-      const { data: membershipData } = await supabase
-        .from("user_business_memberships")
-        .select("business_id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
-
-      if (!membershipData) {
-        throw new Error("User not associated with any business");
-      }
-
-      // Fetch inventory data with product information
-      const { data: inventoryData, error: inventoryError } = await supabase
-        .from("inventory")
-        .select(`
-          *,
-          products!inner(name, price, cost, is_active),
-          stores!inner(business_id)
-        `)
-        .eq("stores.business_id", membershipData.business_id)
-        .eq("products.is_active", true);
-
-      if (inventoryError) throw inventoryError;
-
-      // Calculate stats
-      const totalProducts = inventoryData?.length || 0;
-      const lowStockItems = inventoryData?.filter(item => 
-        item.quantity_on_hand <= (item.low_stock_threshold || 10)
-      ).length || 0;
-      const outOfStockItems = inventoryData?.filter(item => 
-        item.quantity_on_hand === 0
-      ).length || 0;
-      
-      const totalValue = inventoryData?.reduce((sum, item) => {
-        const cost = item.products?.cost || item.products?.price || 0;
-        return sum + (cost * item.quantity_on_hand);
-      }, 0) || 0;
-
-      setStats({
-        totalProducts,
-        lowStockItems,
-        outOfStockItems,
-        totalValue
-      });
-
-    } catch (error: any) {
-      console.error("Error fetching inventory stats:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load inventory statistics",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const statsCards = [
-    {
-      title: "Total Products",
-      value: stats.totalProducts.toLocaleString(),
-      change: "+12",
-      icon: Package,
-      color: "text-primary"
-    },
-    {
-      title: "Low Stock Items",
-      value: stats.lowStockItems.toString(),
-      change: stats.lowStockItems > 0 ? `+${stats.lowStockItems}` : "0",
-      icon: AlertTriangle,
-      color: "text-warning"
-    },
-    {
-      title: "Out of Stock",
-      value: stats.outOfStockItems.toString(),
-      change: stats.outOfStockItems > 0 ? `${stats.outOfStockItems}` : "0",
-      icon: Package,
-      color: "text-destructive"
-    },
-    {
-      title: "Total Value",
-      value: `$${stats.totalValue.toLocaleString()}`,
-      change: "+8.2%",
-      icon: DollarSign,
-      color: "text-success"
-    }
-  ];
-
-  if (loading) {
+  if (loading || !statsData) {
     return (
       <div className="min-h-screen bg-gradient-hero p-4 flex items-center justify-center">
         <div className="text-center">
@@ -161,6 +48,43 @@ const Inventory = () => {
     );
   }
 
+  const statsCards = [
+    {
+      title: "Total Products",
+      value: statsData.getInventoryStats.productsCount.toLocaleString(),
+      change: "+12",
+      icon: Package,
+      color: "text-primary",
+    },
+    {
+      title: "Low Stock Items",
+      value: statsData.getInventoryStats.lowStockItemsCount.toString(),
+      change:
+        statsData.getInventoryStats.lowStockItemsCount > 0
+          ? `+${statsData.getInventoryStats.lowStockItemsCount}`
+          : "0",
+      icon: AlertTriangle,
+      color: "text-warning",
+    },
+    {
+      title: "Out of Stock",
+      value: statsData.getInventoryStats.outOfStockCount.toString(),
+      change:
+        statsData.getInventoryStats.outOfStockCount > 0
+          ? `${statsData.getInventoryStats.outOfStockCount}`
+          : "0",
+      icon: Package,
+      color: "text-destructive",
+    },
+    {
+      title: "Total Value",
+      value: `$${statsData.getInventoryStats.totalValue.toLocaleString()}`,
+      change: "+8.2%",
+      icon: DollarSign,
+      color: "text-success",
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-hero p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -170,9 +94,12 @@ const Inventory = () => {
             <BackButton to="/dashboard" label="Back to Dashboard" />
             <div className="h-6 w-px bg-border" />
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Inventory Management</h1>
+              <h1 className="text-3xl font-bold text-foreground">
+                Inventory Management
+              </h1>
               <p className="text-muted-foreground">
-                Track products, manage stock levels, and monitor inventory performance
+                Track products, manage stock levels, and monitor inventory
+                performance
               </p>
             </div>
           </div>
@@ -184,10 +111,6 @@ const Inventory = () => {
             <Button variant="outline" size="sm">
               <Upload className="h-4 w-4 mr-2" />
               Import
-            </Button>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
             </Button>
           </div>
         </div>
@@ -230,19 +153,27 @@ const Inventory = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                      <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        {stat.title}
+                      </p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {stat.value}
+                      </p>
                       <div className="flex items-center mt-1">
-                        {stat.change.includes('+') ? (
+                        {stat.change.includes("+") ? (
                           <TrendingUp className="h-3 w-3 text-success mr-1" />
-                        ) : stat.change.includes('-') ? (
+                        ) : stat.change.includes("-") ? (
                           <TrendingDown className="h-3 w-3 text-destructive mr-1" />
                         ) : null}
-                        <p className={`text-sm ${
-                          stat.change.includes('+') ? 'text-success' : 
-                          stat.change.includes('-') ? 'text-destructive' : 
-                          'text-muted-foreground'
-                        }`}>
+                        <p
+                          className={`text-sm ${
+                            stat.change.includes("+")
+                              ? "text-success"
+                              : stat.change.includes("-")
+                                ? "text-destructive"
+                                : "text-muted-foreground"
+                          }`}
+                        >
                           {stat.change}
                         </p>
                       </div>
@@ -281,9 +212,9 @@ const Inventory = () => {
             <TabsTrigger value="alerts" className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
               <span className="hidden sm:inline">Alerts</span>
-              {stats.lowStockItems > 0 && (
+              {statsData?.getInventoryStats?.lowStockItemsCount > 0 && (
                 <Badge variant="destructive" className="ml-1">
-                  {stats.lowStockItems}
+                  {statsData?.getInventoryStats?.lowStockItemsCount}
                 </Badge>
               )}
             </TabsTrigger>
@@ -298,7 +229,7 @@ const Inventory = () => {
           </TabsList>
 
           <TabsContent value="smart">
-            <SmartInventoryManager />
+            <SmartInventoryManager refetchStats={refetchStats} />
           </TabsContent>
 
           <TabsContent value="orders">
@@ -306,7 +237,7 @@ const Inventory = () => {
           </TabsContent>
 
           <TabsContent value="products">
-            <ProductInventory 
+            <ProductInventory
               searchQuery={searchQuery}
               selectedStore={selectedStore}
             />

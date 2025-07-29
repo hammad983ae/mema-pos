@@ -43,3 +43,12 @@ export const CREATE_STORE_SESSION = gql`
     }
   }
 `;
+
+export const CREATE_PRODUCT = gql`
+  mutation CreateProduct(
+    $input: CreateProductInput!
+    $inventory: CreateInventoryInput!
+  ) {
+    createProduct(input: $input, inventory: $inventory)
+  }
+`;
