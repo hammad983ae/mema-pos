@@ -61,6 +61,7 @@ export type CreateInventoryInput = {
   /** Count timestamp (defaults to now) */
   last_counted_at?: InputMaybe<Scalars['DateTime']['input']>;
   low_stock_threshold?: Scalars['Int']['input'];
+  max_stock_level?: Scalars['Int']['input'];
   /** Product UUID */
   productId?: InputMaybe<Scalars['ID']['input']>;
   quantity_on_hand?: Scalars['Int']['input'];
@@ -91,6 +92,7 @@ export type Inventory = {
   id: Scalars['ID']['output'];
   last_counted_at: Scalars['DateTime']['output'];
   low_stock_threshold: Scalars['Float']['output'];
+  max_stock_level: Scalars['Float']['output'];
   product: Product;
   quantity_available: Scalars['Float']['output'];
   quantity_on_hand: Scalars['Float']['output'];
@@ -423,6 +425,7 @@ export type UpdateInventoryInput = {
   /** Count timestamp (defaults to now) */
   last_counted_at?: InputMaybe<Scalars['DateTime']['input']>;
   low_stock_threshold?: InputMaybe<Scalars['Int']['input']>;
+  max_stock_level?: InputMaybe<Scalars['Int']['input']>;
   /** Product UUID */
   productId?: InputMaybe<Scalars['ID']['input']>;
   quantity_on_hand?: InputMaybe<Scalars['Int']['input']>;

@@ -42,6 +42,7 @@ import { useMutation, useQuery } from "@apollo/client";
 import {
   CREATE_PRODUCT,
   GET_INVENTORY,
+  Inventory,
   Mutation,
   MutationCreateProductArgs,
   Query,
@@ -297,6 +298,7 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
       cost,
       minimum_price,
       description,
+      max_stock_level,
       initial_quantity,
       low_stock_threshold,
     } = productForm;
@@ -316,6 +318,7 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
         inventory: {
           quantity_on_hand: parseInt(initial_quantity),
           low_stock_threshold: parseInt(low_stock_threshold),
+          max_stock_level: parseInt(max_stock_level),
         },
       },
     }).then(() => {
@@ -447,7 +450,7 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
     }
   };
 
-  const getStockStatus = (item: InventoryItem) => {
+  const getStockStatus = (item: Inventory) => {
     if (item.quantity_on_hand === 0) {
       return {
         status: "Out of Stock",
@@ -466,36 +469,37 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
     }
   };
 
-  const filteredInventory = inventory.filter((item) => {
-    const matchesSearch =
-      item.products.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.products.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.products.barcode &&
-        item.products.barcode
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()));
+  const filteredInventory =
+    data?.getInventoryByBusiness.filter((item) => {
+      const matchesSearch =
+        item.product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.product.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.product.barcode &&
+          item.product.barcode
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()));
 
-    const matchesStockFilter = (() => {
-      switch (stockFilter) {
-        case "low_stock":
-          return item.quantity_on_hand <= item.low_stock_threshold;
-        case "out_of_stock":
-          return item.quantity_on_hand === 0;
-        case "in_stock":
-          return item.quantity_on_hand > item.low_stock_threshold;
-        case "overstocked":
-          return (
-            item.max_stock_level && item.quantity_on_hand > item.max_stock_level
-          );
-        default:
-          return true;
-      }
-    })();
+      const matchesStockFilter = (() => {
+        switch (stockFilter) {
+          case "low_stock":
+            return item.quantity_on_hand <= item.low_stock_threshold;
+          case "out_of_stock":
+            return item.quantity_on_hand === 0;
+          case "in_stock":
+            return item.quantity_on_hand > item.low_stock_threshold;
+          case "overstocked":
+            return (
+              item.max_stock_level &&
+              item.quantity_on_hand > item.max_stock_level
+            );
+          default:
+            return true;
+        }
+      })();
 
-    return matchesSearch && matchesStockFilter;
-  });
+      return matchesSearch && matchesStockFilter;
+    }) ?? [];
 
-  console.log(productForm);
   return (
     <div className="space-y-6">
       {/* Header with Smart Alerts */}
@@ -551,7 +555,13 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
           </SelectContent>
         </Select>
 
-        <Button variant="outline" onClick={loadInventoryData}>
+        <Button
+          variant="outline"
+          onClick={() => {
+            refetch();
+            refetchStats();
+          }}
+        >
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
@@ -587,10 +597,10 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div className="h-16 w-16 rounded-lg bg-muted flex items-center justify-center">
-                          {item.products.image_url ? (
+                          {item.product.image_url ? (
                             <img
-                              src={item.products.image_url}
-                              alt={item.products.name}
+                              src={item.product.image_url}
+                              alt={item.product.name}
                               className="h-full w-full object-cover rounded-lg"
                             />
                           ) : (
@@ -599,9 +609,7 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
                         </div>
                         <div>
                           <div className="flex items-center space-x-2">
-                            <h3 className="font-medium">
-                              {item.products.name}
-                            </h3>
+                            <h3 className="font-medium">{item.product.name}</h3>
                             <Badge
                               variant={stockStatus.color as any}
                               className="flex items-center space-x-1"
@@ -611,14 +619,14 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            SKU: {item.products.sku}
+                            SKU: {item.product.sku}
                           </p>
                           <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-1">
                             <span>Stock: {item.quantity_on_hand}</span>
                             <span>Threshold: {item.low_stock_threshold}</span>
-                            <span>Price: ${item.products.price}</span>
-                            {item.products.cost && (
-                              <span>Cost: ${item.products.cost}</span>
+                            <span>Price: ${item.product.price}</span>
+                            {item.product.cost && (
+                              <span>Cost: ${item.product.cost}</span>
                             )}
                           </div>
                         </div>
