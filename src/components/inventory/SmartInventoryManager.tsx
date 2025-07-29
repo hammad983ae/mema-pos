@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,10 +41,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMutation, useQuery } from "@apollo/client";
 import {
   CREATE_PRODUCT,
+  DELETE_PRODUCT,
   GET_INVENTORY,
   Inventory,
   Mutation,
   MutationCreateProductArgs,
+  MutationDeleteProductArgs,
   Query,
 } from "@/graphql";
 import { showSuccess } from "@/hooks/useToastMessages.tsx";
@@ -96,11 +98,10 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [inventory, setInventory] = useState<Inventory[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
-  const [lowStockItems, setLowStockItems] = useState<InventoryItem[]>([]);
+  const [lowStockItems, setLowStockItems] = useState<Inventory[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -108,12 +109,10 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
   const [selectedStore, setSelectedStore] = useState("all");
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [showAdjustDialog, setShowAdjustDialog] = useState(false);
   const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
-  const [productToDelete, setProductToDelete] = useState<InventoryItem | null>(
-    null,
-  );
+  const [selectedItem, setSelectedItem] = useState<Inventory | null>(null);
   const { data, loading, refetch } = useQuery<Query>(GET_INVENTORY, {
     fetchPolicy: "network-only",
   });
@@ -217,8 +216,8 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
 
       // Extract unique products
       const uniqueProducts =
-        inventoryData?.reduce((acc, item) => {
-          const product = item.products;
+        data?.getInventoryByBusiness?.reduce((acc, item) => {
+          const product = item.product;
           if (!acc.find((p) => p.id === product.id)) {
             acc.push(product);
           }
@@ -229,7 +228,7 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
 
       // Identify low stock items
       const lowStock =
-        inventoryData?.filter(
+        data?.getInventoryByBusiness?.filter(
           (item) => item.quantity_on_hand <= item.low_stock_threshold,
         ) || [];
 
@@ -345,111 +344,6 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
     });
   };
 
-  const handleDeleteProduct = async () => {
-    if (!productToDelete) return;
-
-    try {
-      // First delete inventory records for this product
-      const { error: inventoryError } = await supabase
-        .from("inventory")
-        .delete()
-        .eq("product_id", productToDelete.product_id);
-
-      if (inventoryError) throw inventoryError;
-
-      // Then delete the product itself
-      const { error: productError } = await supabase
-        .from("products")
-        .delete()
-        .eq("id", productToDelete.product_id);
-
-      if (productError) throw productError;
-
-      toast({
-        title: "Success",
-        description: "Product deleted successfully",
-      });
-
-      setIsDeleteDialogOpen(false);
-      setProductToDelete(null);
-      loadInventoryData();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete product",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleStockAdjustment = async () => {
-    if (!selectedItem) return;
-
-    try {
-      const quantityChange = parseInt(adjustmentForm.quantity_change);
-      const newQuantity = selectedItem.quantity_on_hand + quantityChange;
-
-      if (newQuantity < 0) {
-        toast({
-          title: "Error",
-          description: "Adjustment would result in negative stock",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Update inventory
-      const { error: updateError } = await supabase
-        .from("inventory")
-        .update({
-          quantity_on_hand: newQuantity,
-          last_count_date: new Date().toISOString(),
-        })
-        .eq("id", selectedItem.id);
-
-      if (updateError) throw updateError;
-
-      // Record movement
-      const { error: movementError } = await supabase
-        .from("inventory_movements")
-        .insert({
-          store_id: selectedItem.store_id,
-          product_id: selectedItem.product_id,
-          movement_type: adjustmentForm.adjustment_type,
-          quantity_change: quantityChange,
-          previous_quantity: selectedItem.quantity_on_hand,
-          new_quantity: newQuantity,
-          notes: adjustmentForm.notes || adjustmentForm.reason,
-          created_by: user?.id,
-        });
-
-      if (movementError) throw movementError;
-
-      toast({
-        title: "Success",
-        description: "Stock adjustment recorded successfully",
-      });
-
-      setIsAdjustDialogOpen(false);
-      setSelectedItem(null);
-      setAdjustmentForm({
-        adjustment_type: "manual",
-        quantity_change: "",
-        reason: "",
-        notes: "",
-      });
-
-      loadInventoryData();
-      loadRecentMovements();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to record stock adjustment",
-        variant: "destructive",
-      });
-    }
-  };
-
   const getStockStatus = (item: Inventory) => {
     if (item.quantity_on_hand === 0) {
       return {
@@ -499,6 +393,72 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
 
       return matchesSearch && matchesStockFilter;
     }) ?? [];
+
+  const handleStockAdjustment = async () => {
+    // try {
+    const quantityChange = parseInt(adjustmentForm.quantity_change);
+    const newQuantity = item.quantity_on_hand + quantityChange;
+
+    //   if (newQuantity < 0) {
+    //     toast({
+    //       title: "Error",
+    //       description: "Adjustment would result in negative stock",
+    //       variant: "destructive",
+    //     });
+    //     return;
+    //   }
+    //
+    //   // Update inventory
+    //   const { error: updateError } = await supabase
+    //     .from("inventory")
+    //     .update({
+    //       quantity_on_hand: newQuantity,
+    //       last_count_date: new Date().toISOString(),
+    //     })
+    //     .eq("id", selectedItem.id);
+    //
+    //   if (updateError) throw updateError;
+    //
+    //   // Record movement
+    //   const { error: movementError } = await supabase
+    //     .from("inventory_movements")
+    //     .insert({
+    //       store_id: selectedItem.store_id,
+    //       product_id: selectedItem.product_id,
+    //       movement_type: adjustmentForm.adjustment_type,
+    //       quantity_change: quantityChange,
+    //       previous_quantity: selectedItem.quantity_on_hand,
+    //       new_quantity: newQuantity,
+    //       notes: adjustmentForm.notes || adjustmentForm.reason,
+    //       created_by: user?.id,
+    //     });
+    //
+    //   if (movementError) throw movementError;
+    //
+    //   toast({
+    //     title: "Success",
+    //     description: "Stock adjustment recorded successfully",
+    //   });
+    //
+    //   setIsAdjustDialogOpen(false);
+    //   setSelectedItem(null);
+    //   setAdjustmentForm({
+    //     adjustment_type: "manual",
+    //     quantity_change: "",
+    //     reason: "",
+    //     notes: "",
+    //   });
+    //
+    //   loadInventoryData();
+    //   loadRecentMovements();
+    // } catch (error) {
+    //   toast({
+    //     title: "Error",
+    //     description: "Failed to record stock adjustment",
+    //     variant: "destructive",
+    //   });
+    // }
+  };
 
   return (
     <div className="space-y-6">
@@ -584,87 +544,17 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
         {/* Inventory Tab */}
         <TabsContent value="inventory" className="space-y-4">
           <div className="grid gap-4">
-            {filteredInventory.map((item) => {
-              const stockStatus = getStockStatus(item);
-              const StatusIcon = stockStatus.icon;
-
-              return (
-                <Card
-                  key={item.id}
-                  className="hover:shadow-card transition-all"
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="h-16 w-16 rounded-lg bg-muted flex items-center justify-center">
-                          {item.product.image_url ? (
-                            <img
-                              src={item.product.image_url}
-                              alt={item.product.name}
-                              className="h-full w-full object-cover rounded-lg"
-                            />
-                          ) : (
-                            <Package2 className="h-8 w-8 text-muted-foreground" />
-                          )}
-                        </div>
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <h3 className="font-medium">{item.product.name}</h3>
-                            <Badge
-                              variant={stockStatus.color as any}
-                              className="flex items-center space-x-1"
-                            >
-                              <StatusIcon className="h-3 w-3" />
-                              <span>{stockStatus.status}</span>
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            SKU: {item.product.sku}
-                          </p>
-                          <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-1">
-                            <span>Stock: {item.quantity_on_hand}</span>
-                            <span>Threshold: {item.low_stock_threshold}</span>
-                            <span>Price: ${item.product.price}</span>
-                            {item.product.cost && (
-                              <span>Cost: ${item.product.cost}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedItem(item);
-                            setIsAdjustDialogOpen(true);
-                          }}
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Adjust
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          Reorder
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setProductToDelete(item);
-                            setIsDeleteDialogOpen(true);
-                          }}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+            {filteredInventory.map((item) => (
+              <InventoryItem
+                item={item}
+                getStockStatus={getStockStatus}
+                handleAdjust={() => setShowAdjustDialog(true)}
+                refetch={() => {
+                  refetch();
+                  refetchStats();
+                }}
+              />
+            ))}
           </div>
         </TabsContent>
 
@@ -733,7 +623,7 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
                       <div className="flex items-center space-x-4">
                         <StatusIcon className="h-8 w-8 text-warning" />
                         <div>
-                          <h4 className="font-medium">{item.products.name}</h4>
+                          <h4 className="font-medium">{item.product.name}</h4>
                           <p className="text-sm text-muted-foreground">
                             Current stock: {item.quantity_on_hand} / Threshold:{" "}
                             {item.low_stock_threshold}
@@ -751,7 +641,7 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
                           size="sm"
                           onClick={() => {
                             setSelectedItem(item);
-                            setIsAdjustDialogOpen(true);
+                            setShowAdjustDialog(true);
                           }}
                         >
                           <Plus className="h-4 w-4 mr-2" />
@@ -955,155 +845,247 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
         </DialogContent>
       </Dialog>
 
-      {/* Stock Adjustment Dialog */}
-      <Dialog open={isAdjustDialogOpen} onOpenChange={setIsAdjustDialogOpen}>
+      <Dialog open={showAdjustDialog} onOpenChange={setShowAdjustDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Adjust Stock - {selectedItem?.products.name}
+              Adjust Stock - {selectedItem?.product?.name}
             </DialogTitle>
           </DialogHeader>
-          {selectedItem && (
-            <div className="space-y-4">
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <p className="text-sm">
-                  Current Stock:{" "}
-                  <span className="font-medium">
-                    {selectedItem.quantity_on_hand}
-                  </span>
-                </p>
-                <p className="text-sm">
-                  Low Stock Threshold:{" "}
-                  <span className="font-medium">
-                    {selectedItem.low_stock_threshold}
-                  </span>
-                </p>
-              </div>
+          <div className="space-y-4">
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <p className="text-sm">
+                Current Stock:{" "}
+                <span className="font-medium">
+                  {selectedItem?.quantity_on_hand}
+                </span>
+              </p>
+              <p className="text-sm">
+                Low Stock Threshold:{" "}
+                <span className="font-medium">
+                  {selectedItem?.low_stock_threshold}
+                </span>
+              </p>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Adjustment Type</Label>
-                  <Select
-                    value={adjustmentForm.adjustment_type}
-                    onValueChange={(value) =>
-                      setAdjustmentForm((prev) => ({
-                        ...prev,
-                        adjustment_type: value,
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {movementTypes.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Quantity Change</Label>
-                  <Input
-                    type="number"
-                    value={adjustmentForm.quantity_change}
-                    onChange={(e) =>
-                      setAdjustmentForm((prev) => ({
-                        ...prev,
-                        quantity_change: e.target.value,
-                      }))
-                    }
-                    placeholder="Enter +/- amount"
-                  />
-                </div>
-              </div>
-
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Notes</Label>
-                <Textarea
-                  value={adjustmentForm.notes}
+                <Label>Adjustment Type</Label>
+                <Select
+                  value={adjustmentForm.adjustment_type}
+                  onValueChange={(value) =>
+                    setAdjustmentForm((prev) => ({
+                      ...prev,
+                      adjustment_type: value,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {movementTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Quantity Change</Label>
+                <Input
+                  type="number"
+                  value={adjustmentForm.quantity_change}
                   onChange={(e) =>
                     setAdjustmentForm((prev) => ({
                       ...prev,
-                      notes: e.target.value,
+                      quantity_change: e.target.value,
                     }))
                   }
-                  placeholder="Reason for adjustment"
-                  rows={3}
+                  placeholder="Enter +/- amount"
                 />
               </div>
-
-              {adjustmentForm.quantity_change && (
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm">
-                    New Stock Level:{" "}
-                    <span className="font-medium">
-                      {selectedItem.quantity_on_hand +
-                        parseInt(adjustmentForm.quantity_change || "0")}
-                    </span>
-                  </p>
-                </div>
-              )}
-
-              <div className="flex justify-end space-x-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsAdjustDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleStockAdjustment}>Update Stock</Button>
-              </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
-      {/* Delete Product Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Product</DialogTitle>
-          </DialogHeader>
-          {productToDelete && (
-            <div className="space-y-4">
-              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                <p className="text-sm text-destructive font-medium">
-                  Are you sure you want to delete this product?
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  This action cannot be undone. All inventory records for this
-                  product will also be deleted.
-                </p>
-              </div>
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Textarea
+                value={adjustmentForm.notes}
+                onChange={(e) =>
+                  setAdjustmentForm((prev) => ({
+                    ...prev,
+                    notes: e.target.value,
+                  }))
+                }
+                placeholder="Reason for adjustment"
+                rows={3}
+              />
+            </div>
 
+            {adjustmentForm.quantity_change && (
               <div className="p-4 bg-muted/50 rounded-lg">
-                <h4 className="font-medium">{productToDelete.products.name}</h4>
-                <p className="text-sm text-muted-foreground">
-                  SKU: {productToDelete.products.sku}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Current Stock: {productToDelete.quantity_on_hand}
+                <p className="text-sm">
+                  New Stock Level:{" "}
+                  <span className="font-medium">
+                    {selectedItem?.quantity_on_hand +
+                      parseInt(adjustmentForm.quantity_change || "0")}
+                  </span>
                 </p>
               </div>
+            )}
 
-              <div className="flex justify-end space-x-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsDeleteDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button variant="destructive" onClick={handleDeleteProduct}>
-                  Delete Product
-                </Button>
-              </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowAdjustDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleStockAdjustment}>Update Stock</Button>
             </div>
-          )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
   );
 };
+
+type InventoryItemProps = {
+  item: Inventory;
+  getStockStatus: (item: Inventory) => any;
+  handleAdjust: () => void;
+  refetch: () => void;
+};
+
+function InventoryItem({
+  item,
+  getStockStatus,
+  handleAdjust,
+  refetch,
+}: InventoryItemProps) {
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteProduct, { loading: deleting }] = useMutation<
+    Mutation,
+    MutationDeleteProductArgs
+  >(DELETE_PRODUCT);
+
+  const stockStatus = getStockStatus(item);
+  const StatusIcon = stockStatus.icon;
+
+  return (
+    <>
+      <Card key={item.id} className="hover:shadow-card transition-all">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="h-16 w-16 rounded-lg bg-muted flex items-center justify-center">
+                {item.product.image_url ? (
+                  <img
+                    src={item.product.image_url}
+                    alt={item.product.name}
+                    className="h-full w-full object-cover rounded-lg"
+                  />
+                ) : (
+                  <Package2 className="h-8 w-8 text-muted-foreground" />
+                )}
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h3 className="font-medium">{item.product.name}</h3>
+                  <Badge
+                    variant={stockStatus.color as any}
+                    className="flex items-center space-x-1"
+                  >
+                    <StatusIcon className="h-3 w-3" />
+                    <span>{stockStatus.status}</span>
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  SKU: {item.product.sku}
+                </p>
+                <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-1">
+                  <span>Stock: {item.quantity_on_hand}</span>
+                  <span>Threshold: {item.low_stock_threshold}</span>
+                  <span>Price: ${item.product.price}</span>
+                  {item.product.cost && <span>Cost: ${item.product.cost}</span>}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm" onClick={handleAdjust}>
+                <Edit className="h-4 w-4 mr-2" />
+                Adjust
+              </Button>
+              <Button variant="outline" size="sm">
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Reorder
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeleteDialog(true)}
+                loading={deleting}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Product</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <p className="text-sm text-destructive font-medium">
+                Are you sure you want to delete this product?
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                This action cannot be undone. All inventory records for this
+                product will also be deleted.
+              </p>
+            </div>
+
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <h4 className="font-medium">{item.product.name}</h4>
+              <p className="text-sm text-muted-foreground">
+                SKU: {item.product.sku}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Current Stock: {item.quantity_on_hand}
+              </p>
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  deleteProduct({ variables: { id: item.product.id } }).then(
+                    () => {
+                      setShowDeleteDialog(false);
+                      refetch();
+                    },
+                  );
+                }}
+              >
+                Delete Product
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

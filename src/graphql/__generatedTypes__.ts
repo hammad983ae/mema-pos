@@ -175,6 +175,7 @@ export type Mutation = {
   createProductCategory: ProductCategory;
   createStore: Store;
   createStoreSession: StoreDaySession;
+  deleteProduct: Scalars['Boolean']['output'];
   loginBusinessOwner: LoginResponse;
   registerBusinessOwner: LoginResponse;
   updateBusiness: Scalars['Boolean']['output'];
@@ -226,6 +227,11 @@ export type MutationCreateStoreArgs = {
 
 export type MutationCreateStoreSessionArgs = {
   input: StoreSessionInput;
+};
+
+
+export type MutationDeleteProductArgs = {
+  id: Scalars['String']['input'];
 };
 
 
