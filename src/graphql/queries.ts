@@ -82,3 +82,20 @@ export const GET_INVENTORY = gql`
     }
   }
 `;
+
+export const GET_SUPPLIERS = gql`
+  query GetSuppliers {
+    getSuppliers {
+      id
+      name
+      contact_person
+      email
+      phone
+      address
+      notes
+      status
+      created_at
+      updated_at
+    }
+  }
+`;

@@ -86,6 +86,16 @@ export type CreateProductInput = {
   sku: Scalars['String']['input'];
 };
 
+export type CreateSupplierInput = {
+  address?: InputMaybe<Scalars['String']['input']>;
+  contact_person?: InputMaybe<Scalars['String']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  name: Scalars['String']['input'];
+  notes?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<SupplierStatus>;
+};
+
 export type Inventory = {
   __typename?: 'Inventory';
   created_at: Scalars['DateTime']['output'];
@@ -196,7 +206,9 @@ export type Mutation = {
   createProductCategory: ProductCategory;
   createStore: Store;
   createStoreSession: StoreDaySession;
+  createSupplier: Supplier;
   deleteProduct: Scalars['Boolean']['output'];
+  deleteSupplier: Scalars['Boolean']['output'];
   loginBusinessOwner: LoginResponse;
   registerBusinessOwner: LoginResponse;
   updateBusiness: Scalars['Boolean']['output'];
@@ -206,6 +218,7 @@ export type Mutation = {
   updateProduct: Scalars['Boolean']['output'];
   updateProductCategory: Scalars['Boolean']['output'];
   updateStore: Scalars['Boolean']['output'];
+  updateSupplier: Scalars['Boolean']['output'];
   verifyEmail: Scalars['Boolean']['output'];
 };
 
@@ -251,7 +264,17 @@ export type MutationCreateStoreSessionArgs = {
 };
 
 
+export type MutationCreateSupplierArgs = {
+  input: CreateSupplierInput;
+};
+
+
 export type MutationDeleteProductArgs = {
+  id: Scalars['String']['input'];
+};
+
+
+export type MutationDeleteSupplierArgs = {
   id: Scalars['String']['input'];
 };
 
@@ -308,6 +331,11 @@ export type MutationUpdateStoreArgs = {
 };
 
 
+export type MutationUpdateSupplierArgs = {
+  input: UpdateSupplierInput;
+};
+
+
 export type MutationVerifyEmailArgs = {
   token: Scalars['String']['input'];
 };
@@ -353,6 +381,7 @@ export type Query = {
   getCurrentUser: User;
   getInventoryByBusiness: InventoryPagination;
   getInventoryStats: InventoryStats;
+  getSuppliers: Array<Supplier>;
   sayHello: Scalars['String']['output'];
 };
 
@@ -457,6 +486,25 @@ export enum SubscriptionStatus {
   Inactive = 'INACTIVE'
 }
 
+export type Supplier = {
+  __typename?: 'Supplier';
+  address?: Maybe<Scalars['String']['output']>;
+  contact_person?: Maybe<Scalars['String']['output']>;
+  created_at: Scalars['DateTime']['output'];
+  email?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  notes?: Maybe<Scalars['String']['output']>;
+  phone?: Maybe<Scalars['String']['output']>;
+  status: SupplierStatus;
+  updated_at: Scalars['DateTime']['output'];
+};
+
+export enum SupplierStatus {
+  Active = 'ACTIVE',
+  Inactive = 'INACTIVE'
+}
+
 export type UpdateInventoryInput = {
   /** Inventory UUID to update */
   id: Scalars['ID']['input'];
@@ -488,6 +536,18 @@ export type UpdateProductInput = {
   name?: InputMaybe<Scalars['String']['input']>;
   price?: InputMaybe<Scalars['Float']['input']>;
   sku?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateSupplierInput = {
+  address?: InputMaybe<Scalars['String']['input']>;
+  contact_person?: InputMaybe<Scalars['String']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  /** Supplier UUID to update */
+  id: Scalars['ID']['input'];
+  name?: InputMaybe<Scalars['String']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<SupplierStatus>;
 };
 
 export type User = {

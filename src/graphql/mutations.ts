@@ -58,3 +58,23 @@ export const DELETE_PRODUCT = gql`
     deleteProduct(id: $id)
   }
 `;
+
+export const CREATE_SUPPLIER = gql`
+  mutation CreateSupplier($input: CreateSupplierInput!) {
+    createSupplier(input: $input) {
+      id
+    }
+  }
+`;
+
+export const UPDATE_SUPPLIER = gql`
+  mutation UpdateSupplier($input: UpdateSupplierInput!) {
+    updateSupplier(input: $input)
+  }
+`;
+
+export const DELETE_SUPPLIER = gql`
+  mutation DeleteSupplier($id: String!) {
+    deleteSupplier(id: $id)
+  }
+`;
