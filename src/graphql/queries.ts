@@ -56,8 +56,8 @@ export const GET_INVENTORY_STATS = gql`
 `;
 
 export const GET_INVENTORY = gql`
-  query GetInventoryByBusiness {
-    getInventoryByBusiness {
+  query GetInventoryByBusiness($filters: InventoryFilterInput) {
+    getInventoryByBusiness(filters: $filters) {
       id
       product {
         id

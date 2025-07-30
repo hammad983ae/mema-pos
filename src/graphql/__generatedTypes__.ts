@@ -90,6 +90,9 @@ export type Inventory = {
   __typename?: 'Inventory';
   created_at: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
+  is_low_stock: Scalars['Boolean']['output'];
+  is_out_of_stock: Scalars['Boolean']['output'];
+  is_overstocked: Scalars['Boolean']['output'];
   last_counted_at: Scalars['DateTime']['output'];
   low_stock_threshold: Scalars['Float']['output'];
   max_stock_level: Scalars['Float']['output'];
@@ -129,6 +132,11 @@ export enum InventoryAlertType {
   ReorderPoint = 'REORDER_POINT'
 }
 
+export type InventoryFilterInput = {
+  search?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<InventoryStockStatus>;
+};
+
 /** Inventory stats */
 export type InventoryStats = {
   __typename?: 'InventoryStats';
@@ -137,6 +145,13 @@ export type InventoryStats = {
   productsCount: Scalars['Float']['output'];
   totalValue: Scalars['Float']['output'];
 };
+
+export enum InventoryStockStatus {
+  InStock = 'IN_STOCK',
+  LowStock = 'LOW_STOCK',
+  OutOfStock = 'OUT_OF_STOCK',
+  Overstocked = 'OVERSTOCKED'
+}
 
 export type LoginInput = {
   email: Scalars['String']['input'];
@@ -333,6 +348,11 @@ export type Query = {
 
 export type QueryGetBusinessStatsArgs = {
   id: Scalars['String']['input'];
+};
+
+
+export type QueryGetInventoryByBusinessArgs = {
+  filters?: InputMaybe<InventoryFilterInput>;
 };
 
 export type RegisterInput = {

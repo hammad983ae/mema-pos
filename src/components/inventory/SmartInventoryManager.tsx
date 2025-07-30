@@ -44,12 +44,15 @@ import {
   DELETE_PRODUCT,
   GET_INVENTORY,
   Inventory,
+  InventoryStockStatus,
   Mutation,
   MutationCreateProductArgs,
   MutationDeleteProductArgs,
   Query,
+  QueryGetInventoryByBusinessArgs,
 } from "@/graphql";
 import { showSuccess } from "@/hooks/useToastMessages.tsx";
+import { useDebounce } from "@/hooks/useDebounce.ts";
 
 interface Product {
   id: string;
@@ -94,6 +97,14 @@ type Props = {
   refetchStats: () => void;
 };
 
+const stockFilters = [
+  { label: "All Items", value: "all" },
+  { label: "Low Stock", value: InventoryStockStatus.LowStock },
+  { label: "Out of Stock", value: InventoryStockStatus.OutOfStock },
+  { label: "In Stock", value: InventoryStockStatus.InStock },
+  { label: "Overstocked", value: InventoryStockStatus.Overstocked },
+];
+
 export const SmartInventoryManager = ({ refetchStats }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -104,18 +115,30 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
   const [lowStockItems, setLowStockItems] = useState<Inventory[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [stockFilter, setStockFilter] = useState("all");
+  const [stockFilter, setStockFilter] = useState<"all" | InventoryStockStatus>(
+    "all",
+  );
   const [selectedStore, setSelectedStore] = useState("all");
+  const debouncedSearch = useDebounce(searchQuery, 500);
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [showAdjustDialog, setShowAdjustDialog] = useState(false);
   const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Inventory | null>(null);
-  const { data, loading, refetch } = useQuery<Query>(GET_INVENTORY, {
+  const { data, loading, refetch } = useQuery<
+    Query,
+    QueryGetInventoryByBusinessArgs
+  >(GET_INVENTORY, {
     fetchPolicy: "network-only",
+    variables: {
+      filters: {
+        search: debouncedSearch,
+        status: stockFilter === "all" ? null : stockFilter,
+      },
+    },
   });
+
   const [createProduct, { loading: creatingProduct }] = useMutation<
     Mutation,
     MutationCreateProductArgs
@@ -141,14 +164,6 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
     reason: "",
     notes: "",
   });
-
-  const stockFilters = [
-    { value: "all", label: "All Items" },
-    { value: "low_stock", label: "Low Stock" },
-    { value: "out_of_stock", label: "Out of Stock" },
-    { value: "in_stock", label: "In Stock" },
-    { value: "overstocked", label: "Overstocked" },
-  ];
 
   const movementTypes = [
     { value: "manual", label: "Manual Adjustment" },
