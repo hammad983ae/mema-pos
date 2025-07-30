@@ -56,23 +56,29 @@ export const GET_INVENTORY_STATS = gql`
 `;
 
 export const GET_INVENTORY = gql`
-  query GetInventoryByBusiness($filters: InventoryFilterInput) {
-    getInventoryByBusiness(filters: $filters) {
-      id
-      product {
+  query GetInventoryByBusiness(
+    $pagination: PaginationInput!
+    $filters: InventoryFilterInput
+  ) {
+    getInventoryByBusiness(pagination: $pagination, filters: $filters) {
+      data {
         id
-        name
-        sku
-        barcode
-        cost
-        price
-        category {
+        product {
           id
+          name
+          sku
+          barcode
+          cost
+          price
+          category {
+            id
+          }
+          image_url
+          description
+          is_active
         }
-        image_url
-        description
-        is_active
       }
+      count
     }
   }
 `;

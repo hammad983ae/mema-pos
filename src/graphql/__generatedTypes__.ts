@@ -137,6 +137,12 @@ export type InventoryFilterInput = {
   status?: InputMaybe<InventoryStockStatus>;
 };
 
+export type InventoryPagination = {
+  __typename?: 'InventoryPagination';
+  count: Scalars['Int']['output'];
+  data: Array<Inventory>;
+};
+
 /** Inventory stats */
 export type InventoryStats = {
   __typename?: 'InventoryStats';
@@ -306,6 +312,11 @@ export type MutationVerifyEmailArgs = {
   token: Scalars['String']['input'];
 };
 
+export type PaginationInput = {
+  page?: InputMaybe<Scalars['Float']['input']>;
+  take?: InputMaybe<Scalars['Float']['input']>;
+};
+
 export type Product = {
   __typename?: 'Product';
   barcode?: Maybe<Scalars['String']['output']>;
@@ -340,7 +351,7 @@ export type Query = {
   __typename?: 'Query';
   getBusinessStats: BusinessStats;
   getCurrentUser: User;
-  getInventoryByBusiness: Array<Inventory>;
+  getInventoryByBusiness: InventoryPagination;
   getInventoryStats: InventoryStats;
   sayHello: Scalars['String']['output'];
 };
@@ -353,6 +364,7 @@ export type QueryGetBusinessStatsArgs = {
 
 export type QueryGetInventoryByBusinessArgs = {
   filters?: InputMaybe<InventoryFilterInput>;
+  pagination: PaginationInput;
 };
 
 export type RegisterInput = {

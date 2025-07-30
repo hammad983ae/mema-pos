@@ -53,6 +53,7 @@ import {
 } from "@/graphql";
 import { showSuccess } from "@/hooks/useToastMessages.tsx";
 import { useDebounce } from "@/hooks/useDebounce.ts";
+import Pagination from "@/components/ui/pagination.tsx";
 
 interface Product {
   id: string;
@@ -115,6 +116,7 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
   const [lowStockItems, setLowStockItems] = useState<Inventory[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState<number>(1);
   const [stockFilter, setStockFilter] = useState<"all" | InventoryStockStatus>(
     "all",
   );
@@ -132,6 +134,7 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
   >(GET_INVENTORY, {
     fetchPolicy: "network-only",
     variables: {
+      pagination: { take: 10, page },
       filters: {
         search: debouncedSearch,
         status: stockFilter === "all" ? null : stockFilter,
@@ -231,7 +234,7 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
 
       // Extract unique products
       const uniqueProducts =
-        data?.getInventoryByBusiness?.reduce((acc, item) => {
+        data?.getInventoryByBusiness?.data.reduce((acc, item) => {
           const product = item.product;
           if (!acc.find((p) => p.id === product.id)) {
             acc.push(product);
@@ -243,7 +246,7 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
 
       // Identify low stock items
       const lowStock =
-        data?.getInventoryByBusiness?.filter(
+        data?.getInventoryByBusiness?.data.filter(
           (item) => item.quantity_on_hand <= item.low_stock_threshold,
         ) || [];
 
@@ -379,7 +382,7 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
   };
 
   const filteredInventory =
-    data?.getInventoryByBusiness.filter((item) => {
+    data?.getInventoryByBusiness?.data.filter((item) => {
       const matchesSearch =
         item.product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.product.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -559,7 +562,7 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
         {/* Inventory Tab */}
         <TabsContent value="inventory" className="space-y-4">
           <div className="grid gap-4">
-            {filteredInventory.map((item) => (
+            {data?.getInventoryByBusiness?.data.map((item) => (
               <InventoryItem
                 item={item}
                 getStockStatus={getStockStatus}
@@ -570,6 +573,12 @@ export const SmartInventoryManager = ({ refetchStats }: Props) => {
                 }}
               />
             ))}
+
+            <Pagination
+              count={data?.getInventoryByBusiness?.count}
+              page={page}
+              setPage={setPage}
+            />
           </div>
         </TabsContent>
 
