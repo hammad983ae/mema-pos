@@ -89,7 +89,6 @@ export const SupplierManagement = () => {
 
     promise.then(() => {
       showSuccess(
-        "Success",
         `Supplier ${editingSupplier ? "updated" : "created"} successfully`,
       );
 
@@ -126,7 +125,7 @@ export const SupplierManagement = () => {
     if (!confirm("Are you sure you want to delete this supplier?")) return;
 
     deleteSupplier({ variables: { id: supplierId } }).then(() => {
-      showSuccess("Success", "Supplier deleted successfully");
+      showSuccess("Supplier deleted successfully");
       refetch();
     });
   };

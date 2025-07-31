@@ -7,11 +7,10 @@ interface ToastOptions {
 }
 
 export const showSuccess = (
-  title?: string | null,
   description?: string | null,
   options?: ToastOptions,
 ) => {
-  toast.success(title, {
+  toast.success("Success", {
     description,
     duration: options?.duration || 3000,
     icon: (

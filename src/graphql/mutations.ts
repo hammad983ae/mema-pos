@@ -59,6 +59,20 @@ export const DELETE_PRODUCT = gql`
   }
 `;
 
+export const UPDATE_INVENTORY = gql`
+  mutation UpdateInventory($input: UpdateInventoryInput!) {
+    updateInventory(input: $input)
+  }
+`;
+
+export const CREATE_INVENTORY_MOVEMENT = gql`
+  mutation CreateInventoryMovement($input: CreateInventoryMovementInput!) {
+    createInventoryMovement(input: $input) {
+      id
+    }
+  }
+`;
+
 export const CREATE_SUPPLIER = gql`
   mutation CreateSupplier($input: CreateSupplierInput!) {
     createSupplier(input: $input) {

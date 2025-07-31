@@ -155,8 +155,7 @@ export const useAuth = () => {
       onSuccess?.();
 
       showSuccess(
-        "Account created!",
-        "Please check your email to verify your account.",
+        "Account created! Please check your email to verify your account.",
       );
     });
   };
@@ -176,7 +175,7 @@ export const useAuth = () => {
         res.data.loginBusinessOwner.access_token,
       );
 
-      showSuccess("Welcome back!", "You have successfully signed in.");
+      showSuccess("Welcome back!");
 
       setTimeout(() => {
         fetchCurrentUser();

@@ -72,6 +72,20 @@ export type CreateInventoryInput = {
   storeId?: InputMaybe<Scalars['ID']['input']>;
 };
 
+export type CreateInventoryMovementInput = {
+  /** User UUID who performs the movement */
+  createdById: Scalars['ID']['input'];
+  movement_type: MovementType;
+  new_quantity?: InputMaybe<Scalars['Int']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  previous_quantity?: InputMaybe<Scalars['Int']['input']>;
+  productId: Scalars['ID']['input'];
+  quantity_change: Scalars['Int']['input'];
+  reference_id?: InputMaybe<Scalars['String']['input']>;
+  reference_type?: InputMaybe<ReferenceType>;
+  storeId: Scalars['ID']['input'];
+};
+
 export type CreateProductInput = {
   barcode?: InputMaybe<Scalars['String']['input']>;
   /** Category UUID */
@@ -147,6 +161,29 @@ export type InventoryFilterInput = {
   status?: InputMaybe<InventoryStockStatus>;
 };
 
+export type InventoryMovement = {
+  __typename?: 'InventoryMovement';
+  created_at: Scalars['DateTime']['output'];
+  created_by: User;
+  id: Scalars['ID']['output'];
+  movement_type: MovementType;
+  new_quantity: Scalars['Int']['output'];
+  notes?: Maybe<Scalars['String']['output']>;
+  previous_quantity: Scalars['Int']['output'];
+  product: Product;
+  quantity_change: Scalars['Int']['output'];
+  reference_id?: Maybe<Scalars['String']['output']>;
+  reference_type?: Maybe<ReferenceType>;
+  store: Store;
+  updated_at: Scalars['DateTime']['output'];
+};
+
+export type InventoryMovementPagination = {
+  __typename?: 'InventoryMovementPagination';
+  count: Scalars['Int']['output'];
+  data: Array<InventoryMovement>;
+};
+
 export type InventoryPagination = {
   __typename?: 'InventoryPagination';
   count: Scalars['Int']['output'];
@@ -196,11 +233,23 @@ export type LowStockAlertInput = {
   min_stock?: InputMaybe<Scalars['Float']['input']>;
 };
 
+export enum MovementType {
+  Adjustment = 'ADJUSTMENT',
+  Damage = 'DAMAGE',
+  Purchase = 'PURCHASE',
+  Receive = 'RECEIVE',
+  Return = 'RETURN',
+  Sale = 'SALE',
+  TransferIn = 'TRANSFER_IN',
+  TransferOut = 'TRANSFER_OUT'
+}
+
 export type Mutation = {
   __typename?: 'Mutation';
   createBusiness: Business;
   createInventory: Inventory;
   createInventoryAlert: InventoryAlert;
+  createInventoryMovement: InventoryMovement;
   createLowStockAlert: LowStockAlert;
   createProduct: Scalars['Boolean']['output'];
   createProductCategory: ProductCategory;
@@ -214,6 +263,7 @@ export type Mutation = {
   updateBusiness: Scalars['Boolean']['output'];
   updateInventory: Scalars['Boolean']['output'];
   updateInventoryAlert: Scalars['Boolean']['output'];
+  updateInventoryMovement: Scalars['Boolean']['output'];
   updateLowStockAlert: Scalars['Boolean']['output'];
   updateProduct: Scalars['Boolean']['output'];
   updateProductCategory: Scalars['Boolean']['output'];
@@ -235,6 +285,11 @@ export type MutationCreateInventoryArgs = {
 
 export type MutationCreateInventoryAlertArgs = {
   input: InventoryAlertInput;
+};
+
+
+export type MutationCreateInventoryMovementArgs = {
+  input: CreateInventoryMovementInput;
 };
 
 
@@ -296,7 +351,6 @@ export type MutationUpdateBusinessArgs = {
 
 
 export type MutationUpdateInventoryArgs = {
-  id: Scalars['String']['input'];
   input: UpdateInventoryInput;
 };
 
@@ -304,6 +358,11 @@ export type MutationUpdateInventoryArgs = {
 export type MutationUpdateInventoryAlertArgs = {
   id: Scalars['String']['input'];
   input: InventoryAlertInput;
+};
+
+
+export type MutationUpdateInventoryMovementArgs = {
+  input: UpdateInventoryMovementInput;
 };
 
 
@@ -381,6 +440,8 @@ export type Query = {
   getCurrentUser: User;
   getInventoryByBusiness: InventoryPagination;
   getInventoryStats: InventoryStats;
+  getLowStockInventoryByBusiness: InventoryPagination;
+  getMovementsByBusiness: InventoryMovementPagination;
   getSuppliers: Array<Supplier>;
   sayHello: Scalars['String']['output'];
 };
@@ -395,6 +456,25 @@ export type QueryGetInventoryByBusinessArgs = {
   filters?: InputMaybe<InventoryFilterInput>;
   pagination: PaginationInput;
 };
+
+
+export type QueryGetLowStockInventoryByBusinessArgs = {
+  filters?: InputMaybe<InventoryFilterInput>;
+  pagination: PaginationInput;
+};
+
+
+export type QueryGetMovementsByBusinessArgs = {
+  pagination: PaginationInput;
+};
+
+export enum ReferenceType {
+  Adjustment = 'ADJUSTMENT',
+  Order = 'ORDER',
+  PurchaseOrder = 'PURCHASE_ORDER',
+  Return = 'RETURN',
+  Transfer = 'TRANSFER'
+}
 
 export type RegisterInput = {
   business_name: Scalars['String']['input'];
@@ -519,6 +599,21 @@ export type UpdateInventoryInput = {
   reorder_point?: InputMaybe<Scalars['Int']['input']>;
   reorder_quantity?: InputMaybe<Scalars['Int']['input']>;
   /** Store UUID */
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type UpdateInventoryMovementInput = {
+  /** User UUID who performs the movement */
+  createdById?: InputMaybe<Scalars['ID']['input']>;
+  id: Scalars['ID']['input'];
+  movement_type?: InputMaybe<MovementType>;
+  new_quantity?: InputMaybe<Scalars['Int']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  previous_quantity?: InputMaybe<Scalars['Int']['input']>;
+  productId?: InputMaybe<Scalars['ID']['input']>;
+  quantity_change?: InputMaybe<Scalars['Int']['input']>;
+  reference_id?: InputMaybe<Scalars['String']['input']>;
+  reference_type?: InputMaybe<ReferenceType>;
   storeId?: InputMaybe<Scalars['ID']['input']>;
 };
 

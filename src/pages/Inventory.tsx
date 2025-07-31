@@ -212,9 +212,12 @@ const Inventory = () => {
             <TabsTrigger value="alerts" className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
               <span className="hidden sm:inline">Alerts</span>
-              {statsData?.getInventoryStats?.lowStockItemsCount > 0 && (
+              {statsData?.getInventoryStats?.lowStockItemsCount +
+                statsData?.getInventoryStats?.outOfStockCount >
+                0 && (
                 <Badge variant="destructive" className="ml-1">
-                  {statsData?.getInventoryStats?.lowStockItemsCount}
+                  {statsData?.getInventoryStats?.lowStockItemsCount +
+                    statsData?.getInventoryStats?.outOfStockCount}
                 </Badge>
               )}
             </TabsTrigger>
@@ -229,7 +232,13 @@ const Inventory = () => {
           </TabsList>
 
           <TabsContent value="smart">
-            <SmartInventoryManager refetchStats={refetchStats} />
+            <SmartInventoryManager
+              refetchStats={refetchStats}
+              alertCount={
+                statsData?.getInventoryStats?.lowStockItemsCount +
+                statsData?.getInventoryStats?.outOfStockCount
+              }
+            />
           </TabsContent>
 
           <TabsContent value="orders">

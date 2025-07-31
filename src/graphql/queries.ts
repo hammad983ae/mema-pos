@@ -63,6 +63,52 @@ export const GET_INVENTORY = gql`
     getInventoryByBusiness(pagination: $pagination, filters: $filters) {
       data {
         id
+        is_low_stock
+        is_out_of_stock
+        is_overstocked
+        quantity_available
+        quantity_on_hand
+        low_stock_threshold
+        store {
+          id
+        }
+        product {
+          id
+          name
+          sku
+          barcode
+          cost
+          price
+          category {
+            id
+          }
+          image_url
+          description
+          is_active
+        }
+      }
+      count
+    }
+  }
+`;
+
+export const GET_LOW_STOCK_INVENTORY = gql`
+  query GetLowStockInventoryByBusiness(
+    $pagination: PaginationInput!
+    $filters: InventoryFilterInput
+  ) {
+    getLowStockInventoryByBusiness(pagination: $pagination, filters: $filters) {
+      data {
+        id
+        is_low_stock
+        is_out_of_stock
+        is_overstocked
+        quantity_available
+        quantity_on_hand
+        low_stock_threshold
+        store {
+          id
+        }
         product {
           id
           name
@@ -96,6 +142,39 @@ export const GET_SUPPLIERS = gql`
       status
       created_at
       updated_at
+    }
+  }
+`;
+
+export const GET_INVENTORY_MOVEMENTS = gql`
+  query GetMovementsByBusiness($pagination: PaginationInput!) {
+    getMovementsByBusiness(pagination: $pagination) {
+      count
+      data {
+        id
+        store {
+          id
+        }
+        product {
+          id
+          name
+          sku
+        }
+        created_by {
+          id
+          full_name
+          email
+        }
+        movement_type
+        quantity_change
+        previous_quantity
+        new_quantity
+        reference_id
+        reference_type
+        notes
+        created_at
+        updated_at
+      }
     }
   }
 `;
