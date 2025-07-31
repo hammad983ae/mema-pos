@@ -15,11 +15,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertTriangle,
+  Clipboard,
   Edit,
   Package2,
   Plus,
   RefreshCw,
   Search,
+  Settings2,
   ShoppingCart,
   Trash2,
   TrendingDown,
@@ -239,6 +241,10 @@ export const SmartInventoryManager = ({ refetchStats, alertCount }: Props) => {
               <InventoryItem
                 item={item}
                 getStockStatus={getStockStatus}
+                handleEdit={() => {
+                  setSelectedItem(item);
+                  setIsAddDialogOpen(true);
+                }}
                 handleAdjust={() => {
                   setSelectedItem(item);
                   setShowAdjustDialog(true);
@@ -382,8 +388,12 @@ export const SmartInventoryManager = ({ refetchStats, alertCount }: Props) => {
 
       {isAddDialogOpen && (
         <AddProductForm
+          item={selectedItem}
           refetch={refetch}
-          handleClose={() => setIsAddDialogOpen(false)}
+          handleClose={() => {
+            setSelectedItem(null);
+            setIsAddDialogOpen(false);
+          }}
         />
       )}
 
@@ -405,6 +415,7 @@ type InventoryItemProps = {
   item: Inventory;
   getStockStatus: (item: Inventory) => any;
   handleAdjust: () => void;
+  handleEdit: () => void;
   refetch: () => void;
 };
 
@@ -412,6 +423,7 @@ function InventoryItem({
   item,
   getStockStatus,
   handleAdjust,
+  handleEdit,
   refetch,
 }: InventoryItemProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -451,7 +463,7 @@ function InventoryItem({
                     <span>{stockStatus.status}</span>
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mt-1">
                   SKU: {item.product.sku}
                 </p>
                 <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-1">
@@ -463,8 +475,12 @@ function InventoryItem({
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm" onClick={handleAdjust}>
+              <Button variant="outline" size="sm" onClick={handleEdit}>
                 <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleAdjust}>
+                <Settings2 className="h-4 w-4 mr-2" />
                 Adjust
               </Button>
               <Button variant="outline" size="sm">

@@ -79,6 +79,10 @@ export const GET_INVENTORY = gql`
           barcode
           cost
           price
+          minimum_price
+          supplier {
+            id
+          }
           category {
             id
           }
@@ -116,7 +120,11 @@ export const GET_LOW_STOCK_INVENTORY = gql`
           barcode
           cost
           price
+          minimum_price
           category {
+            id
+          }
+          supplier {
             id
           }
           image_url

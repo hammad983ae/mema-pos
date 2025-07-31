@@ -28,7 +28,6 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@apollo/client";
 import {
   CREATE_SUPPLIER,
@@ -58,7 +57,6 @@ export const SupplierManagement = () => {
     notes: "",
     status: SupplierStatus.Active,
   });
-  const { toast } = useToast();
   const { data, loading, refetch } = useQuery<Query>(GET_SUPPLIERS);
   const [createSupplier, { loading: creating }] = useMutation<
     Mutation,
@@ -266,7 +264,7 @@ export const SupplierManagement = () => {
                   <Label htmlFor="status">Status</Label>
                   <Select
                     value={formData.status}
-                    onValueChange={(value: "active" | "inactive") =>
+                    onValueChange={(value) =>
                       setFormData((prev) => ({ ...prev, status: value }))
                     }
                   >
@@ -388,6 +386,7 @@ export const SupplierManagement = () => {
                     <Button
                       variant="ghost"
                       size="sm"
+                      disabled={deleting}
                       onClick={() => handleDelete(supplier.id)}
                       className="text-destructive hover:text-destructive"
                     >

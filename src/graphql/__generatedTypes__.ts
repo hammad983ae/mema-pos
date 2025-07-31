@@ -98,6 +98,8 @@ export type CreateProductInput = {
   name: Scalars['String']['input'];
   price?: Scalars['Float']['input'];
   sku: Scalars['String']['input'];
+  /** Supplier UUID */
+  supplierId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type CreateSupplierInput = {
@@ -260,6 +262,7 @@ export type Mutation = {
   deleteSupplier: Scalars['Boolean']['output'];
   loginBusinessOwner: LoginResponse;
   registerBusinessOwner: LoginResponse;
+  reorderInventory: Scalars['Boolean']['output'];
   updateBusiness: Scalars['Boolean']['output'];
   updateInventory: Scalars['Boolean']['output'];
   updateInventoryAlert: Scalars['Boolean']['output'];
@@ -344,6 +347,11 @@ export type MutationRegisterBusinessOwnerArgs = {
 };
 
 
+export type MutationReorderInventoryArgs = {
+  id: Scalars['String']['input'];
+};
+
+
 export type MutationUpdateBusinessArgs = {
   id: Scalars['String']['input'];
   input: BusinessInput;
@@ -373,7 +381,6 @@ export type MutationUpdateLowStockAlertArgs = {
 
 
 export type MutationUpdateProductArgs = {
-  id: Scalars['String']['input'];
   input: UpdateProductInput;
 };
 
@@ -418,6 +425,7 @@ export type Product = {
   name: Scalars['String']['output'];
   price: Scalars['Float']['output'];
   sku: Scalars['String']['output'];
+  supplier?: Maybe<Supplier>;
   updated_at: Scalars['DateTime']['output'];
 };
 
@@ -569,6 +577,7 @@ export enum SubscriptionStatus {
 export type Supplier = {
   __typename?: 'Supplier';
   address?: Maybe<Scalars['String']['output']>;
+  business: Business;
   contact_person?: Maybe<Scalars['String']['output']>;
   created_at: Scalars['DateTime']['output'];
   email?: Maybe<Scalars['String']['output']>;
@@ -631,6 +640,8 @@ export type UpdateProductInput = {
   name?: InputMaybe<Scalars['String']['input']>;
   price?: InputMaybe<Scalars['Float']['input']>;
   sku?: InputMaybe<Scalars['String']['input']>;
+  /** Supplier UUID */
+  supplierId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type UpdateSupplierInput = {

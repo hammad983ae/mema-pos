@@ -11,83 +11,127 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { LabelWithTooltip } from "@/components/ui/label-with-tooltip";
-import { useMutation } from "@apollo/client";
-import { CREATE_PRODUCT, Mutation, MutationCreateProductArgs } from "@/graphql";
-import { showSuccess } from "@/hooks/useToastMessages.tsx";
+import { useMutation, useQuery } from "@apollo/client";
+import {
+  CREATE_PRODUCT,
+  GET_SUPPLIERS,
+  Inventory,
+  Mutation,
+  MutationCreateProductArgs,
+  MutationUpdateProductArgs,
+  Query,
+  SupplierStatus,
+  UPDATE_PRODUCT,
+} from "@/graphql";
+import { showError, showSuccess } from "@/hooks/useToastMessages.tsx";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select.tsx";
+import NoData from "@/components/NoData.tsx";
 
 type Props = {
   refetch: () => void;
   handleClose: () => void;
+  item?: Inventory;
 };
 
-export const AddProductForm = ({ refetch, handleClose }: Props) => {
+export const AddProductForm = ({ item, refetch, handleClose }: Props) => {
   const [createProduct, { loading: creatingProduct }] = useMutation<
     Mutation,
     MutationCreateProductArgs
   >(CREATE_PRODUCT);
+  const [updateProduct, { loading: updatingProduct }] = useMutation<
+    Mutation,
+    MutationUpdateProductArgs
+  >(UPDATE_PRODUCT);
+  const { data: suppliersData } = useQuery<Query>(GET_SUPPLIERS);
 
   const [productForm, setProductForm] = useState({
-    name: "",
-    sku: "",
-    barcode: "",
-    price: "",
-    cost: "",
-    minimumPrice: "",
-    description: "",
-    image_url: "",
-    low_stock_threshold: "10",
-    max_stock_level: "",
-    initial_quantity: "0",
+    name: item?.product?.name ?? "",
+    supplier: item?.product.supplier?.id ?? null,
+    sku: item?.product.sku ?? "",
+    barcode: item?.product.barcode ?? "",
+    price: item?.product.price?.toString() ?? "0",
+    cost: item?.product.cost?.toString() ?? "0",
+    minimumPrice: item?.product.minimum_price ?? "",
+    description: item?.product.description ?? "",
+    image_url: item?.product.image_url ?? "",
+    low_stock_threshold: item?.low_stock_threshold?.toString() ?? "10",
+    max_stock_level: item?.max_stock_level?.toString() ?? "100",
+    initial_quantity: item?.quantity_on_hand?.toString() ?? "0",
   });
 
-  const handleAddProduct = () => {
+  console.log("item", item, productForm);
+
+  const handleSubmit = () => {
     const {
       name,
       sku,
       barcode,
       price,
       cost,
-      minimum_price,
+      minimumPrice,
       description,
       max_stock_level,
       initial_quantity,
       low_stock_threshold,
+      supplier,
     } = productForm;
 
-    createProduct({
-      variables: {
-        input: {
-          name,
-          sku,
-          barcode,
-          price: parseFloat(price),
-          cost: parseFloat(cost),
-          minimum_price,
-          description,
-          is_active: true,
-        },
-        inventory: {
-          quantity_on_hand: parseInt(initial_quantity),
-          low_stock_threshold: parseInt(low_stock_threshold),
-          max_stock_level: parseInt(max_stock_level),
-        },
-      },
-    }).then(() => {
-      showSuccess("Product added successfully");
+    if (!name || !sku) {
+      showError("Name and SKU are required fields!");
+      return;
+    }
+
+    const productInput = {
+      name,
+      sku,
+      barcode,
+      price: parseFloat(price),
+      cost: parseFloat(cost),
+      supplierId: supplier,
+      minimum_price: parseFloat(minimumPrice),
+      description,
+      is_active: true,
+    };
+    const inventoryInput = {
+      quantity_on_hand: parseInt(initial_quantity),
+      low_stock_threshold: parseInt(low_stock_threshold),
+      max_stock_level: parseInt(max_stock_level),
+    };
+
+    const promise = item
+      ? updateProduct({
+          variables: { input: { id: item.product.id, ...productInput } },
+        })
+      : createProduct({
+          variables: {
+            input: productInput,
+            inventory: inventoryInput,
+          },
+        });
+
+    promise.then(() => {
+      showSuccess(`Product ${!!item ? "updated" : "added"} successfully`);
 
       refetch();
 
       setProductForm({
         name: "",
         sku: "",
+        supplier: "",
         barcode: "",
-        price: "",
-        cost: "",
+        price: "0",
+        cost: "0",
         minimumPrice: "",
         description: "",
         image_url: "",
         low_stock_threshold: "10",
-        max_stock_level: "",
+        max_stock_level: "100",
         initial_quantity: "0",
       });
 
@@ -96,10 +140,10 @@ export const AddProductForm = ({ refetch, handleClose }: Props) => {
   };
 
   return (
-    <Dialog onOpenChange={handleClose}>
+    <Dialog open onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Add New Product</DialogTitle>
+          <DialogTitle>{`${!!item ? "Edit" : "Add New"} Product`}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -185,6 +229,7 @@ export const AddProductForm = ({ refetch, handleClose }: Props) => {
               <Label>Initial Quantity</Label>
               <Input
                 type="number"
+                disabled={!!item}
                 value={productForm.initial_quantity}
                 onChange={(e) =>
                   setProductForm((prev) => ({
@@ -228,6 +273,34 @@ export const AddProductForm = ({ refetch, handleClose }: Props) => {
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Supplier</Label>
+
+              <Select
+                value={productForm.supplier}
+                onValueChange={(value) =>
+                  setProductForm((prev) => ({ ...prev, supplier: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {suppliersData?.getSuppliers?.length ? (
+                    suppliersData.getSuppliers.map((supplier) => (
+                      <SelectItem value={supplier.id}>
+                        {supplier.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <NoData text={"No suppliers found"} />
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <ImageUpload
             value={productForm.image_url}
             onChange={(url) =>
@@ -256,8 +329,11 @@ export const AddProductForm = ({ refetch, handleClose }: Props) => {
             <Button variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button onClick={handleAddProduct} loading={creatingProduct}>
-              Add Product
+            <Button
+              onClick={handleSubmit}
+              loading={creatingProduct || updatingProduct}
+            >
+              {`${!!item ? "Update" : "Add"} Product`}
             </Button>
           </div>
         </div>
