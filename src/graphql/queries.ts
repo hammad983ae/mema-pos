@@ -82,6 +82,7 @@ export const GET_INVENTORY = gql`
           minimum_price
           supplier {
             id
+            name
           }
           category {
             id
@@ -126,6 +127,7 @@ export const GET_LOW_STOCK_INVENTORY = gql`
           }
           supplier {
             id
+            name
           }
           image_url
           description

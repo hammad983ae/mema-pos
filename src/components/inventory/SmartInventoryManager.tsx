@@ -15,7 +15,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertTriangle,
-  Clipboard,
   Edit,
   Package2,
   Plus,
@@ -48,6 +47,7 @@ import Pagination from "@/components/ui/pagination.tsx";
 import { AddProductForm } from "@/components/inventory/AddProductForm.tsx";
 import { DeleteProductDialog } from "@/components/inventory/DeleteProductDialog.tsx";
 import { AdjustStockDialog } from "@/components/inventory/AdjustStockDialog.tsx";
+import { ReorderDialog } from "@/components/inventory/ReorderDialog.tsx";
 
 type Props = {
   refetchStats: () => void;
@@ -72,6 +72,7 @@ export const SmartInventoryManager = ({ refetchStats, alertCount }: Props) => {
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [showAdjustDialog, setShowAdjustDialog] = useState(false);
+  const [showReorderDialog, setShowReorderDialog] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Inventory | null>(null);
   const { data, refetch: refetchInventory } = useQuery<
     Query,
@@ -249,6 +250,10 @@ export const SmartInventoryManager = ({ refetchStats, alertCount }: Props) => {
                   setSelectedItem(item);
                   setShowAdjustDialog(true);
                 }}
+                handleReorder={() => {
+                  setSelectedItem(item);
+                  setShowReorderDialog(true);
+                }}
                 refetch={refetch}
               />
             ))}
@@ -400,7 +405,24 @@ export const SmartInventoryManager = ({ refetchStats, alertCount }: Props) => {
       {showAdjustDialog && (
         <AdjustStockDialog
           item={selectedItem}
-          handleClose={() => setShowAdjustDialog(false)}
+          handleClose={() => {
+            setSelectedItem(null);
+            setShowAdjustDialog(false);
+          }}
+          onSuccess={() => {
+            setSelectedItem(null);
+            refetch();
+          }}
+        />
+      )}
+
+      {showReorderDialog && (
+        <ReorderDialog
+          item={selectedItem}
+          handleClose={() => {
+            setSelectedItem(null);
+            setShowReorderDialog(false);
+          }}
           onSuccess={() => {
             setSelectedItem(null);
             refetch();
@@ -415,6 +437,7 @@ type InventoryItemProps = {
   item: Inventory;
   getStockStatus: (item: Inventory) => any;
   handleAdjust: () => void;
+  handleReorder: () => void;
   handleEdit: () => void;
   refetch: () => void;
 };
@@ -423,6 +446,7 @@ function InventoryItem({
   item,
   getStockStatus,
   handleAdjust,
+  handleReorder,
   handleEdit,
   refetch,
 }: InventoryItemProps) {
@@ -483,7 +507,7 @@ function InventoryItem({
                 <Settings2 className="h-4 w-4 mr-2" />
                 Adjust
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleReorder}>
                 <ShoppingCart className="h-4 w-4 mr-2" />
                 Reorder
               </Button>
