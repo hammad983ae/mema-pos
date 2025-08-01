@@ -68,6 +68,7 @@ export const GET_INVENTORY = gql`
         is_overstocked
         quantity_available
         quantity_on_hand
+        max_stock_level
         low_stock_threshold
         store {
           id
@@ -111,6 +112,7 @@ export const GET_LOW_STOCK_INVENTORY = gql`
         is_overstocked
         quantity_available
         quantity_on_hand
+        max_stock_level
         low_stock_threshold
         store {
           id

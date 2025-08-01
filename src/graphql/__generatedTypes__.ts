@@ -388,6 +388,7 @@ export type MutationUpdateLowStockAlertArgs = {
 
 export type MutationUpdateProductArgs = {
   input: UpdateProductInput;
+  inventory?: InputMaybe<UpdateInventoryInput>;
 };
 
 

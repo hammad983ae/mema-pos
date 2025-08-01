@@ -152,6 +152,9 @@ export const ProductInventoryForm = ({
               id: item.__typename === "Product" ? item.id : item.product.id,
               ...productInput,
             },
+            ...(item.__typename === "Inventory" && {
+              inventory: { id: item.id, ...inventoryInput },
+            }),
           },
         })
       : createProduct({

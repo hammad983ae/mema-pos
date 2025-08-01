@@ -54,8 +54,11 @@ export const CREATE_PRODUCT = gql`
 `;
 
 export const UPDATE_PRODUCT = gql`
-  mutation UpdateProduct($input: UpdateProductInput!) {
-    updateProduct(input: $input)
+  mutation UpdateProduct(
+    $input: UpdateProductInput!
+    $inventory: UpdateInventoryInput
+  ) {
+    updateProduct(input: $input, inventory: $inventory)
   }
 `;
 
