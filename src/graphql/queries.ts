@@ -86,6 +86,7 @@ export const GET_INVENTORY = gql`
           }
           category {
             id
+            name
           }
           image_url
           description
@@ -124,6 +125,7 @@ export const GET_LOW_STOCK_INVENTORY = gql`
           minimum_price
           category {
             id
+            name
           }
           supplier {
             id
@@ -133,6 +135,34 @@ export const GET_LOW_STOCK_INVENTORY = gql`
           description
           is_active
         }
+      }
+      count
+    }
+  }
+`;
+
+export const GET_PRODUCTS = gql`
+  query GetProductsByBusiness($pagination: PaginationInput!) {
+    getProductsByBusiness(pagination: $pagination) {
+      data {
+        id
+        name
+        sku
+        barcode
+        cost
+        price
+        minimum_price
+        category {
+          id
+          name
+        }
+        supplier {
+          id
+          name
+        }
+        image_url
+        description
+        is_active
       }
       count
     }

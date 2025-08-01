@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,7 @@ import {
   Mutation,
   MutationCreateProductArgs,
   MutationUpdateProductArgs,
+  Product,
   Query,
   SupplierStatus,
   UPDATE_PRODUCT,
@@ -36,10 +37,16 @@ import NoData from "@/components/NoData.tsx";
 type Props = {
   refetch: () => void;
   handleClose: () => void;
-  item?: Inventory;
+  item?: Inventory | Product;
+  isProductForm?: boolean;
 };
 
-export const AddProductForm = ({ item, refetch, handleClose }: Props) => {
+export const ProductInventoryForm = ({
+  item,
+  refetch,
+  handleClose,
+  isProductForm = false,
+}: Props) => {
   const [createProduct, { loading: creatingProduct }] = useMutation<
     Mutation,
     MutationCreateProductArgs
@@ -51,21 +58,55 @@ export const AddProductForm = ({ item, refetch, handleClose }: Props) => {
   const { data: suppliersData } = useQuery<Query>(GET_SUPPLIERS);
 
   const [productForm, setProductForm] = useState({
-    name: item?.product?.name ?? "",
-    supplier: item?.product.supplier?.id ?? null,
-    sku: item?.product.sku ?? "",
-    barcode: item?.product.barcode ?? "",
-    price: item?.product.price?.toString() ?? "0",
-    cost: item?.product.cost?.toString() ?? "0",
-    minimumPrice: item?.product.minimum_price ?? "",
-    description: item?.product.description ?? "",
-    image_url: item?.product.image_url ?? "",
-    low_stock_threshold: item?.low_stock_threshold?.toString() ?? "10",
-    max_stock_level: item?.max_stock_level?.toString() ?? "100",
-    initial_quantity: item?.quantity_on_hand?.toString() ?? "0",
+    name: "",
+    supplier: "",
+    sku: "",
+    barcode: "",
+    price: "0",
+    cost: "0",
+    minimumPrice: "",
+    description: "",
+    image_url: "",
+    low_stock_threshold: "10",
+    max_stock_level: "100",
+    initial_quantity: "0",
   });
 
-  console.log("item", item, productForm);
+  useEffect(() => {
+    if (item) {
+      if (item.__typename === "Product") {
+        setProductForm({
+          name: item?.name ?? "",
+          supplier: item?.supplier?.id ?? null,
+          sku: item?.sku ?? "",
+          barcode: item?.barcode ?? "",
+          price: item?.price?.toString() ?? "0",
+          cost: item?.cost?.toString() ?? "0",
+          minimumPrice: item?.minimum_price.toString() ?? "",
+          description: item.description ?? "",
+          image_url: item?.image_url ?? "",
+          low_stock_threshold: "-",
+          max_stock_level: "-",
+          initial_quantity: "-",
+        });
+      } else {
+        setProductForm({
+          name: item?.product?.name ?? "",
+          supplier: item?.product.supplier?.id ?? null,
+          sku: item?.product.sku ?? "",
+          barcode: item?.product.barcode ?? "",
+          price: item?.product.price?.toString() ?? "0",
+          cost: item?.product.cost?.toString() ?? "0",
+          minimumPrice: item?.product.minimum_price.toString() ?? "",
+          description: item?.product.description ?? "",
+          image_url: item?.product.image_url ?? "",
+          low_stock_threshold: item?.low_stock_threshold?.toString() ?? "10",
+          max_stock_level: item?.max_stock_level?.toString() ?? "100",
+          initial_quantity: item?.quantity_on_hand?.toString() ?? "0",
+        });
+      }
+    }
+  }, []);
 
   const handleSubmit = () => {
     const {
@@ -106,7 +147,12 @@ export const AddProductForm = ({ item, refetch, handleClose }: Props) => {
 
     const promise = item
       ? updateProduct({
-          variables: { input: { id: item.product.id, ...productInput } },
+          variables: {
+            input: {
+              id: item.__typename === "Product" ? item.id : item.product.id,
+              ...productInput,
+            },
+          },
         })
       : createProduct({
           variables: {
@@ -225,53 +271,60 @@ export const AddProductForm = ({ item, refetch, handleClose }: Props) => {
                 placeholder="0.00"
               />
             </div>
-            <div className="space-y-2">
-              <Label>Initial Quantity</Label>
-              <Input
-                type="number"
-                disabled={!!item}
-                value={productForm.initial_quantity}
-                onChange={(e) =>
-                  setProductForm((prev) => ({
-                    ...prev,
-                    initial_quantity: e.target.value,
-                  }))
-                }
-                placeholder="0"
-              />
-            </div>
+
+            {!isProductForm ? (
+              <div className="space-y-2">
+                <Label>Initial Quantity</Label>
+                <Input
+                  type="number"
+                  disabled={!!item}
+                  value={productForm.initial_quantity}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({
+                      ...prev,
+                      initial_quantity: e.target.value,
+                    }))
+                  }
+                  placeholder="0"
+                />
+              </div>
+            ) : (
+              <div className="space-y-2" />
+            )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Low Stock Threshold</Label>
-              <Input
-                type="number"
-                value={productForm.low_stock_threshold}
-                onChange={(e) =>
-                  setProductForm((prev) => ({
-                    ...prev,
-                    low_stock_threshold: e.target.value,
-                  }))
-                }
-                placeholder="10"
-              />
+          {!isProductForm && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Low Stock Threshold</Label>
+                <Input
+                  type="number"
+                  value={productForm.low_stock_threshold}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({
+                      ...prev,
+                      low_stock_threshold: e.target.value,
+                    }))
+                  }
+                  placeholder="10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Max Stock Level</Label>
+                <Input
+                  type="number"
+                  value={productForm.max_stock_level}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({
+                      ...prev,
+                      max_stock_level: e.target.value,
+                    }))
+                  }
+                  placeholder="100"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Max Stock Level</Label>
-              <Input
-                type="number"
-                value={productForm.max_stock_level}
-                onChange={(e) =>
-                  setProductForm((prev) => ({
-                    ...prev,
-                    max_stock_level: e.target.value,
-                  }))
-                }
-                placeholder="100"
-              />
-            </div>
-          </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

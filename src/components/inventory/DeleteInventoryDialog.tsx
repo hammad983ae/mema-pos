@@ -5,15 +5,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { Product } from "@/graphql";
+import { Inventory } from "@/graphql";
 
 type Props = {
-  item: Product;
+  item: Inventory;
   handleClose: () => void;
   handleDelete: () => void;
 };
 
-export const DeleteProductDialog = ({
+export const DeleteInventoryDialog = ({
   handleClose,
   handleDelete,
   item,
@@ -22,22 +22,26 @@ export const DeleteProductDialog = ({
     <Dialog open onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete Product</DialogTitle>
+          <DialogTitle>Delete Inventory</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
             <p className="text-sm text-destructive font-medium">
-              Are you sure you want to delete this product?
+              Are you sure you want to delete this product from store inventory?
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              This action cannot be undone. All inventory records for this
-              product will also be deleted.
+              This action cannot be undone.
             </p>
           </div>
 
           <div className="p-4 bg-muted/50 rounded-lg">
-            <h4 className="font-medium">{item.name}</h4>
-            <p className="text-sm text-muted-foreground">SKU: {item.sku}</p>
+            <h4 className="font-medium">{item.product.name}</h4>
+            <p className="text-sm text-muted-foreground">
+              SKU: {item.product.sku}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Current Stock: {item.quantity_on_hand}
+            </p>
           </div>
 
           <div className="flex justify-end space-x-2">
@@ -45,7 +49,7 @@ export const DeleteProductDialog = ({
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
-              Delete Product
+              Delete
             </Button>
           </div>
         </div>

@@ -65,6 +65,12 @@ export const DELETE_PRODUCT = gql`
   }
 `;
 
+export const DELETE_INVENTORY = gql`
+  mutation DeleteInventory($id: String!) {
+    deleteInventory(id: $id)
+  }
+`;
+
 export const UPDATE_INVENTORY = gql`
   mutation UpdateInventory($input: UpdateInventoryInput!) {
     updateInventory(input: $input)

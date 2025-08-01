@@ -176,7 +176,7 @@ export default function Pagination({
     //   </div>
     // </div>
 
-    totalPages > 1 && (
+    totalPages > 1 ? (
       <div className="w-full flex justify-end items-center gap-[15px] py-[10px]">
         <button
           onClick={handlePrevious}
@@ -228,6 +228,8 @@ export default function Pagination({
           </svg>
         </button>
       </div>
+    ) : (
+      <div />
     )
   );
 }

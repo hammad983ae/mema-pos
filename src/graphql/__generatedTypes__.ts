@@ -258,6 +258,7 @@ export type Mutation = {
   createStore: Store;
   createStoreSession: StoreDaySession;
   createSupplier: Supplier;
+  deleteInventory: Scalars['Boolean']['output'];
   deleteProduct: Scalars['Boolean']['output'];
   deleteSupplier: Scalars['Boolean']['output'];
   loginBusinessOwner: LoginResponse;
@@ -324,6 +325,11 @@ export type MutationCreateStoreSessionArgs = {
 
 export type MutationCreateSupplierArgs = {
   input: CreateSupplierInput;
+};
+
+
+export type MutationDeleteInventoryArgs = {
+  id: Scalars['String']['input'];
 };
 
 
@@ -414,6 +420,7 @@ export type PaginationInput = {
 export type Product = {
   __typename?: 'Product';
   barcode?: Maybe<Scalars['String']['output']>;
+  business?: Maybe<Business>;
   category?: Maybe<ProductCategory>;
   cost: Scalars['Float']['output'];
   created_at: Scalars['DateTime']['output'];
@@ -442,6 +449,12 @@ export type ProductCategoryInput = {
   name?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type ProductPagination = {
+  __typename?: 'ProductPagination';
+  count: Scalars['Int']['output'];
+  data: Array<Product>;
+};
+
 export type Query = {
   __typename?: 'Query';
   getBusinessStats: BusinessStats;
@@ -450,6 +463,7 @@ export type Query = {
   getInventoryStats: InventoryStats;
   getLowStockInventoryByBusiness: InventoryPagination;
   getMovementsByBusiness: InventoryMovementPagination;
+  getProductsByBusiness: ProductPagination;
   getSuppliers: Array<Supplier>;
   sayHello: Scalars['String']['output'];
 };
@@ -473,6 +487,11 @@ export type QueryGetLowStockInventoryByBusinessArgs = {
 
 
 export type QueryGetMovementsByBusinessArgs = {
+  pagination: PaginationInput;
+};
+
+
+export type QueryGetProductsByBusinessArgs = {
   pagination: PaginationInput;
 };
 

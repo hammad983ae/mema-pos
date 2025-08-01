@@ -29,6 +29,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQuery } from "@apollo/client";
 import {
+  DELETE_INVENTORY,
   DELETE_PRODUCT,
   GET_INVENTORY,
   GET_INVENTORY_MOVEMENTS,
@@ -36,6 +37,7 @@ import {
   Inventory,
   InventoryStockStatus,
   Mutation,
+  MutationDeleteInventoryArgs,
   MutationDeleteProductArgs,
   Query,
   QueryGetInventoryByBusinessArgs,
@@ -44,8 +46,8 @@ import {
 } from "@/graphql";
 import { useDebounce } from "@/hooks/useDebounce.ts";
 import Pagination from "@/components/ui/pagination.tsx";
-import { AddProductForm } from "@/components/inventory/AddProductForm.tsx";
-import { DeleteProductDialog } from "@/components/inventory/DeleteProductDialog.tsx";
+import { ProductInventoryForm } from "@/components/inventory/ProductInventoryForm.tsx";
+import { DeleteInventoryDialog } from "@/components/inventory/DeleteInventoryDialog.tsx";
 import { AdjustStockDialog } from "@/components/inventory/AdjustStockDialog.tsx";
 import { ReorderDialog } from "@/components/inventory/ReorderDialog.tsx";
 
@@ -392,7 +394,7 @@ export const SmartInventoryManager = ({ refetchStats, alertCount }: Props) => {
       </Tabs>
 
       {isAddDialogOpen && (
-        <AddProductForm
+        <ProductInventoryForm
           item={selectedItem}
           refetch={refetch}
           handleClose={() => {
@@ -451,10 +453,10 @@ function InventoryItem({
   refetch,
 }: InventoryItemProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [deleteProduct, { loading: deleting }] = useMutation<
+  const [deleteInventory, { loading: deleting }] = useMutation<
     Mutation,
-    MutationDeleteProductArgs
-  >(DELETE_PRODUCT);
+    MutationDeleteInventoryArgs
+  >(DELETE_INVENTORY);
 
   const stockStatus = getStockStatus(item);
   const StatusIcon = stockStatus.icon;
@@ -527,10 +529,10 @@ function InventoryItem({
       </Card>
 
       {showDeleteDialog && (
-        <DeleteProductDialog
+        <DeleteInventoryDialog
           item={item}
           handleDelete={() => {
-            deleteProduct({ variables: { id: item.product.id } }).then(() => {
+            deleteInventory({ variables: { id: item.id } }).then(() => {
               setShowDeleteDialog(false);
               refetch();
             });
