@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,58 +31,25 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { BackButton } from "@/components/ui/back-button";
+import { Loader2, Plus, RefreshCw, Save, Store, User } from "lucide-react";
 import {
-  Store,
-  User,
-  Key,
-  Settings,
-  ArrowLeft,
-  Loader2,
-  Save,
-  RefreshCw,
-  Plus,
-  Building,
-} from "lucide-react";
-import { UserRole } from "@/graphql";
-
-interface StoreData {
-  id: string;
-  name: string;
-  address: string | null;
-  pos_access_code: string | null;
-  business_id: string;
-  email: string | null;
-  phone: string | null;
-  timezone: string | null;
-  status: string;
-  tax_rate: number;
-}
-
-interface StoreUser {
-  user_id: string;
-  full_name: string;
-  username: string | null;
-  pos_pin: string | null;
-}
-
-interface BusinessData {
-  id: string;
-  name: string;
-  subscription_plan: string;
-  subscription_status: string;
-}
+  CREATE_STORE,
+  GET_STORES,
+  Mutation,
+  MutationCreateStoreArgs,
+  Query,
+  StoreStatus,
+  SubscriptionPlan,
+  UserRole,
+} from "@/graphql";
+import { useMutation, useQuery } from "@apollo/client";
+import { showError, showSuccess } from "@/hooks/useToastMessages.tsx";
 
 const StoreManagement = () => {
   const { user, business } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
-  const [stores, setStores] = useState<StoreData[]>([]);
-  const [storeUsers, setStoreUsers] = useState<Record<string, StoreUser[]>>({});
-  const [userRole, setUserRole] = useState<string>("");
-  // const [business, setBusiness] = useState<BusinessData | null>(null);
-  const [businessId, setBusinessId] = useState<string>("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newStore, setNewStore] = useState({
     name: "",
@@ -90,9 +57,14 @@ const StoreManagement = () => {
     phone: "",
     address: "",
     timezone: "America/New_York",
-    status: "active",
-    tax_rate: 0.08875,
+    status: StoreStatus.Active,
+    tax_rate: "",
   });
+  const { data, loading, refetch } = useQuery<Query>(GET_STORES);
+  const [createStore, { loading: creating }] = useMutation<
+    Mutation,
+    MutationCreateStoreArgs
+  >(CREATE_STORE);
 
   // Form states for each store user
   const [userForms, setUserForms] = useState<
@@ -108,13 +80,13 @@ const StoreManagement = () => {
     { value: "Pacific/Honolulu", label: "Hawaii Time (HST)" },
   ];
 
-  const getStoreLimit = (plan: string) => {
+  const getStoreLimit = (plan: SubscriptionPlan) => {
     switch (plan) {
-      case "starter":
-        return 1;
-      case "professional":
+      case SubscriptionPlan.Starter:
+        return 2;
+      case SubscriptionPlan.Professional:
         return 5;
-      case "enterprise":
+      case SubscriptionPlan.Enterprise:
         return -1; // Unlimited
       default:
         return 1;
@@ -122,106 +94,20 @@ const StoreManagement = () => {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [user]);
-
-  const fetchData = async () => {
-    if (!user) return;
-
-    try {
-      setLoading(true);
-
-      // Only allow business owners, managers, and office roles
-      if (
-        !(
-          user.role === UserRole.BusinessOwner ||
-          user.role === UserRole.Manager ||
-          user.role === UserRole.Office
-        )
-      ) {
-        toast({
-          title: "Access Denied",
-          description: "You don't have permission to manage store settings",
-          variant: "destructive",
-        });
-        navigate("/dashboard");
-        return;
-      }
-
-      // Fetch stores
-      // const { data: storesData, error: storesError } = await supabase
-      //   .from("stores")
-      //   .select(
-      //     "id, name, address, pos_access_code, business_id, email, phone, timezone, status, tax_rate",
-      //   )
-      //   .eq("business_id", membership.business_id);
-
-      // if (storesError) {
-      //   throw storesError;
-      // }
-      //
-      // setStores(storesData || []);
-
-      // First fetch user IDs from memberships
-      const { data: membershipData, error: membershipDataError } =
-        await supabase
-          .from("user_business_memberships")
-          .select("user_id")
-          .eq("business_id", membership.business_id)
-          .eq("is_active", true);
-
-      if (membershipDataError) {
-        throw membershipDataError;
-      }
-
-      const userIds = membershipData?.map((m) => m.user_id) || [];
-
-      // Then fetch all users in the business with their profile info
-      const { data: businessUsers, error: usersError } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, username, pos_pin")
-        .in("user_id", userIds);
-
-      if (usersError) {
-        throw usersError;
-      }
-
-      // Group users by store (for now, all users can access all stores)
-      const usersMap: Record<string, StoreUser[]> = {};
-      const formsMap: Record<string, { username: string; pin: string }> = {};
-
-      storesData?.forEach((store) => {
-        usersMap[store.id] =
-          businessUsers?.map((user) => ({
-            user_id: user.user_id,
-            full_name: user.full_name || "Unknown",
-            username: user.username || "",
-            pos_pin: user.pos_pin || "",
-          })) || [];
-
-        // Initialize forms for each user in each store
-        usersMap[store.id].forEach((user) => {
-          const key = `${store.id}-${user.user_id}`;
-          formsMap[key] = {
-            username: user.username || "",
-            pin: user.pos_pin || "",
-          };
-        });
-      });
-
-      setStoreUsers(usersMap);
-      setUserForms(formsMap);
-    } catch (error: any) {
-      console.error("Error fetching data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load store data",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+    if (
+      !(
+        user.role === UserRole.BusinessOwner ||
+        user.role === UserRole.Manager ||
+        user.role === UserRole.Office
+      )
+    ) {
+      showError(
+        "Access Denied. You don't have permission to manage store settings",
+      );
+      navigate("/dashboard");
+      return;
     }
-  };
+  }, [user]);
 
   const updateUserCredentials = async (storeId: string, userId: string) => {
     const key = `${storeId}-${userId}`;
@@ -235,7 +121,9 @@ const StoreManagement = () => {
       // Update username
       if (
         formData.username !==
-        storeUsers[storeId]?.find((u) => u.user_id === userId)?.username
+        data?.getStores
+          ?.find((store) => store.id === storeId)
+          ?.users?.find((u) => u.id === userId)?.username
       ) {
         const { error: usernameError } = await supabase
           .from("profiles")
@@ -253,7 +141,9 @@ const StoreManagement = () => {
       if (
         formData.pin &&
         formData.pin !==
-          storeUsers[storeId]?.find((u) => u.user_id === userId)?.pos_pin
+          data?.getStores
+            ?.find((store) => store.id === storeId)
+            ?.users?.find((u) => u.id === userId)?.pos_pin
       ) {
         if (!/^\d{4,6}$/.test(formData.pin)) {
           throw new Error("PIN must be 4-6 digits");
@@ -280,7 +170,7 @@ const StoreManagement = () => {
       });
 
       // Refresh data
-      await fetchData();
+      await refetch();
     } catch (error: any) {
       console.error("Error updating credentials:", error);
       toast({
@@ -309,74 +199,48 @@ const StoreManagement = () => {
     }));
   };
 
-  const createStore = async () => {
-    if (!businessId || !business) return;
-
+  const handleCreate = async () => {
     // Check subscription limits
     const storeLimit = getStoreLimit(business.subscription_plan);
-    if (storeLimit !== -1 && stores.length >= storeLimit) {
-      toast({
-        title: "Store Limit Reached",
-        description: `Your ${business.subscription_plan} plan allows up to ${storeLimit} store${storeLimit > 1 ? "s" : ""}. Upgrade your plan to add more stores.`,
-        variant: "destructive",
-      });
+    if (storeLimit !== -1 && data?.getStores?.length >= storeLimit) {
+      showError(
+        `Store Limit Reached. Your ${business.subscription_plan} plan allows up to ${storeLimit} store${storeLimit > 1 ? "s" : ""}. Upgrade your plan to add more stores.`,
+      );
       return;
     }
 
     if (!newStore.name.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Store name is required",
-        variant: "destructive",
-      });
+      showError("Store name is required");
       return;
     }
 
-    try {
-      setSaving("create");
-
-      const { error } = await supabase.from("stores").insert({
-        name: newStore.name,
-        email: newStore.email || null,
-        phone: newStore.phone || null,
-        address: newStore.address || null,
-        timezone: newStore.timezone,
-        status: newStore.status,
-        tax_rate: newStore.tax_rate,
-        business_id: businessId,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Store created successfully",
-      });
-
-      // Reset form and close dialog
+    createStore({
+      variables: {
+        input: {
+          name: newStore.name,
+          email: newStore.email || null,
+          phone: newStore.phone || null,
+          address: newStore.address || null,
+          timezone: newStore.timezone,
+          status: newStore.status,
+          tax_rate: parseFloat(newStore.tax_rate),
+        },
+      },
+    }).then(() => {
+      showSuccess("Store created successfully");
       setNewStore({
         name: "",
         email: "",
         phone: "",
         address: "",
         timezone: "America/New_York",
-        status: "active",
-        tax_rate: 0.08875,
+        status: StoreStatus.Active,
+        tax_rate: "",
       });
       setShowCreateDialog(false);
 
-      // Refresh data
-      await fetchData();
-    } catch (error: any) {
-      console.error("Error creating store:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create store",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(null);
-    }
+      refetch();
+    });
   };
 
   if (loading) {
@@ -405,9 +269,11 @@ const StoreManagement = () => {
                 </p>
               </div>
             </div>
-            {["business_owner", "manager", "office"].includes(userRole) && (
+            {(user.role === UserRole.BusinessOwner ||
+              user.role === UserRole.Manager ||
+              user.role === UserRole.Office) && (
               <div className="flex gap-2">
-                <Button variant="outline" onClick={fetchData}>
+                <Button variant="outline" onClick={() => refetch()}>
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refresh
                 </Button>
@@ -430,7 +296,7 @@ const StoreManagement = () => {
                           <span className="block mt-1 text-sm">
                             Plan: {business.subscription_plan}
                             {getStoreLimit(business.subscription_plan) !== -1 &&
-                              ` (${stores.length}/${getStoreLimit(business.subscription_plan)} stores used)`}
+                              ` (${data?.getStores?.length}/${getStoreLimit(business.subscription_plan)} stores used)`}
                           </span>
                         )}
                       </DialogDescription>
@@ -458,7 +324,7 @@ const StoreManagement = () => {
                             onValueChange={(value) =>
                               setNewStore((prev) => ({
                                 ...prev,
-                                status: value,
+                                status: value as StoreStatus,
                               }))
                             }
                           >
@@ -466,8 +332,12 @@ const StoreManagement = () => {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="active">Active</SelectItem>
-                              <SelectItem value="inactive">Inactive</SelectItem>
+                              <SelectItem value={StoreStatus.Active}>
+                                Active
+                              </SelectItem>
+                              <SelectItem value={StoreStatus.Inactive}>
+                                Inactive
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -536,7 +406,7 @@ const StoreManagement = () => {
                             onChange={(e) =>
                               setNewStore((prev) => ({
                                 ...prev,
-                                tax_rate: parseFloat(e.target.value) || 0,
+                                tax_rate: e.target.value,
                               }))
                             }
                             placeholder="0.08875"
@@ -569,22 +439,12 @@ const StoreManagement = () => {
                           Cancel
                         </Button>
                         <Button
-                          onClick={createStore}
-                          disabled={
-                            saving === "create" || !newStore.name.trim()
-                          }
+                          onClick={handleCreate}
+                          loading={creating}
+                          disabled={!newStore.name.trim()}
                         >
-                          {saving === "create" ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              Creating...
-                            </>
-                          ) : (
-                            <>
-                              <Save className="h-4 w-4 mr-2" />
-                              Create Store
-                            </>
-                          )}
+                          <Save className="h-4 w-4 mr-2" />
+                          Create Store
                         </Button>
                       </div>
                     </div>
@@ -596,7 +456,7 @@ const StoreManagement = () => {
         </div>
 
         <div className="space-y-6">
-          {stores.map((store) => (
+          {data?.getStores?.map((store) => (
             <Card key={store.id} className="border-border/50">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -606,7 +466,9 @@ const StoreManagement = () => {
                       {store.name}
                       <Badge
                         variant={
-                          store.status === "active" ? "default" : "secondary"
+                          store.status === StoreStatus.Active
+                            ? "default"
+                            : "secondary"
                         }
                       >
                         {store.status}
@@ -626,9 +488,9 @@ const StoreManagement = () => {
                       </p>
                     )}
                   </div>
-                  <Badge variant="outline" className="font-mono">
-                    Code: {store.pos_access_code}
-                  </Badge>
+                  {/*<Badge variant="outline" className="font-mono">*/}
+                  {/*  Code: store.pos_access_code*/}
+                  {/*</Badge>*/}
                 </div>
               </CardHeader>
 
@@ -639,14 +501,14 @@ const StoreManagement = () => {
                     Employee POS Credentials
                   </h4>
 
-                  {storeUsers[store.id]?.length === 0 ? (
+                  {!store.users?.length ? (
                     <p className="text-muted-foreground text-sm">
                       No employees found
                     </p>
                   ) : (
                     <div className="grid gap-4">
-                      {storeUsers[store.id]?.map((user) => {
-                        const key = `${store.id}-${user.user_id}`;
+                      {store.users?.map((user) => {
+                        const key = `${store.id}-${user.id}`;
                         const formData = userForms[key] || {
                           username: "",
                           pin: "",
@@ -656,7 +518,7 @@ const StoreManagement = () => {
                           (formData.pin && formData.pin !== user.pos_pin);
 
                         return (
-                          <Card key={user.user_id} className="p-4 bg-muted/20">
+                          <Card key={user.id} className="p-4 bg-muted/20">
                             <div className="flex items-center justify-between mb-3">
                               <h5 className="font-medium">{user.full_name}</h5>
                               {isChanged && (
@@ -678,7 +540,7 @@ const StoreManagement = () => {
                                   onChange={(e) =>
                                     handleFormChange(
                                       store.id,
-                                      user.user_id,
+                                      user.id,
                                       "username",
                                       e.target.value,
                                     )
@@ -698,7 +560,7 @@ const StoreManagement = () => {
                                   onChange={(e) =>
                                     handleFormChange(
                                       store.id,
-                                      user.user_id,
+                                      user.id,
                                       "pin",
                                       e.target.value
                                         .replace(/\D/g, "")
@@ -712,10 +574,7 @@ const StoreManagement = () => {
                               <div className="flex items-end">
                                 <Button
                                   onClick={() =>
-                                    updateUserCredentials(
-                                      store.id,
-                                      user.user_id,
-                                    )
+                                    updateUserCredentials(store.id, user.id)
                                   }
                                   disabled={!isChanged || saving === key}
                                   size="sm"
@@ -745,7 +604,7 @@ const StoreManagement = () => {
             </Card>
           ))}
 
-          {stores.length === 0 && (
+          {!data?.getStores?.length && (
             <Card>
               <CardContent className="py-8 text-center">
                 <Store className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/ui/back-button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,15 +24,12 @@ import { UpsellerDashboard } from "@/components/team/UpsellerDashboard";
 import { PositionTypeSelector } from "@/components/team/PositionTypeSelector";
 import { AnnouncementTemplates } from "@/components/team/AnnouncementTemplates";
 import {
-  MessageSquare,
   Calendar,
-  Users,
-  TrendingUp,
-  Bell,
-  Settings,
-  Search,
-  Plus,
   Loader2,
+  MessageSquare,
+  Search,
+  TrendingUp,
+  Users,
 } from "lucide-react";
 import { UserRole } from "@/graphql";
 
@@ -313,7 +309,8 @@ const Team = () => {
               <TabsTrigger value="chat" className="text-xs sm:text-sm">
                 Chat
               </TabsTrigger>
-              {(userRole === "business_owner" || userRole === "manager") && (
+              {(user.role === UserRole.BusinessOwner ||
+                user.role === UserRole.Manager) && (
                 <TabsTrigger
                   value="announcements"
                   className="text-xs sm:text-sm"
@@ -326,8 +323,9 @@ const Team = () => {
 
           <TabsContent value="schedule" className="space-y-6">
             {/* Business owners and managers see full schedule, employees see role-specific dashboards */}
-            {userRole === "business_owner" || userRole === "manager" ? (
-              <TeamSchedule userRole={userRole} />
+            {user.role === UserRole.BusinessOwner ||
+            user.role === UserRole.Manager ? (
+              <TeamSchedule userRole={user.role} />
             ) : userPositionType === "opener" ? (
               <OpenerDashboard />
             ) : userPositionType === "upseller" ? (
@@ -337,26 +335,27 @@ const Team = () => {
                 onPositionSet={() => window.location.reload()}
               />
             ) : (
-              <TeamSchedule userRole={userRole} />
+              <TeamSchedule userRole={user.role} />
             )}
           </TabsContent>
 
-          {(userRole === "business_owner" || userRole === "manager") && (
+          {(user.role === UserRole.BusinessOwner ||
+            user.role === UserRole.Manager) && (
             <TabsContent value="smart-schedule" className="space-y-6">
-              <SmartScheduleBuilder userRole={userRole} />
+              <SmartScheduleBuilder userRole={user.role} />
             </TabsContent>
           )}
 
           <TabsContent value="tasks" className="space-y-6">
-            <TaskManager userRole={userRole} />
+            <TaskManager userRole={user.role} />
           </TabsContent>
 
           <TabsContent value="directory" className="space-y-6">
-            <TeamDirectory searchQuery={searchQuery} userRole={userRole} />
+            <TeamDirectory searchQuery={searchQuery} userRole={user.role} />
           </TabsContent>
 
           <TabsContent value="performance" className="space-y-6">
-            <TeamPerformance userRole={userRole} />
+            <TeamPerformance userRole={user.role} />
           </TabsContent>
 
           <TabsContent value="commission" className="space-y-6">
@@ -366,12 +365,13 @@ const Team = () => {
           <TabsContent value="chat" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               <div className="lg:col-span-3">
-                <TeamChat searchQuery={searchQuery} userRole={userRole} />
+                <TeamChat searchQuery={searchQuery} userRole={user.role} />
               </div>
-              {(userRole === "business_owner" || userRole === "manager") && (
+              {(user.role === UserRole.BusinessOwner ||
+                user.role === UserRole.Manager) && (
                 <div className="lg:col-span-1">
                   <PendingAnnouncementsManager
-                    userRole={userRole}
+                    userRole={user.role}
                     onAnnouncementApproved={(announcement) => {
                       // The announcement handling is done in the TeamChat component
                       console.log("Announcement approved:", announcement);
@@ -382,9 +382,10 @@ const Team = () => {
             </div>
           </TabsContent>
 
-          {(userRole === "business_owner" || userRole === "manager") && (
+          {(user.role === UserRole.BusinessOwner ||
+            user.role === UserRole.Manager) && (
             <TabsContent value="announcements" className="space-y-6">
-              <AnnouncementTemplates userRole={userRole} />
+              <AnnouncementTemplates userRole={user.role} />
             </TabsContent>
           )}
         </Tabs>

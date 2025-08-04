@@ -32,8 +32,8 @@ export type Business = {
   phone?: Maybe<Scalars['String']['output']>;
   settings: Scalars['JSONObject']['output'];
   stores: Array<Store>;
-  subscription_plan: Scalars['String']['output'];
-  subscription_status: Scalars['String']['output'];
+  subscription_plan: SubscriptionPlan;
+  subscription_status: SubscriptionStatus;
   updated_at: Scalars['DateTime']['output'];
   users: Array<User>;
 };
@@ -112,6 +112,18 @@ export type CreateReorderRequestInput = {
   inventoryId: Scalars['ID']['input'];
   quantity: Scalars['Int']['input'];
   restock_by: Scalars['DateTime']['input'];
+};
+
+export type CreateStoreInput = {
+  address?: InputMaybe<Scalars['String']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  is_active?: InputMaybe<Scalars['Boolean']['input']>;
+  is_main?: InputMaybe<Scalars['Boolean']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<StoreStatus>;
+  tax_rate?: InputMaybe<Scalars['Float']['input']>;
+  timezone?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type CreateSupplierInput = {
@@ -334,7 +346,7 @@ export type MutationCreateReorderRequestArgs = {
 
 
 export type MutationCreateStoreArgs = {
-  input: StoreInput;
+  input: CreateStoreInput;
 };
 
 
@@ -429,7 +441,7 @@ export type MutationUpdateReorderRequestArgs = {
 
 export type MutationUpdateStoreArgs = {
   id: Scalars['String']['input'];
-  input: StoreInput;
+  input: UpdateStoreInput;
 };
 
 
@@ -493,6 +505,7 @@ export type Query = {
   getMovementsByBusiness: InventoryMovementPagination;
   getProductsByBusiness: ProductPagination;
   getReorderRequestsByBusiness: ReorderRequestPagination;
+  getStores: Array<Store>;
   getSuppliers: Array<Supplier>;
   sayHello: Scalars['String']['output'];
 };
@@ -577,12 +590,14 @@ export type Store = {
   email?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   is_active: Scalars['Boolean']['output'];
+  is_main: Scalars['Boolean']['output'];
   name: Scalars['String']['output'];
   phone?: Maybe<Scalars['String']['output']>;
   status: StoreStatus;
   tax_rate: Scalars['Float']['output'];
   timezone: Scalars['String']['output'];
   updated_at: Scalars['DateTime']['output'];
+  users: Array<User>;
 };
 
 export type StoreDaySession = {
@@ -606,18 +621,6 @@ export type StoreDaySession = {
   updated_at: Scalars['DateTime']['output'];
 };
 
-export type StoreInput = {
-  address?: InputMaybe<Scalars['String']['input']>;
-  businessId?: InputMaybe<Scalars['String']['input']>;
-  email?: InputMaybe<Scalars['String']['input']>;
-  is_active?: InputMaybe<Scalars['Boolean']['input']>;
-  name?: InputMaybe<Scalars['String']['input']>;
-  phone?: InputMaybe<Scalars['String']['input']>;
-  status?: InputMaybe<StoreStatus>;
-  tax_rate?: InputMaybe<Scalars['Float']['input']>;
-  timezone?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type StoreSessionInput = {
   cash_variance?: InputMaybe<Scalars['Float']['input']>;
   closing_cash_amount?: InputMaybe<Scalars['Float']['input']>;
@@ -636,6 +639,8 @@ export enum StoreStatus {
 }
 
 export enum SubscriptionPlan {
+  Enterprise = 'ENTERPRISE',
+  Professional = 'PROFESSIONAL',
   Starter = 'STARTER'
 }
 
@@ -729,6 +734,20 @@ export type UpdateReorderRequestInput = {
   restock_by?: InputMaybe<Scalars['DateTime']['input']>;
 };
 
+export type UpdateStoreInput = {
+  address?: InputMaybe<Scalars['String']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  /** Store UUID to update */
+  id: Scalars['ID']['input'];
+  is_active?: InputMaybe<Scalars['Boolean']['input']>;
+  is_main?: InputMaybe<Scalars['Boolean']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<StoreStatus>;
+  tax_rate?: InputMaybe<Scalars['Float']['input']>;
+  timezone?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type UpdateSupplierInput = {
   address?: InputMaybe<Scalars['String']['input']>;
   contact_person?: InputMaybe<Scalars['String']['input']>;
@@ -756,10 +775,12 @@ export type User = {
   is_active: Scalars['Boolean']['output'];
   performance_metrics?: Maybe<Scalars['JSONObject']['output']>;
   phone?: Maybe<Scalars['String']['output']>;
+  pos_pin?: Maybe<Scalars['String']['output']>;
   position?: Maybe<Scalars['String']['output']>;
   position_type?: Maybe<Scalars['String']['output']>;
   role: UserRole;
   specialties: Array<Scalars['String']['output']>;
+  store: Store;
   username?: Maybe<Scalars['String']['output']>;
 };
 

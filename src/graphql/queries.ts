@@ -10,6 +10,7 @@ export const GET_CURRENT_USER = gql`
       role
       full_name
       username
+      pos_pin
       avatar_url
       phone
       position
@@ -228,6 +229,37 @@ export const GET_CATEGORIES = gql`
       name
       description
       is_active
+    }
+  }
+`;
+
+export const GET_STORES = gql`
+  query GetStores {
+    getStores {
+      id
+      name
+      address
+      phone
+      email
+      tax_rate
+      timezone
+      status
+      is_active
+      is_main
+      address
+      created_at
+      updated_at
+      users {
+        id
+        full_name
+        email
+        role
+        full_name
+        username
+        pos_pin
+        avatar_url
+        phone
+      }
     }
   }
 `;
