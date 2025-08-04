@@ -73,6 +73,7 @@ export const GET_INVENTORY = gql`
         low_stock_threshold
         store {
           id
+          name
         }
         product {
           id
@@ -117,6 +118,7 @@ export const GET_LOW_STOCK_INVENTORY = gql`
         low_stock_threshold
         store {
           id
+          name
         }
         product {
           id
@@ -197,6 +199,7 @@ export const GET_INVENTORY_MOVEMENTS = gql`
         id
         store {
           id
+          name
         }
         product {
           id

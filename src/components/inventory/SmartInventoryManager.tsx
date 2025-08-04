@@ -284,6 +284,9 @@ export const SmartInventoryManager = ({ refetchStats, alertCount }: Props) => {
                       <div>
                         <h4 className="font-medium">{movement.product.name}</h4>
                         <p className="text-sm text-muted-foreground">
+                          Store: {movement.store.name}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
                           {movement.movement_type
                             .replace("_", " ")
                             .charAt(0)
@@ -341,6 +344,10 @@ export const SmartInventoryManager = ({ refetchStats, alertCount }: Props) => {
                         />
                         <div>
                           <h4 className="font-medium">{item.product.name}</h4>
+
+                          <p className="text-sm text-muted-foreground">
+                            Store: {item.store?.name}
+                          </p>
                           <p className="text-sm text-muted-foreground">
                             Current stock: {item.quantity_on_hand} / Threshold:{" "}
                             {item.low_stock_threshold}
@@ -499,6 +506,7 @@ function InventoryItem({
                   SKU: {item.product.sku}
                 </p>
                 <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-1">
+                  <span>Store: {item.store?.name}</span>
                   <span>Stock: {item.quantity_on_hand}</span>
                   <span>Threshold: {item.low_stock_threshold}</span>
                   <span>Price: ${item.product.price}</span>
