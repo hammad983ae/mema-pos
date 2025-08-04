@@ -4,7 +4,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/ui/back-button";
-import { Input } from "@/components/ui/input";
 import { ProductInventory } from "@/components/inventory/ProductInventory";
 import { StockAlerts } from "@/components/inventory/StockAlerts";
 import { SupplierManagement } from "@/components/inventory/SupplierManagement";
@@ -14,7 +13,6 @@ import { PurchaseOrderManager } from "@/components/inventory/PurchaseOrderManage
 import {
   Package,
   AlertTriangle,
-  Search,
   Download,
   Upload,
   Truck,
@@ -22,12 +20,13 @@ import {
   DollarSign,
   TrendingUp,
   TrendingDown,
+  Grid,
 } from "lucide-react";
 import { useQuery } from "@apollo/client";
 import { GET_INVENTORY_STATS, Query } from "@/graphql";
+import { ProductCategoryManagement } from "@/components/inventory/ProductCategoryManagement.tsx";
 
 const Inventory = () => {
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedStore, setSelectedStore] = useState("all");
   const {
     data: statsData,
@@ -103,46 +102,39 @@ const Inventory = () => {
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-            <Button variant="outline" size="sm">
-              <Upload className="h-4 w-4 mr-2" />
-              Import
-            </Button>
-          </div>
+          {/*TODO*/}
+          {/*<div className="flex gap-2">*/}
+          {/*  <Button variant="outline" size="sm">*/}
+          {/*    <Download className="h-4 w-4 mr-2" />*/}
+          {/*    Export*/}
+          {/*  </Button>*/}
+          {/*  <Button variant="outline" size="sm">*/}
+          {/*    <Upload className="h-4 w-4 mr-2" />*/}
+          {/*    Import*/}
+          {/*  </Button>*/}
+          {/*</div>*/}
         </div>
 
+        {/*TODO*/}
         {/* Search and Filters */}
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search products, SKU, or barcode..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant={selectedStore === "all" ? "default" : "outline"}
-              onClick={() => setSelectedStore("all")}
-              size="sm"
-            >
-              All Stores
-            </Button>
-            <Button
-              variant={selectedStore === "main" ? "default" : "outline"}
-              onClick={() => setSelectedStore("main")}
-              size="sm"
-            >
-              Main Store
-            </Button>
-          </div>
-        </div>
+        {/*<div className="flex flex-col md:flex-row gap-4">*/}
+        {/*<div className="flex gap-2">*/}
+        {/*<Button*/}
+        {/*  variant={selectedStore === "all" ? "default" : "outline"}*/}
+        {/*  onClick={() => setSelectedStore("all")}*/}
+        {/*  size="sm"*/}
+        {/*>*/}
+        {/*  All Stores*/}
+        {/*</Button>*/}
+        {/*<Button*/}
+        {/*  variant={selectedStore === "main" ? "default" : "outline"}*/}
+        {/*  onClick={() => setSelectedStore("main")}*/}
+        {/*  size="sm"*/}
+        {/*>*/}
+        {/*  Main Store*/}
+        {/*</Button>*/}
+        {/*</div>*/}
+        {/*</div>*/}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -193,17 +185,22 @@ const Inventory = () => {
               <Package className="h-4 w-4" />
               <span className="hidden sm:inline">Smart Manager</span>
             </TabsTrigger>
-            <TabsTrigger value="sync" className="flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              <span className="hidden sm:inline">Real-time Sync</span>
-            </TabsTrigger>
-            <TabsTrigger value="reorder" className="flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              <span className="hidden sm:inline">Auto Reorder</span>
-            </TabsTrigger>
-            <TabsTrigger value="catalog" className="flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              <span className="hidden sm:inline">Vendor Catalog</span>
+            {/*TODO*/}
+            {/*<TabsTrigger value="sync" className="flex items-center gap-2">*/}
+            {/*  <Package className="h-4 w-4" />*/}
+            {/*  <span className="hidden sm:inline">Real-time Sync</span>*/}
+            {/*</TabsTrigger>*/}
+            {/*<TabsTrigger value="reorder" className="flex items-center gap-2">*/}
+            {/*  <Package className="h-4 w-4" />*/}
+            {/*  <span className="hidden sm:inline">Auto Reorder</span>*/}
+            {/*</TabsTrigger>*/}
+            {/*<TabsTrigger value="catalog" className="flex items-center gap-2">*/}
+            {/*  <Package className="h-4 w-4" />*/}
+            {/*  <span className="hidden sm:inline">Vendor Catalog</span>*/}
+            {/*</TabsTrigger>*/}
+            <TabsTrigger value="categories" className="flex items-center gap-2">
+              <Grid className="h-4 w-4" />
+              <span className="hidden sm:inline">Categories</span>
             </TabsTrigger>
             <TabsTrigger value="products" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
@@ -225,10 +222,11 @@ const Inventory = () => {
               <Truck className="h-4 w-4" />
               <span className="hidden sm:inline">Suppliers</span>
             </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              <span className="hidden sm:inline">Reports</span>
-            </TabsTrigger>
+            {/*TODO*/}
+            {/*<TabsTrigger value="reports" className="flex items-center gap-2">*/}
+            {/*  <BarChart3 className="h-4 w-4" />*/}
+            {/*  <span className="hidden sm:inline">Reports</span>*/}
+            {/*</TabsTrigger>*/}
           </TabsList>
 
           <TabsContent value="smart">
@@ -245,15 +243,19 @@ const Inventory = () => {
             <PurchaseOrderManager />
           </TabsContent>
 
+          <TabsContent value="categories">
+            <ProductCategoryManagement />
+          </TabsContent>
+
           <TabsContent value="products">
-            <ProductInventory
-              searchQuery={searchQuery}
-              selectedStore={selectedStore}
-            />
+            <ProductInventory selectedStore={selectedStore} />
           </TabsContent>
 
           <TabsContent value="alerts">
-            <StockAlerts />
+            <StockAlerts
+              lowCount={statsData?.getInventoryStats?.lowStockItemsCount}
+              criticalCount={statsData?.getInventoryStats?.outOfStockCount}
+            />
           </TabsContent>
 
           <TabsContent value="suppliers">

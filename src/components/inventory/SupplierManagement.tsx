@@ -44,10 +44,12 @@ import {
   UPDATE_SUPPLIER,
 } from "@/graphql";
 import { showSuccess } from "@/hooks/useToastMessages.tsx";
+import { DeleteDialog } from "@/components/inventory/DeleteDialog.tsx";
 
 export const SupplierManagement = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [showDelete, setShowDelete] = useState(false);
+  const [selecteditem, setSelecteditem] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState<CreateSupplierInput>({
     name: "",
     contact_person: "",
@@ -74,12 +76,12 @@ export const SupplierManagement = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const promise = editingSupplier
+    const promise = selecteditem
       ? updateSupplier({
           variables: {
             input: {
               ...formData,
-              id: editingSupplier.id,
+              id: selecteditem.id,
             },
           },
         })
@@ -87,11 +89,11 @@ export const SupplierManagement = () => {
 
     promise.then(() => {
       showSuccess(
-        `Supplier ${editingSupplier ? "updated" : "created"} successfully`,
+        `Supplier ${selecteditem ? "updated" : "created"} successfully`,
       );
 
       setIsDialogOpen(false);
-      setEditingSupplier(null);
+      setSelecteditem(null);
       setFormData({
         name: "",
         contact_person: "",
@@ -106,7 +108,7 @@ export const SupplierManagement = () => {
   };
 
   const handleEdit = (supplier: Supplier) => {
-    setEditingSupplier(supplier);
+    setSelecteditem(supplier);
     setFormData({
       name: supplier.name,
       contact_person: supplier.contact_person || "",
@@ -117,15 +119,6 @@ export const SupplierManagement = () => {
       status: supplier.status,
     });
     setIsDialogOpen(true);
-  };
-
-  const handleDelete = async (supplierId: string) => {
-    if (!confirm("Are you sure you want to delete this supplier?")) return;
-
-    deleteSupplier({ variables: { id: supplierId } }).then(() => {
-      showSuccess("Supplier deleted successfully");
-      refetch();
-    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -166,7 +159,7 @@ export const SupplierManagement = () => {
             <DialogTrigger asChild>
               <Button
                 onClick={() => {
-                  setEditingSupplier(null);
+                  setSelecteditem(null);
                   setFormData({
                     name: "",
                     contact_person: "",
@@ -182,38 +175,43 @@ export const SupplierManagement = () => {
                 Add Supplier
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-xl">
               <DialogHeader>
                 <DialogTitle>
-                  {editingSupplier ? "Edit Supplier" : "Add New Supplier"}
+                  {selecteditem ? "Edit Supplier" : "Add New Supplier"}
                 </DialogTitle>
               </DialogHeader>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Supplier Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, name: e.target.value }))
-                    }
-                    required
-                  />
-                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Supplier Name *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          name: e.target.value,
+                        }))
+                      }
+                      required
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="contact_person">Contact Person</Label>
-                  <Input
-                    id="contact_person"
-                    value={formData.contact_person}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        contact_person: e.target.value,
-                      }))
-                    }
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="contact_person">Contact Person</Label>
+                    <Input
+                      id="contact_person"
+                      value={formData.contact_person}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          contact_person: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -231,18 +229,42 @@ export const SupplierManagement = () => {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        phone: e.target.value,
-                      }))
-                    }
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          phone: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Status</Label>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(value) =>
+                        setFormData((prev) => ({ ...prev, status: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={SupplierStatus.Active}>
+                          Active
+                        </SelectItem>
+                        <SelectItem value={SupplierStatus.Inactive}>
+                          Inactive
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -258,28 +280,6 @@ export const SupplierManagement = () => {
                     }
                     rows={2}
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) =>
-                      setFormData((prev) => ({ ...prev, status: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={SupplierStatus.Active}>
-                        Active
-                      </SelectItem>
-                      <SelectItem value={SupplierStatus.Inactive}>
-                        Inactive
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 <div className="space-y-2">
@@ -303,7 +303,7 @@ export const SupplierManagement = () => {
                     className="flex-1"
                     loading={creating || updating}
                   >
-                    {editingSupplier ? "Update" : "Create"} Supplier
+                    {selecteditem ? "Update" : "Create"} Supplier
                   </Button>
                   <Button
                     type="button"
@@ -387,7 +387,10 @@ export const SupplierManagement = () => {
                       variant="ghost"
                       size="sm"
                       disabled={deleting}
-                      onClick={() => handleDelete(supplier.id)}
+                      onClick={() => {
+                        setSelecteditem(supplier);
+                        setShowDelete(true);
+                      }}
                       className="text-destructive hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -399,6 +402,23 @@ export const SupplierManagement = () => {
           </div>
         )}
       </CardContent>
+
+      {showDelete && (
+        <DeleteDialog
+          title={"Delete Supplier"}
+          loading={deleting}
+          handleClose={() => {
+            setSelecteditem(null);
+            setShowDelete(false);
+          }}
+          handleDelete={() => {
+            deleteSupplier({ variables: { id: selecteditem.id } }).then(() => {
+              showSuccess("Supplier deleted successfully");
+              refetch();
+            });
+          }}
+        />
+      )}
     </Card>
   );
 };

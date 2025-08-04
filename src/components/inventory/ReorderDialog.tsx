@@ -6,10 +6,10 @@ import {
 } from "@/components/ui/dialog.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import {
+  CREATE_REORDER_REQUEST,
   Inventory,
   Mutation,
-  MutationUpdateInventoryArgs,
-  UPDATE_INVENTORY,
+  MutationCreateReorderRequestArgs,
 } from "@/graphql";
 import { Label } from "@/components/ui/label.tsx";
 import { Input } from "@/components/ui/input.tsx";
@@ -29,16 +29,15 @@ import { Calendar } from "@/components/ui/calendar.tsx";
 type Props = {
   item: Inventory;
   handleClose: () => void;
-  onSuccess: () => void;
 };
 
-export const ReorderDialog = ({ handleClose, onSuccess, item }: Props) => {
+export const ReorderDialog = ({ handleClose, item }: Props) => {
   const [date, setDate] = useState<string>();
   const [quantity, setQuantity] = useState("");
-  const [updateInventory, { loading }] = useMutation<
+  const [createRequest, { loading }] = useMutation<
     Mutation,
-    MutationUpdateInventoryArgs
-  >(UPDATE_INVENTORY);
+    MutationCreateReorderRequestArgs
+  >(CREATE_REORDER_REQUEST);
 
   const handleSubmit = () => {
     if (!quantity || !date) {
@@ -46,28 +45,18 @@ export const ReorderDialog = ({ handleClose, onSuccess, item }: Props) => {
       return;
     }
 
-    const quantityChange = parseInt(quantity);
-    const newQuantity = item.quantity_on_hand + quantityChange;
-
-    if (newQuantity < 0) {
-      showError("Adjustment would result in negative stock");
-      return;
-    }
-
-    // updateInventory({
-    //   variables: {
-    //     input: {
-    //       id: item.id,
-    //       quantity_on_hand: newQuantity,
-    //       last_counted_at: new Date().toISOString(),
-    //     },
-    //   },
-    // }).then(() => {
-    //   onSuccess();
-    //
-    showSuccess("Request for reorder sent to supplier!");
-    handleClose();
-    // });
+    createRequest({
+      variables: {
+        input: {
+          inventoryId: item.id,
+          restock_by: date,
+          quantity: parseInt(quantity),
+        },
+      },
+    }).then(() => {
+      showSuccess("Request for reorder sent to supplier!");
+      handleClose();
+    });
   };
 
   return (
@@ -165,7 +154,7 @@ export const ReorderDialog = ({ handleClose, onSuccess, item }: Props) => {
               disabled={!item?.product?.supplier?.name}
               loading={loading}
             >
-              Update Stock
+              Reorder Stock
             </Button>
           </div>
         </div>

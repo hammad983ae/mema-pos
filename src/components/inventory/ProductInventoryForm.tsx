@@ -14,6 +14,7 @@ import { LabelWithTooltip } from "@/components/ui/label-with-tooltip";
 import { useMutation, useQuery } from "@apollo/client";
 import {
   CREATE_PRODUCT,
+  GET_CATEGORIES,
   GET_SUPPLIERS,
   Inventory,
   Mutation,
@@ -21,7 +22,6 @@ import {
   MutationUpdateProductArgs,
   Product,
   Query,
-  SupplierStatus,
   UPDATE_PRODUCT,
 } from "@/graphql";
 import { showError, showSuccess } from "@/hooks/useToastMessages.tsx";
@@ -56,10 +56,12 @@ export const ProductInventoryForm = ({
     MutationUpdateProductArgs
   >(UPDATE_PRODUCT);
   const { data: suppliersData } = useQuery<Query>(GET_SUPPLIERS);
+  const { data: categoriesData } = useQuery<Query>(GET_CATEGORIES);
 
   const [productForm, setProductForm] = useState({
     name: "",
     supplier: "",
+    category: "",
     sku: "",
     barcode: "",
     price: "0",
@@ -78,6 +80,7 @@ export const ProductInventoryForm = ({
         setProductForm({
           name: item?.name ?? "",
           supplier: item?.supplier?.id ?? null,
+          category: item?.category?.id ?? null,
           sku: item?.sku ?? "",
           barcode: item?.barcode ?? "",
           price: item?.price?.toString() ?? "0",
@@ -93,6 +96,7 @@ export const ProductInventoryForm = ({
         setProductForm({
           name: item?.product?.name ?? "",
           supplier: item?.product.supplier?.id ?? null,
+          category: item?.product.category?.id ?? null,
           sku: item?.product.sku ?? "",
           barcode: item?.product.barcode ?? "",
           price: item?.product.price?.toString() ?? "0",
@@ -121,6 +125,7 @@ export const ProductInventoryForm = ({
       initial_quantity,
       low_stock_threshold,
       supplier,
+      category,
     } = productForm;
 
     if (!name || !sku) {
@@ -135,6 +140,7 @@ export const ProductInventoryForm = ({
       price: parseFloat(price),
       cost: parseFloat(cost),
       supplierId: supplier,
+      categoryId: category,
       minimum_price: parseFloat(minimumPrice),
       description,
       is_active: true,
@@ -173,6 +179,7 @@ export const ProductInventoryForm = ({
         name: "",
         sku: "",
         supplier: "",
+        category: "",
         barcode: "",
         price: "0",
         cost: "0",
@@ -330,6 +337,32 @@ export const ProductInventoryForm = ({
           )}
 
           <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Category</Label>
+
+              <Select
+                value={productForm.category}
+                onValueChange={(value) =>
+                  setProductForm((prev) => ({ ...prev, category: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {categoriesData?.getCategories?.length ? (
+                    categoriesData.getCategories.map((category) => (
+                      <SelectItem value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <NoData text={"No categories found"} />
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label>Supplier</Label>
 

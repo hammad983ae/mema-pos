@@ -220,3 +220,14 @@ export const GET_INVENTORY_MOVEMENTS = gql`
     }
   }
 `;
+
+export const GET_CATEGORIES = gql`
+  query GetCategories {
+    getCategories {
+      id
+      name
+      description
+      is_active
+    }
+  }
+`;

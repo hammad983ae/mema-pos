@@ -30,7 +30,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQuery } from "@apollo/client";
 import {
   DELETE_INVENTORY,
-  DELETE_PRODUCT,
   GET_INVENTORY,
   GET_INVENTORY_MOVEMENTS,
   GET_LOW_STOCK_INVENTORY,
@@ -38,7 +37,6 @@ import {
   InventoryStockStatus,
   Mutation,
   MutationDeleteInventoryArgs,
-  MutationDeleteProductArgs,
   Query,
   QueryGetInventoryByBusinessArgs,
   QueryGetLowStockInventoryByBusinessArgs,
@@ -331,21 +329,26 @@ export const SmartInventoryManager = ({ refetchStats, alertCount }: Props) => {
               const StatusIcon = stockStatus.icon;
 
               return (
-                <Card key={item.id} className="border-l-4 border-l-warning">
+                <Card
+                  key={item.id}
+                  className={`border-l-4 border-l-${stockStatus.color}`}
+                >
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        <StatusIcon className="h-8 w-8 text-warning" />
+                        <StatusIcon
+                          className={`h-8 w-8 text-${stockStatus.color}`}
+                        />
                         <div>
                           <h4 className="font-medium">{item.product.name}</h4>
                           <p className="text-sm text-muted-foreground">
                             Current stock: {item.quantity_on_hand} / Threshold:{" "}
                             {item.low_stock_threshold}
                           </p>
-                          <p className="text-sm text-warning">
-                            {item.quantity_on_hand === 0
-                              ? "OUT OF STOCK"
-                              : "LOW STOCK ALERT"}
+                          <p
+                            className={`text-sm text-${stockStatus.color} uppercase`}
+                          >
+                            {stockStatus.status}
                           </p>
                         </div>
                       </div>
@@ -361,9 +364,16 @@ export const SmartInventoryManager = ({ refetchStats, alertCount }: Props) => {
                           <Plus className="h-4 w-4 mr-2" />
                           Add Stock
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedItem(item);
+                            setShowReorderDialog(true);
+                          }}
+                        >
                           <ShoppingCart className="h-4 w-4 mr-2" />
-                          Auto Reorder
+                          Reorder
                         </Button>
                       </div>
                     </div>
@@ -424,10 +434,6 @@ export const SmartInventoryManager = ({ refetchStats, alertCount }: Props) => {
           handleClose={() => {
             setSelectedItem(null);
             setShowReorderDialog(false);
-          }}
-          onSuccess={() => {
-            setSelectedItem(null);
-            refetch();
           }}
         />
       )}

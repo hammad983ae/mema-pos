@@ -107,3 +107,37 @@ export const DELETE_SUPPLIER = gql`
     deleteSupplier(id: $id)
   }
 `;
+
+export const CREATE_PRODUCT_CATEGORY = gql`
+  mutation CreateProductCategory($input: CreateProductCategoryInput!) {
+    createProductCategory(input: $input) {
+      id
+    }
+  }
+`;
+
+export const UPDATE_PRODUCT_CATEGORY = gql`
+  mutation UpdateProductCategory($input: UpdateProductCategoryInput!) {
+    updateProductCategory(input: $input)
+  }
+`;
+
+export const DELETE_PRODUCT_CATEGORY = gql`
+  mutation DeleteProductCategory($id: String!) {
+    deleteProductCategory(id: $id)
+  }
+`;
+
+export const CREATE_REORDER_REQUEST = gql`
+  mutation CreateReorderRequest($input: CreateReorderRequestInput!) {
+    createReorderRequest(input: $input) {
+      id
+    }
+  }
+`;
+
+export const UPDATE_REORDER_REQUEST = gql`
+  mutation UpdateReorderRequest($input: UpdateReorderRequestInput!) {
+    updateReorderRequest(input: $input)
+  }
+`;

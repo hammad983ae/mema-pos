@@ -39,7 +39,6 @@ import { ProductInventoryForm } from "@/components/inventory/ProductInventoryFor
 import { DeleteProductDialog } from "@/components/inventory/DeleteProductDialog.tsx";
 
 interface ProductInventoryProps {
-  searchQuery: string;
   selectedStore: string;
 }
 
@@ -66,6 +65,7 @@ export const ProductInventory = ({ selectedStore }: ProductInventoryProps) => {
             <Package className="h-5 w-5" />
             <span>Product Inventory</span>
           </CardTitle>
+          {/*TODO*/}
           {/*<div className="flex items-center space-x-3">*/}
           {/*  <Select value={sortBy} onValueChange={setSortBy}>*/}
           {/*    <SelectTrigger className="w-40">*/}
@@ -107,6 +107,7 @@ export const ProductInventory = ({ selectedStore }: ProductInventoryProps) => {
                     </Tooltip>
                   </TooltipProvider>
                 </TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>Supplier</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -172,16 +173,15 @@ const ProductItem = ({
 
   return (
     <TableRow>
-      <TableCell className="font-medium">
-        <div className="flex items-center space-x-3">
-          <span>{product.name}</span>
-        </div>
-      </TableCell>
+      <TableCell className="font-medium">{product.name}</TableCell>
       <TableCell className="font-mono text-sm">{product.sku}</TableCell>
       <TableCell>${product.price}</TableCell>
       <TableCell className="text-muted-foreground">${product.cost}</TableCell>
       <TableCell className="text-primary font-medium">
         ${product.minimum_price}
+      </TableCell>
+      <TableCell className="text-sm text-muted-foreground">
+        {product.category?.name ?? "-"}
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">
         {product.supplier?.name ?? "-"}

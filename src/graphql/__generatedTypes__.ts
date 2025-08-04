@@ -86,6 +86,12 @@ export type CreateInventoryMovementInput = {
   storeId: Scalars['ID']['input'];
 };
 
+export type CreateProductCategoryInput = {
+  description?: InputMaybe<Scalars['String']['input']>;
+  is_active?: InputMaybe<Scalars['Boolean']['input']>;
+  name: Scalars['String']['input'];
+};
+
 export type CreateProductInput = {
   barcode?: InputMaybe<Scalars['String']['input']>;
   /** Category UUID */
@@ -100,6 +106,12 @@ export type CreateProductInput = {
   sku: Scalars['String']['input'];
   /** Supplier UUID */
   supplierId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type CreateReorderRequestInput = {
+  inventoryId: Scalars['ID']['input'];
+  quantity: Scalars['Int']['input'];
+  restock_by: Scalars['DateTime']['input'];
 };
 
 export type CreateSupplierInput = {
@@ -255,11 +267,13 @@ export type Mutation = {
   createLowStockAlert: LowStockAlert;
   createProduct: Scalars['Boolean']['output'];
   createProductCategory: ProductCategory;
+  createReorderRequest: ReorderRequest;
   createStore: Store;
   createStoreSession: StoreDaySession;
   createSupplier: Supplier;
   deleteInventory: Scalars['Boolean']['output'];
   deleteProduct: Scalars['Boolean']['output'];
+  deleteProductCategory: Scalars['Boolean']['output'];
   deleteSupplier: Scalars['Boolean']['output'];
   loginBusinessOwner: LoginResponse;
   registerBusinessOwner: LoginResponse;
@@ -271,6 +285,7 @@ export type Mutation = {
   updateLowStockAlert: Scalars['Boolean']['output'];
   updateProduct: Scalars['Boolean']['output'];
   updateProductCategory: Scalars['Boolean']['output'];
+  updateReorderRequest: Scalars['Boolean']['output'];
   updateStore: Scalars['Boolean']['output'];
   updateSupplier: Scalars['Boolean']['output'];
   verifyEmail: Scalars['Boolean']['output'];
@@ -309,7 +324,12 @@ export type MutationCreateProductArgs = {
 
 
 export type MutationCreateProductCategoryArgs = {
-  input: ProductCategoryInput;
+  input: CreateProductCategoryInput;
+};
+
+
+export type MutationCreateReorderRequestArgs = {
+  input: CreateReorderRequestInput;
 };
 
 
@@ -334,6 +354,11 @@ export type MutationDeleteInventoryArgs = {
 
 
 export type MutationDeleteProductArgs = {
+  id: Scalars['String']['input'];
+};
+
+
+export type MutationDeleteProductCategoryArgs = {
   id: Scalars['String']['input'];
 };
 
@@ -393,8 +418,12 @@ export type MutationUpdateProductArgs = {
 
 
 export type MutationUpdateProductCategoryArgs = {
-  id: Scalars['String']['input'];
-  input: ProductCategoryInput;
+  input: UpdateProductCategoryInput;
+};
+
+
+export type MutationUpdateReorderRequestArgs = {
+  input: UpdateReorderRequestInput;
 };
 
 
@@ -439,15 +468,12 @@ export type Product = {
 
 export type ProductCategory = {
   __typename?: 'ProductCategory';
+  business?: Maybe<Business>;
   description?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   is_active: Scalars['Boolean']['output'];
   name: Scalars['String']['output'];
   products: Array<Product>;
-};
-
-export type ProductCategoryInput = {
-  name?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type ProductPagination = {
@@ -459,12 +485,14 @@ export type ProductPagination = {
 export type Query = {
   __typename?: 'Query';
   getBusinessStats: BusinessStats;
+  getCategories: Array<ProductCategory>;
   getCurrentUser: User;
   getInventoryByBusiness: InventoryPagination;
   getInventoryStats: InventoryStats;
   getLowStockInventoryByBusiness: InventoryPagination;
   getMovementsByBusiness: InventoryMovementPagination;
   getProductsByBusiness: ProductPagination;
+  getReorderRequestsByBusiness: ReorderRequestPagination;
   getSuppliers: Array<Supplier>;
   sayHello: Scalars['String']['output'];
 };
@@ -496,6 +524,11 @@ export type QueryGetProductsByBusinessArgs = {
   pagination: PaginationInput;
 };
 
+
+export type QueryGetReorderRequestsByBusinessArgs = {
+  pagination: PaginationInput;
+};
+
 export enum ReferenceType {
   Adjustment = 'ADJUSTMENT',
   Order = 'ORDER',
@@ -512,6 +545,23 @@ export type RegisterInput = {
   phone: Scalars['String']['input'];
   pos_pin: Scalars['String']['input'];
   username: Scalars['String']['input'];
+};
+
+export type ReorderRequest = {
+  __typename?: 'ReorderRequest';
+  created_at: Scalars['DateTime']['output'];
+  created_by: User;
+  id: Scalars['ID']['output'];
+  inventory: Inventory;
+  quantity: Scalars['Int']['output'];
+  restock_by: Scalars['String']['output'];
+  updated_at: Scalars['DateTime']['output'];
+};
+
+export type ReorderRequestPagination = {
+  __typename?: 'ReorderRequestPagination';
+  count: Scalars['Int']['output'];
+  data: Array<ReorderRequest>;
 };
 
 export enum SessionStatus {
@@ -646,6 +696,14 @@ export type UpdateInventoryMovementInput = {
   storeId?: InputMaybe<Scalars['ID']['input']>;
 };
 
+export type UpdateProductCategoryInput = {
+  description?: InputMaybe<Scalars['String']['input']>;
+  /** Product UUID to update */
+  id: Scalars['ID']['input'];
+  is_active?: InputMaybe<Scalars['Boolean']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type UpdateProductInput = {
   barcode?: InputMaybe<Scalars['String']['input']>;
   /** Category UUID */
@@ -662,6 +720,13 @@ export type UpdateProductInput = {
   sku?: InputMaybe<Scalars['String']['input']>;
   /** Supplier UUID */
   supplierId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type UpdateReorderRequestInput = {
+  id: Scalars['ID']['input'];
+  inventoryId?: InputMaybe<Scalars['ID']['input']>;
+  quantity?: InputMaybe<Scalars['Int']['input']>;
+  restock_by?: InputMaybe<Scalars['DateTime']['input']>;
 };
 
 export type UpdateSupplierInput = {

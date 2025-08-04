@@ -7,6 +7,7 @@ import {
 import { Button } from "@/components/ui/button.tsx";
 import {
   CREATE_INVENTORY_MOVEMENT,
+  GET_INVENTORY_STATS,
   Inventory,
   MovementType,
   Mutation,
@@ -32,7 +33,7 @@ import { useAuth } from "@/hooks/useAuth.tsx";
 type Props = {
   item: Inventory;
   handleClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 };
 
 export const AdjustStockDialog = ({ handleClose, onSuccess, item }: Props) => {
@@ -93,6 +94,7 @@ export const AdjustStockDialog = ({ handleClose, onSuccess, item }: Props) => {
             createdById: user?.id,
           },
         },
+        refetchQueries: [{ query: GET_INVENTORY_STATS }],
       }).then(() => {
         setAdjustmentForm({
           adjustment_type: MovementType.Adjustment,
@@ -100,7 +102,7 @@ export const AdjustStockDialog = ({ handleClose, onSuccess, item }: Props) => {
           notes: "",
         });
 
-        onSuccess();
+        onSuccess?.();
 
         handleClose();
         showSuccess("Stock adjustment recorded successfully");
