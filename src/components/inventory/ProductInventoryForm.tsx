@@ -38,14 +38,14 @@ type Props = {
   refetch: () => void;
   handleClose: () => void;
   item?: Inventory | Product;
-  isProductForm?: boolean;
+  showInventory?: boolean;
 };
 
 export const ProductInventoryForm = ({
   item,
   refetch,
   handleClose,
-  isProductForm = false,
+  showInventory = true,
 }: Props) => {
   const [createProduct, { loading: creatingProduct }] = useMutation<
     Mutation,
@@ -282,7 +282,7 @@ export const ProductInventoryForm = ({
               />
             </div>
 
-            {!isProductForm ? (
+            {showInventory ? (
               <div className="space-y-2">
                 <Label>Initial Quantity</Label>
                 <Input
@@ -303,7 +303,7 @@ export const ProductInventoryForm = ({
             )}
           </div>
 
-          {!isProductForm && (
+          {showInventory && (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Low Stock Threshold</Label>
@@ -347,7 +347,11 @@ export const ProductInventoryForm = ({
                 }
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue
+                    placeholder={
+                      <p className={"text-muted-foreground"}>Choose category</p>
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {categoriesData?.getCategories?.length ? (
@@ -373,7 +377,11 @@ export const ProductInventoryForm = ({
                 }
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue
+                    placeholder={
+                      <p className={"text-muted-foreground"}>Choose supplier</p>
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {suppliersData?.getSuppliers?.length ? (
@@ -399,6 +407,7 @@ export const ProductInventoryForm = ({
             path="products/"
           />
 
+          {/*<div className="grid grid-cols-2 gap-4">*/}
           <div className="space-y-2">
             <Label>Description</Label>
             <Textarea
@@ -413,6 +422,7 @@ export const ProductInventoryForm = ({
               rows={3}
             />
           </div>
+          {/*</div>*/}
 
           <div className="flex justify-end space-x-2">
             <Button variant="outline" onClick={handleClose}>

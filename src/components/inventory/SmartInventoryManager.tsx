@@ -48,6 +48,7 @@ import { ProductInventoryForm } from "@/components/inventory/ProductInventoryFor
 import { DeleteInventoryDialog } from "@/components/inventory/DeleteInventoryDialog.tsx";
 import { AdjustStockDialog } from "@/components/inventory/AdjustStockDialog.tsx";
 import { ReorderDialog } from "@/components/inventory/ReorderDialog.tsx";
+import { format } from "date-fns";
 
 type Props = {
   refetchStats: () => void;
@@ -303,7 +304,10 @@ export const SmartInventoryManager = ({ refetchStats, alertCount }: Props) => {
                         {movement.quantity_change}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {new Date(movement.created_at).toLocaleDateString()}
+                        {format(new Date(movement.created_at), "PP")}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(movement.created_at), "h:mm a")}
                       </p>
                     </div>
                   </div>

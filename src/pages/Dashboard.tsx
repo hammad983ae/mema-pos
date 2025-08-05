@@ -343,7 +343,10 @@ const Dashboard = () => {
 
           {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <Card>
+            <Card
+              onClick={() => navigate("/inventory")}
+              className={"cursor-pointer"}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Products</CardTitle>
                 <Package className="h-4 w-4 text-muted-foreground" />
@@ -360,7 +363,10 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card
+              onClick={() => navigate("/store-management")}
+              className={"cursor-pointer"}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Stores</CardTitle>
                 <Store className="h-4 w-4 text-muted-foreground" />
@@ -375,7 +381,10 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card
+              onClick={() => navigate("/team")}
+              className={"cursor-pointer"}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Team Members

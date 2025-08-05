@@ -25,11 +25,11 @@ export type Business = {
   __typename?: 'Business';
   address?: Maybe<Scalars['String']['output']>;
   created_at: Scalars['DateTime']['output'];
-  email?: Maybe<Scalars['String']['output']>;
+  email: Scalars['String']['output'];
   id: Scalars['ID']['output'];
   invitation_code: Scalars['String']['output'];
   name: Scalars['String']['output'];
-  phone?: Maybe<Scalars['String']['output']>;
+  phone: Scalars['String']['output'];
   settings: Scalars['JSONObject']['output'];
   stores: Array<Store>;
   subscription_plan: SubscriptionPlan;
@@ -768,21 +768,21 @@ export type User = {
   business: Business;
   email: Scalars['String']['output'];
   emailVerificationToken?: Maybe<Scalars['String']['output']>;
-  full_name?: Maybe<Scalars['String']['output']>;
+  full_name: Scalars['String']['output'];
   hired_date: Scalars['String']['output'];
   hourly_rate?: Maybe<Scalars['Float']['output']>;
   id: Scalars['ID']['output'];
   isEmailVerified: Scalars['Boolean']['output'];
   is_active: Scalars['Boolean']['output'];
   performance_metrics?: Maybe<Scalars['JSONObject']['output']>;
-  phone?: Maybe<Scalars['String']['output']>;
-  pos_pin?: Maybe<Scalars['String']['output']>;
+  phone: Scalars['String']['output'];
+  pos_pin: Scalars['String']['output'];
   position?: Maybe<Scalars['String']['output']>;
   position_type?: Maybe<Scalars['String']['output']>;
   role: UserRole;
   specialties: Array<Scalars['String']['output']>;
   store: Store;
-  username?: Maybe<Scalars['String']['output']>;
+  username: Scalars['String']['output'];
 };
 
 export enum UserRole {

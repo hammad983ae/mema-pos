@@ -142,7 +142,7 @@ export const ProductInventory = ({ selectedStore }: ProductInventoryProps) => {
 
         {showAddProduct && (
           <ProductInventoryForm
-            isProductForm={!!selectedProduct}
+            showInventory={!selectedProduct}
             refetch={refetch}
             handleClose={() => {
               setShowAddProduct(false);
