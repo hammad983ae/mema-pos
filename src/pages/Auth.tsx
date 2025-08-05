@@ -22,13 +22,16 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { UserRole } from "@/graphql";
+import { Mutation, RESEND_VERIFICATION_EMAIL, UserRole } from "@/graphql";
+import { useMutation } from "@apollo/client";
+import { showSuccess } from "@/hooks/useToastMessages.tsx";
 
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const {
     user,
+    signOut,
     signInEmployee,
     signInOwner,
     signUp,
@@ -36,7 +39,6 @@ const Auth = () => {
     updatePassword,
     verifyEmail,
     loading,
-    business,
   } = useAuth();
   const { toast } = useToast();
 
@@ -55,7 +57,10 @@ const Auth = () => {
   const [resetEmail, setResetEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [disableResend, setDisableResend] = useState(false);
   const token = searchParams.get("token");
+  const [resendVerification, { loading: resendingVerification }] =
+    useMutation<Mutation>(RESEND_VERIFICATION_EMAIL);
 
   // Employee Sign In Form
   const [employeeSignInData, setEmployeeSignInData] = useState({
@@ -118,7 +123,9 @@ const Auth = () => {
 
   useEffect(() => {
     if (user) {
-      if (user.role === UserRole.BusinessOwner) {
+      if (!user.isEmailVerified) {
+        setShowEmailVerification(true);
+      } else if (user.role === UserRole.BusinessOwner) {
         navigate("/dashboard");
       } else if (user.role === UserRole.Manager) {
         navigate("/manager");
@@ -553,25 +560,41 @@ const Auth = () => {
 
                 <div className="flex flex-col space-y-3 pt-4">
                   <Button
+                    disabled={resendingVerification || disableResend}
                     onClick={() => {
-                      setShowEmailVerification(false);
-                      setAuthFlow("signin");
+                      if (user) {
+                        setDisableResend(true);
+
+                        resendVerification().then(() => {
+                          showSuccess("Resent verification link!");
+
+                          setTimeout(() => setDisableResend(false), 60000);
+                        });
+                      } else {
+                        setShowEmailVerification(false);
+                        setAuthFlow("signin");
+                      }
                     }}
                     className="w-full"
                   >
-                    Continue to Sign In
+                    {!!user
+                      ? "Resend verification link"
+                      : "Continue to Sign In"}
                   </Button>
 
                   <Button
                     variant="outline"
                     onClick={() => {
+                      if (user) {
+                        signOut();
+                      }
                       setShowEmailVerification(false);
                       setVerificationEmail("");
                       setAuthFlow("owner_signup");
                     }}
                     className="w-full"
                   >
-                    Back to Sign Up
+                    {!!user ? "Logout" : "Back to Sign Up"}
                   </Button>
                 </div>
               </div>

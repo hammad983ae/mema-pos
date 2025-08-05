@@ -22,6 +22,12 @@ export const VERIFY_EMAIL = gql`
   }
 `;
 
+export const RESEND_VERIFICATION_EMAIL = gql`
+  mutation ResendVerificationEmail {
+    resendVerificationEmail
+  }
+`;
+
 export const CREATE_BUSINESS = gql`
   mutation CreateBusiness($input: BusinessInput!) {
     createBusiness(input: $input) {

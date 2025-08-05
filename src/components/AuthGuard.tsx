@@ -46,7 +46,11 @@ export const AuthGuard = ({
 
     // If user is authenticated with business and trying to access auth pages, redirect to dashboard
     if (user && hasBusinessAssociation && location.pathname === "/auth") {
-      navigate("/dashboard");
+      if (!user.isEmailVerified) {
+        navigate("/auth");
+      } else {
+        navigate("/dashboard");
+      }
       return;
     }
 

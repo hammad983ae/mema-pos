@@ -290,6 +290,7 @@ export type Mutation = {
   loginBusinessOwner: LoginResponse;
   registerBusinessOwner: LoginResponse;
   reorderInventory: Scalars['Boolean']['output'];
+  resendVerificationEmail: Scalars['Boolean']['output'];
   updateBusiness: Scalars['Boolean']['output'];
   updateInventory: Scalars['Boolean']['output'];
   updateInventoryAlert: Scalars['Boolean']['output'];
