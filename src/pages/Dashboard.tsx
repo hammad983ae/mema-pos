@@ -376,7 +376,8 @@ const Dashboard = () => {
                   {statsData.getBusinessStats.storesCount}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Active locations
+                  In {statsData.getBusinessStats.storeLocationsCount} active
+                  locations
                 </p>
               </CardContent>
             </Card>

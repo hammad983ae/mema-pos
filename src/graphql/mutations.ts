@@ -29,7 +29,7 @@ export const RESEND_VERIFICATION_EMAIL = gql`
 `;
 
 export const CREATE_BUSINESS = gql`
-  mutation CreateBusiness($input: BusinessInput!) {
+  mutation CreateBusiness($input: CreateBusinessInput!) {
     createBusiness(input: $input) {
       id
     }
@@ -37,8 +37,8 @@ export const CREATE_BUSINESS = gql`
 `;
 
 export const UPDATE_BUSINESS = gql`
-  mutation UpdateBusiness($id: String!, $input: BusinessInput!) {
-    updateBusiness(id: $id, input: $input)
+  mutation UpdateBusiness($input: UpdateBusinessInput!) {
+    updateBusiness(input: $input)
   }
 `;
 
@@ -47,6 +47,18 @@ export const CREATE_STORE = gql`
     createStore(input: $input) {
       id
     }
+  }
+`;
+
+export const UPDATE_STORE = gql`
+  mutation UpdateStore($input: UpdateStoreInput!) {
+    updateStore(input: $input)
+  }
+`;
+
+export const DELETE_STORE = gql`
+  mutation DeleteStore($id: String!) {
+    deleteStore(id: $id)
   }
 `;
 
@@ -139,6 +151,26 @@ export const UPDATE_PRODUCT_CATEGORY = gql`
 export const DELETE_PRODUCT_CATEGORY = gql`
   mutation DeleteProductCategory($id: String!) {
     deleteProductCategory(id: $id)
+  }
+`;
+
+export const CREATE_STORE_LOCATION = gql`
+  mutation CreateStoreLocation($input: CreateStoreLocationInput!) {
+    createStoreLocation(input: $input) {
+      id
+    }
+  }
+`;
+
+export const UPDATE_STORE_LOCATION = gql`
+  mutation UpdateStoreLocation($input: UpdateStoreLocationInput!) {
+    updateStoreLocation(input: $input)
+  }
+`;
+
+export const DELETE_STORE_LOCATION = gql`
+  mutation DeleteStoreLocation($id: String!) {
+    deleteStoreLocation(id: $id)
   }
 `;
 

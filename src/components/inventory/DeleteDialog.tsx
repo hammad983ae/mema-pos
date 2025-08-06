@@ -31,7 +31,8 @@ export const DeleteDialog = ({
         <div className="space-y-4">
           <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
             <p className="text-sm text-destructive font-medium">
-              {description ?? "Are you sure you want to delete this item?"}
+              {(description ? `${description} ` : "") +
+                "Are you sure you want to proceed?"}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
               This action cannot be undone.

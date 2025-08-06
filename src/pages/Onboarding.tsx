@@ -45,8 +45,8 @@ export default function Onboarding() {
 
     updateBusiness({
       variables: {
-        id: business.id,
         input: {
+          id: business.id,
           name: businessData.name,
           email: businessData.email,
           phone: businessData.phone,

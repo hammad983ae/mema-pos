@@ -244,12 +244,10 @@ export const GET_STORES = gql`
       address
       phone
       email
+      pin
       tax_rate
-      timezone
-      status
       is_active
       is_main
-      address
       created_at
       updated_at
       users {
@@ -263,6 +261,26 @@ export const GET_STORES = gql`
         avatar_url
         phone
       }
+      location {
+        id
+        name
+        storesCount
+      }
+    }
+  }
+`;
+
+export const GET_LOCATIONS = gql`
+  query GetLocations {
+    getLocations {
+      id
+      name
+      address
+      pin
+      is_active
+      created_at
+      updated_at
+      storesCount
     }
   }
 `;

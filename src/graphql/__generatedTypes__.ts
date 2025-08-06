@@ -38,23 +38,24 @@ export type Business = {
   users: Array<User>;
 };
 
-export type BusinessInput = {
-  address?: InputMaybe<Scalars['String']['input']>;
-  email?: InputMaybe<Scalars['String']['input']>;
-  name?: InputMaybe<Scalars['String']['input']>;
-  ownerId?: InputMaybe<Scalars['String']['input']>;
-  phone?: InputMaybe<Scalars['String']['input']>;
-  settings?: InputMaybe<Scalars['JSONObject']['input']>;
-  subscription_plan?: InputMaybe<SubscriptionPlan>;
-  subscription_status?: InputMaybe<SubscriptionStatus>;
-};
-
 /** Business stats */
 export type BusinessStats = {
   __typename?: 'BusinessStats';
   membersCount: Scalars['Float']['output'];
   productsCount: Scalars['Float']['output'];
+  storeLocationsCount: Scalars['Float']['output'];
   storesCount: Scalars['Float']['output'];
+};
+
+export type CreateBusinessInput = {
+  address?: InputMaybe<Scalars['String']['input']>;
+  email: Scalars['String']['input'];
+  name: Scalars['String']['input'];
+  ownerId?: InputMaybe<Scalars['String']['input']>;
+  phone: Scalars['String']['input'];
+  settings?: InputMaybe<Scalars['JSONObject']['input']>;
+  subscription_plan?: InputMaybe<SubscriptionPlan>;
+  subscription_status?: InputMaybe<SubscriptionStatus>;
 };
 
 export type CreateInventoryInput = {
@@ -119,10 +120,21 @@ export type CreateStoreInput = {
   email?: InputMaybe<Scalars['String']['input']>;
   is_active?: InputMaybe<Scalars['Boolean']['input']>;
   is_main?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Location UUID */
+  locationId?: InputMaybe<Scalars['ID']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   phone?: InputMaybe<Scalars['String']['input']>;
-  status?: InputMaybe<StoreStatus>;
+  pin?: InputMaybe<Scalars['String']['input']>;
   tax_rate?: InputMaybe<Scalars['Float']['input']>;
+};
+
+export type CreateStoreLocationInput = {
+  address: Scalars['String']['input'];
+  is_active?: InputMaybe<Scalars['Boolean']['input']>;
+  lat?: InputMaybe<Scalars['String']['input']>;
+  long?: InputMaybe<Scalars['String']['input']>;
+  name: Scalars['String']['input'];
+  pin?: InputMaybe<Scalars['String']['input']>;
   timezone?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -281,11 +293,14 @@ export type Mutation = {
   createProductCategory: ProductCategory;
   createReorderRequest: ReorderRequest;
   createStore: Store;
+  createStoreLocation: StoreLocation;
   createStoreSession: StoreDaySession;
   createSupplier: Supplier;
   deleteInventory: Scalars['Boolean']['output'];
   deleteProduct: Scalars['Boolean']['output'];
   deleteProductCategory: Scalars['Boolean']['output'];
+  deleteStore: Scalars['Boolean']['output'];
+  deleteStoreLocation: Scalars['Boolean']['output'];
   deleteSupplier: Scalars['Boolean']['output'];
   loginBusinessOwner: LoginResponse;
   registerBusinessOwner: LoginResponse;
@@ -300,13 +315,14 @@ export type Mutation = {
   updateProductCategory: Scalars['Boolean']['output'];
   updateReorderRequest: Scalars['Boolean']['output'];
   updateStore: Scalars['Boolean']['output'];
+  updateStoreLocation: Scalars['Boolean']['output'];
   updateSupplier: Scalars['Boolean']['output'];
   verifyEmail: Scalars['Boolean']['output'];
 };
 
 
 export type MutationCreateBusinessArgs = {
-  input: BusinessInput;
+  input: CreateBusinessInput;
 };
 
 
@@ -351,6 +367,11 @@ export type MutationCreateStoreArgs = {
 };
 
 
+export type MutationCreateStoreLocationArgs = {
+  input: CreateStoreLocationInput;
+};
+
+
 export type MutationCreateStoreSessionArgs = {
   input: StoreSessionInput;
 };
@@ -376,6 +397,16 @@ export type MutationDeleteProductCategoryArgs = {
 };
 
 
+export type MutationDeleteStoreArgs = {
+  id: Scalars['String']['input'];
+};
+
+
+export type MutationDeleteStoreLocationArgs = {
+  id: Scalars['String']['input'];
+};
+
+
 export type MutationDeleteSupplierArgs = {
   id: Scalars['String']['input'];
 };
@@ -397,8 +428,7 @@ export type MutationReorderInventoryArgs = {
 
 
 export type MutationUpdateBusinessArgs = {
-  id: Scalars['String']['input'];
-  input: BusinessInput;
+  input: UpdateBusinessInput;
 };
 
 
@@ -441,8 +471,12 @@ export type MutationUpdateReorderRequestArgs = {
 
 
 export type MutationUpdateStoreArgs = {
-  id: Scalars['String']['input'];
   input: UpdateStoreInput;
+};
+
+
+export type MutationUpdateStoreLocationArgs = {
+  input: UpdateStoreLocationInput;
 };
 
 
@@ -482,11 +516,13 @@ export type Product = {
 export type ProductCategory = {
   __typename?: 'ProductCategory';
   business?: Maybe<Business>;
+  created_at: Scalars['DateTime']['output'];
   description?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   is_active: Scalars['Boolean']['output'];
   name: Scalars['String']['output'];
   products: Array<Product>;
+  updated_at: Scalars['DateTime']['output'];
 };
 
 export type ProductPagination = {
@@ -502,6 +538,7 @@ export type Query = {
   getCurrentUser: User;
   getInventoryByBusiness: InventoryPagination;
   getInventoryStats: InventoryStats;
+  getLocations: Array<StoreLocation>;
   getLowStockInventoryByBusiness: InventoryPagination;
   getMovementsByBusiness: InventoryMovementPagination;
   getProductsByBusiness: ProductPagination;
@@ -592,11 +629,11 @@ export type Store = {
   id: Scalars['ID']['output'];
   is_active: Scalars['Boolean']['output'];
   is_main: Scalars['Boolean']['output'];
+  location?: Maybe<StoreLocation>;
   name: Scalars['String']['output'];
   phone?: Maybe<Scalars['String']['output']>;
-  status: StoreStatus;
+  pin?: Maybe<Scalars['String']['output']>;
   tax_rate: Scalars['Float']['output'];
-  timezone: Scalars['String']['output'];
   updated_at: Scalars['DateTime']['output'];
   users: Array<User>;
 };
@@ -622,6 +659,23 @@ export type StoreDaySession = {
   updated_at: Scalars['DateTime']['output'];
 };
 
+export type StoreLocation = {
+  __typename?: 'StoreLocation';
+  address: Scalars['String']['output'];
+  business?: Maybe<Business>;
+  created_at: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  is_active: Scalars['Boolean']['output'];
+  lat?: Maybe<Scalars['String']['output']>;
+  long?: Maybe<Scalars['String']['output']>;
+  name: Scalars['String']['output'];
+  pin?: Maybe<Scalars['String']['output']>;
+  stores: Array<Store>;
+  storesCount?: Maybe<Scalars['Float']['output']>;
+  timezone: Scalars['String']['output'];
+  updated_at: Scalars['DateTime']['output'];
+};
+
 export type StoreSessionInput = {
   cash_variance?: InputMaybe<Scalars['Float']['input']>;
   closing_cash_amount?: InputMaybe<Scalars['Float']['input']>;
@@ -633,11 +687,6 @@ export type StoreSessionInput = {
   storeId: Scalars['ID']['input'];
   total_sales?: Scalars['Float']['input'];
 };
-
-export enum StoreStatus {
-  Active = 'ACTIVE',
-  Inactive = 'INACTIVE'
-}
 
 export enum SubscriptionPlan {
   Enterprise = 'ENTERPRISE',
@@ -669,6 +718,19 @@ export enum SupplierStatus {
   Active = 'ACTIVE',
   Inactive = 'INACTIVE'
 }
+
+export type UpdateBusinessInput = {
+  address?: InputMaybe<Scalars['String']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  /** Business UUID to update */
+  id: Scalars['ID']['input'];
+  name?: InputMaybe<Scalars['String']['input']>;
+  ownerId?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  settings?: InputMaybe<Scalars['JSONObject']['input']>;
+  subscription_plan?: InputMaybe<SubscriptionPlan>;
+  subscription_status?: InputMaybe<SubscriptionStatus>;
+};
 
 export type UpdateInventoryInput = {
   /** Inventory UUID to update */
@@ -704,7 +766,7 @@ export type UpdateInventoryMovementInput = {
 
 export type UpdateProductCategoryInput = {
   description?: InputMaybe<Scalars['String']['input']>;
-  /** Product UUID to update */
+  /** Category UUID to update */
   id: Scalars['ID']['input'];
   is_active?: InputMaybe<Scalars['Boolean']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
@@ -742,10 +804,23 @@ export type UpdateStoreInput = {
   id: Scalars['ID']['input'];
   is_active?: InputMaybe<Scalars['Boolean']['input']>;
   is_main?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Location UUID */
+  locationId?: InputMaybe<Scalars['ID']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   phone?: InputMaybe<Scalars['String']['input']>;
-  status?: InputMaybe<StoreStatus>;
+  pin?: InputMaybe<Scalars['String']['input']>;
   tax_rate?: InputMaybe<Scalars['Float']['input']>;
+};
+
+export type UpdateStoreLocationInput = {
+  address?: InputMaybe<Scalars['String']['input']>;
+  /** Location UUID to update */
+  id: Scalars['ID']['input'];
+  is_active?: InputMaybe<Scalars['Boolean']['input']>;
+  lat?: InputMaybe<Scalars['String']['input']>;
+  long?: InputMaybe<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  pin?: InputMaybe<Scalars['String']['input']>;
   timezone?: InputMaybe<Scalars['String']['input']>;
 };
 
