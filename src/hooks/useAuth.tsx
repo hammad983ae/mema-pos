@@ -13,7 +13,6 @@ import {
   REGISTER_BUSINESS_OWNER,
   User,
   UserBusiness,
-  UserMembership,
   VERIFY_EMAIL,
 } from "@/graphql";
 import { showSuccess } from "@/hooks/useToastMessages.tsx";
@@ -22,7 +21,6 @@ export const useAuth = () => {
   const token = useReactiveVar(AuthToken);
   const user = useReactiveVar(LoggedInUser);
   const business = useReactiveVar(UserBusiness);
-  const membership = useReactiveVar(UserMembership);
   const [register, { loading: registering }] = useMutation<
     Mutation,
     MutationRegisterBusinessOwnerArgs
@@ -229,7 +227,7 @@ export const useAuth = () => {
     isAuthenticated: !!user,
     hasBusinessAssociation: !!business,
     business,
-    membership,
+    membership: business,
     refreshBusinessAssociation: fetchCurrentUser,
   };
 };

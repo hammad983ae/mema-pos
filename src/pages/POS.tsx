@@ -41,6 +41,8 @@ import {
   ArrowLeft,
   ExternalLink,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth.tsx";
+import { UserRole } from "@/graphql";
 
 export interface CartItem {
   id: string;
@@ -75,6 +77,7 @@ interface Employee {
 
 const POS = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [activeCategory, setActiveCategory] = useState("all");
@@ -163,103 +166,80 @@ const POS = () => {
         }
       }
 
-      // Check if user is owner/manager and can auto-access POS
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
         if (!user) {
           navigate("/pos/login");
           return;
         }
 
-        // Get user's business membership
-        const { data: membership } = await supabase
-          .from("user_business_memberships")
-          .select(
-            `
-            role,
-            business_id,
-            businesses!inner(
-              id,
-              name,
-              stores!inner(
-                id,
-                name,
-                status
-              )
-            )
-          `,
-          )
-          .eq("user_id", user.id)
-          .eq("is_active", true)
-          .single();
-
         if (
-          !membership ||
-          !["owner", "manager", "office"].includes(membership.role)
+          !(
+            user.role === UserRole.BusinessOwner ||
+            user.role === UserRole.Manager ||
+            user.role === UserRole.Office
+          )
         ) {
           navigate("/pos/login");
           return;
         }
 
         // Find an active store
-        const activeStore = membership.businesses.stores.find(
-          (store) => store.status === "active",
-        );
-        if (!activeStore) {
-          navigate("/pos/login");
-          return;
-        }
+        // const activeStore = membership.businesses.stores.find(
+        //   (store) => store.status === "active",
+        // );
+        // if (!activeStore) {
+        //   navigate("/pos/login");
+        //   return;
+        // }
 
         // Get or create day session for authorized user
-        const { data: daySessionData, error: sessionError } =
-          await supabase.rpc("get_or_create_store_day_session", {
-            p_store_id: activeStore.id,
-            p_opened_by: user.id,
-            p_opening_cash_amount: 0.0,
-          });
+        // const { data: daySessionData, error: sessionError } =
+        //   await supabase.rpc("get_or_create_store_day_session", {
+        //     p_store_id: activeStore.id,
+        //     p_opened_by: user.id,
+        //     p_opening_cash_amount: 0.0,
+        //   });
+        //
+        // if (sessionError) {
+        //   console.error("Day session error:", sessionError);
+        //   navigate("/pos/login");
+        //   return;
+        // }
 
-        if (sessionError) {
-          console.error("Day session error:", sessionError);
-          navigate("/pos/login");
-          return;
-        }
-
-        const daySession = daySessionData[0];
+        // const daySession = daySessionData[0];
 
         // Get user profile
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("user_id", user.id)
-          .single();
+        // const { data: profile } = await supabase
+        //   .from("profiles")
+        //   .select("*")
+        //   .eq("user_id", user.id)
+        //   .single();
+        //
+        // // Create automatic POS session for authorized user
+        // const autoSession = {
+        //   store: {
+        //     id: activeStore.id,
+        //     name: activeStore.name,
+        //     business_id: membership.business_id,
+        //   },
+        //   daySession: {
+        //     id: daySession.session_id,
+        //     sessionDate: daySession.session_date,
+        //     openedAt: daySession.opened_at,
+        //     openedByName: daySession.opened_by_name,
+        //     isNewSession: daySession.is_new_session,
+        //   },
+        //   user: {
+        //     id: user.id,
+        //     name: profile?.full_name || profile?.username || user.email,
+        //     username: profile?.username || user.email,
+        //     role: membership.role,
+        //   },
+        //   loginAt: new Date().toISOString(),
+        // };
 
-        // Create automatic POS session for authorized user
-        const autoSession = {
-          store: {
-            id: activeStore.id,
-            name: activeStore.name,
-            business_id: membership.business_id,
-          },
-          daySession: {
-            id: daySession.session_id,
-            sessionDate: daySession.session_date,
-            openedAt: daySession.opened_at,
-            openedByName: daySession.opened_by_name,
-            isNewSession: daySession.is_new_session,
-          },
-          user: {
-            id: user.id,
-            name: profile?.full_name || profile?.username || user.email,
-            username: profile?.username || user.email,
-            role: membership.role,
-          },
-          loginAt: new Date().toISOString(),
-        };
-
-        localStorage.setItem("pos_session", JSON.stringify(autoSession));
-        setPosUser(autoSession);
+        // localStorage.setItem("pos_session", JSON.stringify(autoSession));
+        // setPosUser(autoSession);
       } catch (error) {
         console.error("Error checking POS access:", error);
         navigate("/pos/login");
@@ -274,9 +254,9 @@ const POS = () => {
     navigate("/pos/login");
   };
 
-  if (!posUser) {
-    return <div>Loading...</div>;
-  }
+  // if (!posUser) {
+  //   return <div>Loading...</div>;
+  // }
 
   const addToCart = (product: Product, customPrice?: number) => {
     const finalPrice = customPrice || product.price;

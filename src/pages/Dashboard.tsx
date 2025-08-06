@@ -44,7 +44,7 @@ import {
 import { useMutation, useQuery } from "@apollo/client";
 
 const Dashboard = () => {
-  const { user, business, membership, signOut } = useAuth();
+  const { user, business, signOut } = useAuth();
   const { businessId, isConnected, connectionStatus } = useRealtimeContext();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -79,88 +79,83 @@ const Dashboard = () => {
     }
 
     try {
-      if (!membership) {
-        navigate("/pos/login");
-        return;
-      }
-
       // Find an active store
-      const activeStore = membership.businesses.stores.find(
-        (store) => store.status === "active",
-      );
-      if (!activeStore) {
-        toast({
-          title: "No Active Store",
-          description:
-            "No active store found. Please contact your administrator.",
-          variant: "destructive",
-        });
-        return;
-      }
+      // const activeStore = membership.businesses.stores.find(
+      //   (store) => store.status === "active",
+      // );
+      // if (!activeStore) {
+      //   toast({
+      //     title: "No Active Store",
+      //     description:
+      //       "No active store found. Please contact your administrator.",
+      //     variant: "destructive",
+      //   });
+      //   return;
+      // }
 
       // Get or create store day session
-      const { data: daySessionData, error: sessionError } = await supabase.rpc(
-        "get_or_create_store_day_session",
-        {
-          p_store_id: activeStore.id,
-          p_opened_by: user!.id,
-          p_opening_cash_amount: 0.0,
-        },
-      );
-
-      if (sessionError) {
-        console.error("Day session error:", sessionError);
-        toast({
-          title: "Error",
-          description: "Failed to access store session. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const daySession = daySessionData[0];
-
-      // Get user profile
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user!.id)
-        .single();
-
-      // Store POS session with day session info
-      localStorage.setItem(
-        "pos_session",
-        JSON.stringify({
-          store: {
-            id: activeStore.id,
-            name: activeStore.name,
-            business_id: membership.business_id,
-          },
-          daySession: {
-            id: daySession.session_id,
-            sessionDate: daySession.session_date,
-            openedAt: daySession.opened_at,
-            openedByName: daySession.opened_by_name,
-            isNewSession: daySession.is_new_session,
-          },
-          user: {
-            id: user!.id,
-            name: profile?.full_name || profile?.username || user!.email,
-            username: profile?.username || user!.email,
-            role: membership.role,
-          },
-          loginAt: new Date().toISOString(),
-        }),
-      );
-
-      const welcomeMessage = daySession.is_new_session
-        ? `Store opened for the day`
-        : `Welcome back! Store opened earlier by ${daySession.opened_by_name}`;
-
-      toast({
-        title: welcomeMessage,
-        description: `${activeStore.name} - ${daySession.session_date}`,
-      });
+      // const { data: daySessionData, error: sessionError } = await supabase.rpc(
+      //   "get_or_create_store_day_session",
+      //   {
+      //     p_store_id: activeStore.id,
+      //     p_opened_by: user!.id,
+      //     p_opening_cash_amount: 0.0,
+      //   },
+      // );
+      //
+      // if (sessionError) {
+      //   console.error("Day session error:", sessionError);
+      //   toast({
+      //     title: "Error",
+      //     description: "Failed to access store session. Please try again.",
+      //     variant: "destructive",
+      //   });
+      //   return;
+      // }
+      //
+      // const daySession = daySessionData[0];
+      //
+      // // Get user profile
+      // const { data: profile } = await supabase
+      //   .from("profiles")
+      //   .select("*")
+      //   .eq("user_id", user!.id)
+      //   .single();
+      //
+      // // Store POS session with day session info
+      // localStorage.setItem(
+      //   "pos_session",
+      //   JSON.stringify({
+      //     store: {
+      //       id: activeStore.id,
+      //       name: activeStore.name,
+      //       business_id: membership.business_id,
+      //     },
+      //     daySession: {
+      //       id: daySession.session_id,
+      //       sessionDate: daySession.session_date,
+      //       openedAt: daySession.opened_at,
+      //       openedByName: daySession.opened_by_name,
+      //       isNewSession: daySession.is_new_session,
+      //     },
+      //     user: {
+      //       id: user!.id,
+      //       name: profile?.full_name || profile?.username || user!.email,
+      //       username: profile?.username || user!.email,
+      //       role: membership.role,
+      //     },
+      //     loginAt: new Date().toISOString(),
+      //   }),
+      // );
+      //
+      // const welcomeMessage = daySession.is_new_session
+      //   ? `Store opened for the day`
+      //   : `Welcome back! Store opened earlier by ${daySession.opened_by_name}`;
+      //
+      // toast({
+      //   title: welcomeMessage,
+      //   description: `${activeStore.name} - ${daySession.session_date}`,
+      // });
 
       navigate("/pos");
     } catch (error) {
