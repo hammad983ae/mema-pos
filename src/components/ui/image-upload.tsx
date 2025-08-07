@@ -5,6 +5,9 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, X, Image } from "lucide-react";
+import { useLazyQuery } from "@apollo/client";
+import { GET_UPLOAD_URL, Query, QueryGetUploadUrlArgs } from "@/graphql";
+import { showError, showSuccess } from "@/hooks/useToastMessages.tsx";
 
 interface ImageUploadProps {
   value?: string;
@@ -20,7 +23,6 @@ export const ImageUpload = ({
   value,
   onChange,
   bucket,
-  path = "",
   accept = "image/*",
   maxSize = 5,
   className = "",
@@ -28,65 +30,47 @@ export const ImageUpload = ({
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
+  const [getUploadUrl, { loading }] = useLazyQuery<
+    Query,
+    QueryGetUploadUrlArgs
+  >(GET_UPLOAD_URL, { fetchPolicy: "network-only" });
 
   const handleFileSelect = async (file: File) => {
     if (!file) return;
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      toast({
-        title: "Invalid File Type",
-        description: "Please select an image file",
-        variant: "destructive",
-      });
+      showError("Invalid File Type", "Please select an image file");
       return;
     }
 
     // Validate file size
     if (file.size > maxSize * 1024 * 1024) {
-      toast({
-        title: "File Too Large",
-        description: `File size must be less than ${maxSize}MB`,
-        variant: "destructive",
-      });
+      showError("File Too Large", `File size must be less than ${maxSize}MB`);
       return;
     }
 
     setUploading(true);
-    try {
-      // Generate unique filename
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${path}${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-      // Upload file to Supabase storage
-      const { error: uploadError } = await supabase.storage
-        .from(bucket)
-        .upload(fileName, file);
+    getUploadUrl({ variables: { fileType: file.type } })
+      .then((res) => {
+        fetch(res.data.getUploadUrl.url, {
+          method: "PUT",
+          headers: {
+            "Content-Type": file.type,
+          },
+          body: file,
+        }).then(() => {
+          const publicUrl = `https://memaproducts.s3.amazonaws.com/${res.data.getUploadUrl.key}`;
 
-      if (uploadError) throw uploadError;
+          onChange(publicUrl);
 
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from(bucket).getPublicUrl(fileName);
-
-      onChange(publicUrl);
-
-      toast({
-        title: "Image Uploaded",
-        description: "Image has been uploaded successfully",
+          showSuccess("Image uploaded successfully");
+        });
+      })
+      .finally(() => {
+        setUploading(false);
       });
-    } catch (error: any) {
-      console.error("Upload error:", error);
-      toast({
-        title: "Upload Failed",
-        description: error.message || "Failed to upload image",
-        variant: "destructive",
-      });
-    } finally {
-      setUploading(false);
-    }
   };
 
   const handleRemove = async () => {
@@ -131,11 +115,11 @@ export const ImageUpload = ({
       <Label>Product Image</Label>
 
       {value ? (
-        <div className="relative">
+        <div className="relative py-2 rounded-lg border">
           <img
             src={value}
             alt="Product"
-            className="w-full h-24 object-cover rounded-lg border"
+            className="w-full h-24 object-contain"
           />
           <Button
             type="button"
@@ -145,7 +129,7 @@ export const ImageUpload = ({
             onClick={handleRemove}
             disabled={uploading}
           >
-            <X className="h-4 w-4" />
+            <X className="h-2 w-2" />
           </Button>
         </div>
       ) : (

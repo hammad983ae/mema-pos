@@ -68,7 +68,7 @@ export const AdjustStockDialog = ({ handleClose, onSuccess, item }: Props) => {
     const newQuantity = item.quantity_on_hand + quantityChange;
 
     if (newQuantity < 0) {
-      showError("Adjustment would result in negative stock");
+      showError("Error", "Adjustment would result in negative stock");
       return;
     }
 

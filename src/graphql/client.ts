@@ -33,7 +33,7 @@ const errorLink = onError(
     if (graphQLErrors) {
       graphQLErrors.forEach(async ({ message, locations, path }) => {
         const locationsStr = JSON.stringify(locations);
-        if (message !== "jwt malformed") showError(message);
+        if (message !== "jwt malformed") showError("Error", message);
 
         console.warn(
           `[GraphQL Error Mema] Message: "${message}", Locations: ${locationsStr}, Path: "${path}"`,

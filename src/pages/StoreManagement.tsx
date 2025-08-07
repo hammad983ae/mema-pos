@@ -77,7 +77,8 @@ const StoreManagement = () => {
       )
     ) {
       showError(
-        "Access Denied. You don't have permission to manage store settings",
+        "Access Denied",
+        "You don't have permission to manage store settings",
       );
       navigate("/dashboard");
       return;
@@ -329,7 +330,7 @@ const StoreItem = ({
       await refetch();
     } catch (error: any) {
       console.error("Error updating credentials:", error);
-      showError(error.message || "Failed to update credentials");
+      showError("Error", error.message || "Failed to update credentials");
     } finally {
       setLoading(false);
     }

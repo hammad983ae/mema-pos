@@ -545,6 +545,7 @@ export type Query = {
   getReorderRequestsByBusiness: ReorderRequestPagination;
   getStores: Array<Store>;
   getSuppliers: Array<Supplier>;
+  getUploadUrl: SignedUrlResponse;
   sayHello: Scalars['String']['output'];
 };
 
@@ -578,6 +579,12 @@ export type QueryGetProductsByBusinessArgs = {
 
 export type QueryGetReorderRequestsByBusinessArgs = {
   pagination: PaginationInput;
+};
+
+
+export type QueryGetUploadUrlArgs = {
+  fileType?: InputMaybe<Scalars['String']['input']>;
+  folder?: InputMaybe<Scalars['String']['input']>;
 };
 
 export enum ReferenceType {
@@ -619,6 +626,12 @@ export enum SessionStatus {
   Closed = 'CLOSED',
   Open = 'OPEN'
 }
+
+export type SignedUrlResponse = {
+  __typename?: 'SignedUrlResponse';
+  key: Scalars['String']['output'];
+  url: Scalars['String']['output'];
+};
 
 export type Store = {
   __typename?: 'Store';

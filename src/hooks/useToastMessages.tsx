@@ -19,8 +19,12 @@ export const showSuccess = (
   });
 };
 
-export const showError = (description: string, options?: ToastOptions) => {
-  toast.error("Error!", {
+export const showError = (
+  title: string,
+  description: string,
+  options?: ToastOptions,
+) => {
+  toast.error(title, {
     description,
     duration: options?.duration || 3000,
     icon: (<ShieldX className={"text-red-500 h-[20px]"} />) as JSX.Element,

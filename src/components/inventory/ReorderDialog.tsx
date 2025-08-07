@@ -41,7 +41,7 @@ export const ReorderDialog = ({ handleClose, item }: Props) => {
 
   const handleSubmit = () => {
     if (!quantity || !date) {
-      showError("Please fill all required fields!");
+      showError("Error", "Please fill all required fields!");
       return;
     }
 

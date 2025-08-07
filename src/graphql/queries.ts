@@ -284,3 +284,12 @@ export const GET_LOCATIONS = gql`
     }
   }
 `;
+
+export const GET_UPLOAD_URL = gql`
+  query GetUploadUrl($fileType: String!, $folder: String) {
+    getUploadUrl(fileType: $fileType, folder: $folder) {
+      url
+      key
+    }
+  }
+`;

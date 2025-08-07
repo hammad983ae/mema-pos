@@ -67,7 +67,7 @@ export const LocationForm = ({ selectedItem, handleClose, refetch }: Props) => {
       !formData.pin ||
       formData.pin?.length !== 6
     ) {
-      showError("Please fill required fields!");
+      showError("Error", "Please fill required fields!");
       return;
     }
 

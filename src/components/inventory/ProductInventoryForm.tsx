@@ -126,10 +126,11 @@ export const ProductInventoryForm = ({
       low_stock_threshold,
       supplier,
       category,
+      image_url,
     } = productForm;
 
     if (!name || !sku) {
-      showError("Name and SKU are required fields!");
+      showError("Error", "Name and SKU are required fields!");
       return;
     }
 
@@ -144,6 +145,7 @@ export const ProductInventoryForm = ({
       minimum_price: parseFloat(minimumPrice),
       description,
       is_active: true,
+      image_url,
     };
     const inventoryInput = {
       quantity_on_hand: parseInt(initial_quantity),
