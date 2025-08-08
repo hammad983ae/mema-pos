@@ -129,8 +129,8 @@ export const ProductInventoryForm = ({
       image_url,
     } = productForm;
 
-    if (!name || !sku) {
-      showError("Error", "Name and SKU are required fields!");
+    if (!name || !sku || !category) {
+      showError("Error", "Please fill required fields!");
       return;
     }
 
@@ -206,7 +206,7 @@ export const ProductInventoryForm = ({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Product Name</Label>
+              <Label>Product Name *</Label>
               <Input
                 value={productForm.name}
                 onChange={(e) =>
@@ -219,7 +219,7 @@ export const ProductInventoryForm = ({
               />
             </div>
             <div className="space-y-2">
-              <Label>SKU</Label>
+              <Label>SKU *</Label>
               <Input
                 value={productForm.sku}
                 onChange={(e) =>
@@ -340,7 +340,7 @@ export const ProductInventoryForm = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Category</Label>
+              <Label>Category *</Label>
 
               <Select
                 value={productForm.category}
@@ -370,7 +370,7 @@ export const ProductInventoryForm = ({
             </div>
 
             <div className="space-y-2">
-              <Label>Supplier</Label>
+              <Label>Supplier *</Label>
 
               <Select
                 value={productForm.supplier}

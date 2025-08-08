@@ -1,36 +1,23 @@
-import { useState, useEffect, useMemo, memo } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { Plus, Package, Edit, AlertCircle, Eye } from "lucide-react";
+import { Package } from "lucide-react";
 import { Product } from "@/pages/POS";
 import { useDebounce } from "@/hooks/useDebounce.ts";
 import { ProductCard } from "./ProductCard";
 import { PriceSelectionDialog } from "./PriceSelectionDialog";
+import { useQuery, useReactiveVar } from "@apollo/client";
+import {
+  GET_PRODUCTS,
+  PosSession,
+  Query,
+  QueryGetProductsByBusinessArgs,
+} from "@/graphql";
 
 interface ProductGridProps {
   searchQuery: string;
   activeCategory: string;
   onAddToCart: (product: Product, customPrice?: number) => void;
-}
-
-interface DatabaseProduct {
-  id: string;
-  name: string;
-  price: number;
-  minimum_price: number;
-  description: string;
-  category_id: string;
-  sku: string;
-  is_active: boolean;
-  image_url: string | null;
-  barcode: string | null;
-  product_categories: {
-    name: string;
-  } | null;
 }
 
 export const ProductGrid = ({
@@ -39,155 +26,49 @@ export const ProductGrid = ({
   onAddToCart,
 }: ProductGridProps) => {
   const { toast } = useToast();
+  const session = useReactiveVar(PosSession);
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [inventory, setInventory] = useState<Record<string, number>>({});
+  const [page, setPage] = useState<number>(1);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isPriceDialogOpen, setIsPriceDialogOpen] = useState(false);
+  const debouncedSearch = useDebounce(searchQuery, 500);
+
+  const { data: productsData, loading: loadingProducts } = useQuery<
+    Query,
+    QueryGetProductsByBusinessArgs
+  >(GET_PRODUCTS, {
+    variables: {
+      pagination: { page, take: 100 },
+      filters: {
+        search: debouncedSearch,
+        categoryId: activeCategory === "all" ? null : activeCategory,
+      },
+      storeId: session.store.id,
+    },
+    fetchPolicy: "network-only",
+  });
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-
-      // Fetch products with categories (optimized query)
-      const { data: productsData, error: productsError } = await supabase
-        .from("products")
-        .select(
-          `
-          id, name, price, minimum_price, description, category_id, 
-          sku, is_active, image_url, barcode,
-          product_categories(name)
-        `,
-        )
-        .eq("is_active", true)
-        .order("name")
-        .limit(100);
-
-      if (productsError) throw productsError;
-
-      // Fetch inventory for products in batches
-      const productIds = productsData?.map((p) => p.id) || [];
-      const { data: inventoryData, error: inventoryError } = await supabase
-        .from("inventory")
-        .select("product_id, quantity_on_hand")
-        .in("product_id", productIds);
-
-      if (inventoryError) throw inventoryError;
-
-      // Create inventory lookup
-      const inventoryLookup =
-        inventoryData?.reduce(
-          (acc, item) => {
-            acc[item.product_id] = item.quantity_on_hand;
-            return acc;
-          },
-          {} as Record<string, number>,
-        ) || {};
-
-      setInventory(inventoryLookup);
-
-      // Transform products
+    if (productsData?.getProductsByBusiness) {
       const transformedProducts: Product[] =
-        productsData?.map((dbProduct: DatabaseProduct) => ({
-          id: dbProduct.id,
-          name: dbProduct.name,
-          price: dbProduct.price,
-          minimum_price: dbProduct.minimum_price,
+        productsData?.getProductsByBusiness?.data?.map((product) => ({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          minimum_price: product.minimum_price,
           category:
-            dbProduct.product_categories?.name
-              ?.toLowerCase()
-              .replace(/\s+/g, "") || "other",
-          description: dbProduct.description,
-          inStock: (inventoryLookup[dbProduct.id] || 0) > 0,
-          sku: dbProduct.sku,
-          image: dbProduct.image_url || undefined,
+            product.category?.name?.toLowerCase().replace(/\s+/g, "") ||
+            "other",
+          description: product.description,
+          inStock: (product.inventoryCount ?? 0) > 0,
+          stock: product.inventoryCount ?? 0,
+          sku: product.sku,
+          image: product.image_url || undefined,
         })) || [];
 
       setProducts(transformedProducts);
-    } catch (error: any) {
-      console.error("Error fetching products:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load products. Using sample data.",
-        variant: "destructive",
-      });
-
-      // Fallback to sample data with minimum prices for demo
-      setProducts([
-        {
-          id: "1",
-          name: "Gentle Hydrating Cleanser",
-          price: 34.99,
-          minimum_price: 15.0,
-          category: "cleansers",
-          description:
-            "A gentle, sulfate-free cleanser perfect for sensitive skin",
-          inStock: true,
-          sku: "CLN001",
-        },
-        {
-          id: "2",
-          name: "Vitamin C Brightening Serum",
-          price: 89.99,
-          minimum_price: 35.0,
-          category: "serums",
-          description: "20% vitamin C serum for radiant, even skin tone",
-          inStock: true,
-          sku: "SER002",
-        },
-        {
-          id: "3",
-          name: "Hyaluronic Acid Moisturizer",
-          price: 45.99,
-          minimum_price: 20.0,
-          category: "moisturizers",
-          description: "Intensive hydration with hyaluronic acid",
-          inStock: true,
-          sku: "MOI003",
-        },
-        {
-          id: "4",
-          name: "Daily SPF 50 Sunscreen",
-          price: 28.99,
-          minimum_price: 12.0,
-          category: "sunscreen",
-          description: "Broad spectrum protection for daily use",
-          inStock: true,
-          sku: "SUN004",
-        },
-        {
-          id: "5",
-          name: "Luxury Anti-Aging Night Cream",
-          price: 124.99,
-          minimum_price: 65.0,
-          category: "moisturizers",
-          description: "Premium night cream with peptides and retinol",
-          inStock: true,
-          sku: "NAC005",
-        },
-      ]);
-    } finally {
-      setLoading(false);
     }
-  };
-
-  // Debounce search for better performance
-  const debouncedSearch = useDebounce(searchQuery, 300);
-
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const matchesSearch =
-        product.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-        product.sku.toLowerCase().includes(debouncedSearch.toLowerCase());
-      const matchesCategory =
-        activeCategory === "all" || product.category === activeCategory;
-      return matchesSearch && matchesCategory;
-    });
-  }, [products, debouncedSearch, activeCategory]);
+  }, [productsData]);
 
   const handleAddToCart = (product: Product) => {
     if (!product.inStock) {
@@ -212,10 +93,10 @@ export const ProductGrid = ({
     });
   };
 
-  if (loading) {
+  if (loadingProducts) {
     return (
       <div className="p-6 bg-muted/20">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {[...Array(12)].map((_, i) => (
             <Card key={i} className="animate-pulse bg-card border-border">
               <CardContent className="p-0">
@@ -236,7 +117,7 @@ export const ProductGrid = ({
 
   return (
     <div className="p-8 bg-muted/20">
-      {filteredProducts.length === 0 ? (
+      {products.length === 0 ? (
         <div className="text-center py-20">
           <div className="w-24 h-24 bg-muted rounded-full mx-auto mb-8 flex items-center justify-center">
             <Package className="h-12 w-12 text-muted-foreground" />
@@ -251,12 +132,11 @@ export const ProductGrid = ({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-8">
-          {filteredProducts.map((product) => (
+        <div className="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-8">
+          {products.map((product) => (
             <ProductCard
               key={product.id}
               product={product}
-              inventory={inventory}
               onAddToCart={handleAddToCart}
             />
           ))}

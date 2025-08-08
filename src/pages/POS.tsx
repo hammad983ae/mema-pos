@@ -1,13 +1,11 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ProductGrid } from "@/components/pos/ProductGrid";
 import { CartSidebar } from "@/components/pos/CartSidebar";
-
 import { CategoryTabs } from "@/components/pos/CategoryTabs";
 import { ReceiptManagement } from "@/components/pos/ReceiptManagement";
 import { CashDrawerManager } from "@/components/pos/CashDrawerManager";
@@ -18,31 +16,49 @@ import { HardwareIntegration } from "@/components/pos/HardwareIntegration";
 import { BarcodeScanner } from "@/components/pos/BarcodeScanner";
 import { BulkBarcodePrinter } from "@/components/pos/BulkBarcodePrinter";
 import ClockInManager from "@/components/pos/ClockInManager";
-import { OfflineManager } from "@/components/pos/OfflineManager";
 import CRM from "@/pages/CRM";
 import { EmployeeAuth } from "@/components/pos/EmployeeAuth";
 import { EmployeeDashboard } from "@/components/pos/EmployeeDashboard";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Search,
-  Scan,
-  ShoppingCart,
-  LogOut,
-  Receipt,
-  Users,
-  Package,
-  Settings,
-  FileText,
-  DollarSign,
-  Calendar,
-  Monitor,
-  BarChart3,
-  Wrench,
   ArrowLeft,
+  BarChart3,
+  Calendar,
+  DollarSign,
   ExternalLink,
+  FileText,
+  LogOut,
+  Monitor,
+  Package,
+  Receipt,
+  Search,
+  Settings,
+  ShoppingCart,
+  Users,
+  Wrench,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth.tsx";
-import { UserRole } from "@/graphql";
+import {
+  CREATE_STORE_SESSION,
+  GET_CATEGORIES,
+  GET_PRODUCTS,
+  GET_STORE_SESSION,
+  Mutation,
+  MutationCreateStoreSessionArgs,
+  PosSession,
+  Query,
+  QueryGetProductsByBusinessArgs,
+  QueryGetStoreSessionByIdArgs,
+  StoreDaySession,
+  UserRole,
+} from "@/graphql";
+import {
+  useLazyQuery,
+  useMutation,
+  useQuery,
+  useReactiveVar,
+} from "@apollo/client";
+import { useDebounce } from "@/hooks/useDebounce.ts";
 
 export interface CartItem {
   id: string;
@@ -64,6 +80,7 @@ export interface Product {
   image?: string;
   description?: string;
   inStock: boolean;
+  stock: number;
   sku: string;
 }
 
@@ -77,18 +94,25 @@ interface Employee {
 
 const POS = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, business } = useAuth();
   const { toast } = useToast();
+  const session = useReactiveVar(PosSession);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [activeCategory, setActiveCategory] = useState("all");
+  const [activeCategory, setActiveCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [posUser, setPosUser] = useState<any>(null);
+  const [posUser, setPosUser] = useState<StoreDaySession | null>(null);
   const [activeView, setActiveView] = useState("sale");
   const [tipAmount, setTipAmount] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
-  const [products, setProducts] = useState<Product[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [getStoreSession, { loading: fetchingSession }] = useLazyQuery<
+    Query,
+    QueryGetStoreSessionByIdArgs
+  >(GET_STORE_SESSION);
+  const [createStoreSession, { loading: creatingSession }] = useMutation<
+    Mutation,
+    MutationCreateStoreSessionArgs
+  >(CREATE_STORE_SESSION);
 
   // Employee authentication state
   const [authenticatedEmployee, setAuthenticatedEmployee] =
@@ -130,135 +154,67 @@ const POS = () => {
     }
   }, []);
 
-  // Check for POS authentication and day session
-  useEffect(() => {
-    const checkPOSAccess = async () => {
-      const sessionData = localStorage.getItem("pos_session");
-      if (sessionData) {
-        const session = JSON.parse(sessionData);
+  const checkPOSAccess = () => {
+    if (!user) {
+      navigate("/pos/login");
+      return;
+    }
 
-        // Check if we have a day session
-        if (session.daySession) {
-          // Verify the day session is still active
-          try {
-            const { data: daySession } = await supabase
-              .from("store_day_sessions")
-              .select("*")
-              .eq("id", session.daySession.id)
-              .eq("is_active", true)
-              .maybeSingle();
+    if (
+      !(
+        user.role === UserRole.BusinessOwner ||
+        user.role === UserRole.Manager ||
+        user.role === UserRole.Office
+      )
+    ) {
+      navigate("/pos/login");
+      return;
+    }
 
-            if (daySession) {
-              setPosUser(session);
-              return;
-            } else {
-              // Day session is closed, clear localStorage and redirect
-              localStorage.removeItem("pos_session");
-            }
-          } catch (error) {
-            console.error("Error checking day session:", error);
-            localStorage.removeItem("pos_session");
+    if (session?.id) {
+      getStoreSession({ variables: { id: session.id } })
+        .then((res) => {
+          if (res.data.getStoreSessionById?.is_active) {
+            setPosUser(session);
+          } else {
+            PosSession(undefined);
           }
-        } else if (session.openedBy) {
-          // Legacy session format, convert to new format if user is authorized
-          setPosUser(session);
-          return;
-        }
-      }
-
-      try {
-        if (!user) {
+        })
+        .catch(() => PosSession(undefined));
+    } else {
+      createStoreSession({
+        variables: {
+          input: {
+            opening_cash_amount: 0.0,
+            session_date: new Date(),
+          },
+        },
+      })
+        .then((res) => {
+          setPosUser(res.data.createStoreSession);
+          PosSession(res.data.createStoreSession);
+        })
+        .catch(() => {
           navigate("/pos/login");
           return;
-        }
+        });
+    }
+  };
 
-        if (
-          !(
-            user.role === UserRole.BusinessOwner ||
-            user.role === UserRole.Manager ||
-            user.role === UserRole.Office
-          )
-        ) {
-          navigate("/pos/login");
-          return;
-        }
-
-        // Find an active store
-        // const activeStore = membership.businesses.stores.find(
-        //   (store) => store.status === "active",
-        // );
-        // if (!activeStore) {
-        //   navigate("/pos/login");
-        //   return;
-        // }
-
-        // Get or create day session for authorized user
-        // const { data: daySessionData, error: sessionError } =
-        //   await supabase.rpc("get_or_create_store_day_session", {
-        //     p_store_id: activeStore.id,
-        //     p_opened_by: user.id,
-        //     p_opening_cash_amount: 0.0,
-        //   });
-        //
-        // if (sessionError) {
-        //   console.error("Day session error:", sessionError);
-        //   navigate("/pos/login");
-        //   return;
-        // }
-
-        // const daySession = daySessionData[0];
-
-        // Get user profile
-        // const { data: profile } = await supabase
-        //   .from("profiles")
-        //   .select("*")
-        //   .eq("user_id", user.id)
-        //   .single();
-        //
-        // // Create automatic POS session for authorized user
-        // const autoSession = {
-        //   store: {
-        //     id: activeStore.id,
-        //     name: activeStore.name,
-        //     business_id: membership.business_id,
-        //   },
-        //   daySession: {
-        //     id: daySession.session_id,
-        //     sessionDate: daySession.session_date,
-        //     openedAt: daySession.opened_at,
-        //     openedByName: daySession.opened_by_name,
-        //     isNewSession: daySession.is_new_session,
-        //   },
-        //   user: {
-        //     id: user.id,
-        //     name: profile?.full_name || profile?.username || user.email,
-        //     username: profile?.username || user.email,
-        //     role: membership.role,
-        //   },
-        //   loginAt: new Date().toISOString(),
-        // };
-
-        // localStorage.setItem("pos_session", JSON.stringify(autoSession));
-        // setPosUser(autoSession);
-      } catch (error) {
-        console.error("Error checking POS access:", error);
-        navigate("/pos/login");
-      }
-    };
-
+  useEffect(() => {
     checkPOSAccess();
   }, [navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem("pos_session");
+    PosSession(undefined);
     navigate("/pos/login");
   };
 
-  // if (!posUser) {
-  //   return <div>Loading...</div>;
-  // }
+  if (fetchingSession || creatingSession || !posUser) {
+    return <div>Loading...</div>;
+  }
 
-  const addToCart = (product: Product, customPrice?: number) => {
+  const addToCart = (product: any, customPrice?: number) => {
     const finalPrice = customPrice || product.price;
 
     setCartItems((prev) => {
@@ -456,22 +412,6 @@ const POS = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-12 h-12 text-base bg-background border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-primary"
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter" && searchQuery.trim()) {
-                        // Quick SKU lookup on Enter
-                        const product = products.find(
-                          (p) =>
-                            p.sku.toLowerCase() === searchQuery.toLowerCase() ||
-                            p.name
-                              .toLowerCase()
-                              .includes(searchQuery.toLowerCase()),
-                        );
-                        if (product) {
-                          addToCart(product, product.price); // Use retail price for quick add
-                          setSearchQuery("");
-                        }
-                      }
-                    }}
                   />
                 </div>
                 <BarcodeScanner
@@ -602,8 +542,8 @@ const POS = () => {
             <div className="max-w-4xl mx-auto">
               <ClockInManager
                 storeId={posUser?.store?.id}
-                businessId={posUser?.store?.business_id}
-                currentEmployeeId={posUser?.openedBy?.id}
+                businessId={business.id}
+                currentEmployeeId={posUser?.opened_by?.id}
               />
             </div>
           </div>
@@ -907,10 +847,10 @@ const POS = () => {
                   onClearCart={clearCart}
                   onUpdateShipping={updateCartItemShipping}
                   totalPrice={getTotalPrice()}
-                  businessId={posUser?.store?.business_id || ""}
+                  businessId={business.id || ""}
                   selectedCustomer={selectedCustomer}
                   onSelectCustomer={setSelectedCustomer}
-                  userRole={posUser?.role || "employee"}
+                  userRole={user.role || "employee"}
                 />
               </div>
             </div>
@@ -926,7 +866,7 @@ const POS = () => {
           setAuthenticatedEmployee(employee);
           setActiveView("mydash");
         }}
-        businessId={posUser?.store?.business_id}
+        businessId={business.id}
       />
     </div>
   );

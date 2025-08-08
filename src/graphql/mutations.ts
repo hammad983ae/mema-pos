@@ -66,6 +66,36 @@ export const CREATE_STORE_SESSION = gql`
   mutation CreateStoreSession($input: StoreSessionInput!) {
     createStoreSession(input: $input) {
       id
+      store {
+        id
+        name
+      }
+      session_date
+      opened_by {
+        id
+        full_name
+        email
+        role
+      }
+      opened_at
+      closed_by {
+        id
+        full_name
+        email
+        role
+      }
+      closed_at
+      is_active
+      opening_cash_amount
+      closing_cash_amount
+      expected_cash_amount
+      cash_variance
+      total_sales
+      total_transactions
+      status
+      notes
+      created_at
+      updated_at
     }
   }
 `;

@@ -504,6 +504,7 @@ export type Product = {
   description?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   image_url?: Maybe<Scalars['String']['output']>;
+  inventoryCount?: Maybe<Scalars['Float']['output']>;
   is_active: Scalars['Boolean']['output'];
   minimum_price: Scalars['Float']['output'];
   name: Scalars['String']['output'];
@@ -522,7 +523,13 @@ export type ProductCategory = {
   is_active: Scalars['Boolean']['output'];
   name: Scalars['String']['output'];
   products: Array<Product>;
+  productsCount?: Maybe<Scalars['Float']['output']>;
   updated_at: Scalars['DateTime']['output'];
+};
+
+export type ProductFilterInput = {
+  categoryId?: InputMaybe<Scalars['String']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type ProductPagination = {
@@ -543,6 +550,7 @@ export type Query = {
   getMovementsByBusiness: InventoryMovementPagination;
   getProductsByBusiness: ProductPagination;
   getReorderRequestsByBusiness: ReorderRequestPagination;
+  getStoreSessionById: StoreDaySession;
   getStores: Array<Store>;
   getSuppliers: Array<Supplier>;
   getUploadUrl: SignedUrlResponse;
@@ -573,12 +581,19 @@ export type QueryGetMovementsByBusinessArgs = {
 
 
 export type QueryGetProductsByBusinessArgs = {
+  filters?: InputMaybe<ProductFilterInput>;
   pagination: PaginationInput;
+  storeId?: InputMaybe<Scalars['String']['input']>;
 };
 
 
 export type QueryGetReorderRequestsByBusinessArgs = {
   pagination: PaginationInput;
+};
+
+
+export type QueryGetStoreSessionByIdArgs = {
+  id: Scalars['String']['input'];
 };
 
 
@@ -660,11 +675,12 @@ export type StoreDaySession = {
   created_at: Scalars['DateTime']['output'];
   expected_cash_amount?: Maybe<Scalars['Float']['output']>;
   id: Scalars['ID']['output'];
+  is_active: Scalars['Boolean']['output'];
   notes?: Maybe<Scalars['String']['output']>;
   opened_at: Scalars['DateTime']['output'];
   opened_by: User;
   opening_cash_amount: Scalars['Float']['output'];
-  session_date: Scalars['DateTime']['output'];
+  session_date: Scalars['String']['output'];
   status: SessionStatus;
   store: Store;
   total_sales: Scalars['Float']['output'];
@@ -697,7 +713,7 @@ export type StoreSessionInput = {
   opening_cash_amount?: Scalars['Float']['input'];
   session_date: Scalars['DateTime']['input'];
   status?: InputMaybe<SessionStatus>;
-  storeId: Scalars['ID']['input'];
+  storeId?: InputMaybe<Scalars['ID']['input']>;
   total_sales?: Scalars['Float']['input'];
 };
 

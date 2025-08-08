@@ -147,8 +147,16 @@ export const GET_LOW_STOCK_INVENTORY = gql`
 `;
 
 export const GET_PRODUCTS = gql`
-  query GetProductsByBusiness($pagination: PaginationInput!) {
-    getProductsByBusiness(pagination: $pagination) {
+  query GetProductsByBusiness(
+    $pagination: PaginationInput!
+    $filters: ProductFilterInput
+    $storeId: String
+  ) {
+    getProductsByBusiness(
+      pagination: $pagination
+      filters: $filters
+      storeId: $storeId
+    ) {
       data {
         id
         name
@@ -168,6 +176,7 @@ export const GET_PRODUCTS = gql`
         image_url
         description
         is_active
+        inventoryCount
       }
       count
     }
@@ -232,6 +241,7 @@ export const GET_CATEGORIES = gql`
       name
       description
       is_active
+      productsCount
     }
   }
 `;
@@ -290,6 +300,44 @@ export const GET_UPLOAD_URL = gql`
     getUploadUrl(fileType: $fileType, folder: $folder) {
       url
       key
+    }
+  }
+`;
+
+export const GET_STORE_SESSION = gql`
+  query GetStoreSessionById($id: String!) {
+    getStoreSessionById(id: $id) {
+      id
+      store {
+        id
+        name
+      }
+      session_date
+      opened_by {
+        id
+        full_name
+        email
+        role
+      }
+      opened_at
+      closed_by {
+        id
+        full_name
+        email
+        role
+      }
+      closed_at
+      is_active
+      opening_cash_amount
+      closing_cash_amount
+      expected_cash_amount
+      cash_variance
+      total_sales
+      total_transactions
+      status
+      notes
+      created_at
+      updated_at
     }
   }
 `;
