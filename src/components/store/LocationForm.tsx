@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea.tsx";
 import { showError, showSuccess } from "@/hooks/useToastMessages.tsx";
 import { useState } from "react";
 import { useMutation } from "@apollo/client";
+import { PlaceAutocomplete } from "@/components/PlaceAutocomplete";
 
 type Props = {
   refetch: () => void;
@@ -104,6 +105,14 @@ export const LocationForm = ({ selectedItem, handleClose, refetch }: Props) => {
 
       refetch();
     });
+  };
+
+  const handlePlaceSelected = (place: google.maps.places.PlaceResult) => {
+    console.log("Selected place:", place);
+    const city = place.address_components?.find((c) =>
+      c.types.includes("locality"),
+    )?.long_name;
+    console.log("City:", city);
   };
 
   return (
@@ -188,6 +197,8 @@ export const LocationForm = ({ selectedItem, handleClose, refetch }: Props) => {
               placeholder="123 Main St, City, State 12345"
               rows={3}
             />
+
+            <PlaceAutocomplete onPlaceSelected={handlePlaceSelected} />
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

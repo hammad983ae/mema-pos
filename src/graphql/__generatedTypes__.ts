@@ -23,7 +23,7 @@ export enum AlertLevel {
 
 export type Business = {
   __typename?: 'Business';
-  address?: Maybe<Scalars['String']['output']>;
+  address?: Maybe<Location>;
   created_at: Scalars['DateTime']['output'];
   email: Scalars['String']['output'];
   id: Scalars['ID']['output'];
@@ -48,7 +48,7 @@ export type BusinessStats = {
 };
 
 export type CreateBusinessInput = {
-  address?: InputMaybe<Scalars['String']['input']>;
+  address?: InputMaybe<LocationInput>;
   email: Scalars['String']['input'];
   name: Scalars['String']['input'];
   ownerId?: InputMaybe<Scalars['String']['input']>;
@@ -116,7 +116,7 @@ export type CreateReorderRequestInput = {
 };
 
 export type CreateStoreInput = {
-  address?: InputMaybe<Scalars['String']['input']>;
+  address?: InputMaybe<LocationInput>;
   email?: InputMaybe<Scalars['String']['input']>;
   is_active?: InputMaybe<Scalars['Boolean']['input']>;
   is_main?: InputMaybe<Scalars['Boolean']['input']>;
@@ -129,7 +129,7 @@ export type CreateStoreInput = {
 };
 
 export type CreateStoreLocationInput = {
-  address: Scalars['String']['input'];
+  address?: InputMaybe<LocationInput>;
   is_active?: InputMaybe<Scalars['Boolean']['input']>;
   lat?: InputMaybe<Scalars['String']['input']>;
   long?: InputMaybe<Scalars['String']['input']>;
@@ -243,6 +243,21 @@ export enum InventoryStockStatus {
   OutOfStock = 'OUT_OF_STOCK',
   Overstocked = 'OVERSTOCKED'
 }
+
+export type Location = {
+  __typename?: 'Location';
+  formatted_address: Scalars['String']['output'];
+  lat: Scalars['Float']['output'];
+  long: Scalars['Float']['output'];
+  place_id: Scalars['String']['output'];
+};
+
+export type LocationInput = {
+  formatted_address: Scalars['String']['input'];
+  lat: Scalars['Float']['input'];
+  long: Scalars['Float']['input'];
+  place_id: Scalars['String']['input'];
+};
 
 export type LoginInput = {
   email: Scalars['String']['input'];
@@ -635,7 +650,7 @@ export type SignedUrlResponse = {
 
 export type Store = {
   __typename?: 'Store';
-  address?: Maybe<Scalars['String']['output']>;
+  address?: Maybe<Location>;
   business: Business;
   created_at: Scalars['DateTime']['output'];
   email?: Maybe<Scalars['String']['output']>;
@@ -674,7 +689,7 @@ export type StoreDaySession = {
 
 export type StoreLocation = {
   __typename?: 'StoreLocation';
-  address: Scalars['String']['output'];
+  address?: Maybe<Location>;
   business?: Maybe<Business>;
   created_at: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
@@ -733,7 +748,7 @@ export enum SupplierStatus {
 }
 
 export type UpdateBusinessInput = {
-  address?: InputMaybe<Scalars['String']['input']>;
+  address?: InputMaybe<LocationInput>;
   email?: InputMaybe<Scalars['String']['input']>;
   /** Business UUID to update */
   id: Scalars['ID']['input'];
@@ -811,7 +826,7 @@ export type UpdateReorderRequestInput = {
 };
 
 export type UpdateStoreInput = {
-  address?: InputMaybe<Scalars['String']['input']>;
+  address?: InputMaybe<LocationInput>;
   email?: InputMaybe<Scalars['String']['input']>;
   /** Store UUID to update */
   id: Scalars['ID']['input'];
@@ -826,7 +841,7 @@ export type UpdateStoreInput = {
 };
 
 export type UpdateStoreLocationInput = {
-  address?: InputMaybe<Scalars['String']['input']>;
+  address?: InputMaybe<LocationInput>;
   /** Location UUID to update */
   id: Scalars['ID']['input'];
   is_active?: InputMaybe<Scalars['Boolean']['input']>;

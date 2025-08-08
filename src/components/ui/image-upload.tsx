@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { Upload, X, Image } from "lucide-react";
 import { useLazyQuery } from "@apollo/client";
 import { GET_UPLOAD_URL, Query, QueryGetUploadUrlArgs } from "@/graphql";
