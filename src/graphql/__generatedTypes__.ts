@@ -47,6 +47,15 @@ export type BusinessStats = {
   storesCount: Scalars['Float']['output'];
 };
 
+export enum CardType {
+  Amex = 'AMEX',
+  Debit = 'DEBIT',
+  Discover = 'DISCOVER',
+  Mastercard = 'MASTERCARD',
+  Other = 'OTHER',
+  Visa = 'VISA'
+}
+
 export type CreateBusinessInput = {
   address?: InputMaybe<Scalars['String']['input']>;
   email: Scalars['String']['input'];
@@ -107,6 +116,19 @@ export type CreateProductInput = {
   sku: Scalars['String']['input'];
   /** Supplier UUID */
   supplierId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type CreateReceiptInput = {
+  cashierId?: InputMaybe<Scalars['String']['input']>;
+  discount_total: Scalars['String']['input'];
+  grand_total: Scalars['String']['input'];
+  items: Array<LineItemInput>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  payment_methods: Array<PaymentInput>;
+  storeId: Scalars['String']['input'];
+  sub_total: Scalars['String']['input'];
+  tax_total: Scalars['String']['input'];
+  tip_total: Scalars['String']['input'];
 };
 
 export type CreateReorderRequestInput = {
@@ -244,6 +266,19 @@ export enum InventoryStockStatus {
   Overstocked = 'OVERSTOCKED'
 }
 
+export type LineItem = {
+  __typename?: 'LineItem';
+  product_id: Scalars['String']['output'];
+  quantity: Scalars['Float']['output'];
+  unit_price: Scalars['String']['output'];
+};
+
+export type LineItemInput = {
+  product_id: Scalars['String']['input'];
+  quantity: Scalars['Float']['input'];
+  unit_price: Scalars['String']['input'];
+};
+
 export type LoginInput = {
   email: Scalars['String']['input'];
   password: Scalars['String']['input'];
@@ -291,6 +326,7 @@ export type Mutation = {
   createLowStockAlert: LowStockAlert;
   createProduct: Scalars['Boolean']['output'];
   createProductCategory: ProductCategory;
+  createReceipt: Receipt;
   createReorderRequest: ReorderRequest;
   createStore: Store;
   createStoreLocation: StoreLocation;
@@ -299,6 +335,7 @@ export type Mutation = {
   deleteInventory: Scalars['Boolean']['output'];
   deleteProduct: Scalars['Boolean']['output'];
   deleteProductCategory: Scalars['Boolean']['output'];
+  deleteReceipt: Scalars['Boolean']['output'];
   deleteStore: Scalars['Boolean']['output'];
   deleteStoreLocation: Scalars['Boolean']['output'];
   deleteSupplier: Scalars['Boolean']['output'];
@@ -313,6 +350,7 @@ export type Mutation = {
   updateLowStockAlert: Scalars['Boolean']['output'];
   updateProduct: Scalars['Boolean']['output'];
   updateProductCategory: Scalars['Boolean']['output'];
+  updateReceipt: Scalars['Boolean']['output'];
   updateReorderRequest: Scalars['Boolean']['output'];
   updateStore: Scalars['Boolean']['output'];
   updateStoreLocation: Scalars['Boolean']['output'];
@@ -357,6 +395,11 @@ export type MutationCreateProductCategoryArgs = {
 };
 
 
+export type MutationCreateReceiptArgs = {
+  input: CreateReceiptInput;
+};
+
+
 export type MutationCreateReorderRequestArgs = {
   input: CreateReorderRequestInput;
 };
@@ -393,6 +436,11 @@ export type MutationDeleteProductArgs = {
 
 
 export type MutationDeleteProductCategoryArgs = {
+  id: Scalars['String']['input'];
+};
+
+
+export type MutationDeleteReceiptArgs = {
   id: Scalars['String']['input'];
 };
 
@@ -465,6 +513,11 @@ export type MutationUpdateProductCategoryArgs = {
 };
 
 
+export type MutationUpdateReceiptArgs = {
+  input: UpdateReceiptInput;
+};
+
+
 export type MutationUpdateReorderRequestArgs = {
   input: UpdateReorderRequestInput;
 };
@@ -493,6 +546,31 @@ export type PaginationInput = {
   page?: InputMaybe<Scalars['Float']['input']>;
   take?: InputMaybe<Scalars['Float']['input']>;
 };
+
+export type Payment = {
+  __typename?: 'Payment';
+  amount: Scalars['String']['output'];
+  card_type?: Maybe<CardType>;
+  check_number?: Maybe<Scalars['String']['output']>;
+  last_four_digits?: Maybe<Scalars['String']['output']>;
+  reference?: Maybe<Scalars['String']['output']>;
+  type: PaymentType;
+};
+
+export type PaymentInput = {
+  amount: Scalars['String']['input'];
+  card_type?: InputMaybe<CardType>;
+  check_number?: InputMaybe<Scalars['String']['input']>;
+  last_four_digits?: InputMaybe<Scalars['String']['input']>;
+  reference?: InputMaybe<Scalars['String']['input']>;
+  type: PaymentType;
+};
+
+export enum PaymentType {
+  Card = 'CARD',
+  Cash = 'CASH',
+  Check = 'CHECK'
+}
 
 export type Product = {
   __typename?: 'Product';
@@ -549,6 +627,7 @@ export type Query = {
   getLowStockInventoryByBusiness: InventoryPagination;
   getMovementsByBusiness: InventoryMovementPagination;
   getProductsByBusiness: ProductPagination;
+  getReceipts: Array<Receipt>;
   getReorderRequestsByBusiness: ReorderRequestPagination;
   getStoreSessionById: StoreDaySession;
   getStores: Array<Store>;
@@ -600,6 +679,24 @@ export type QueryGetStoreSessionByIdArgs = {
 export type QueryGetUploadUrlArgs = {
   fileType?: InputMaybe<Scalars['String']['input']>;
   folder?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type Receipt = {
+  __typename?: 'Receipt';
+  cashier?: Maybe<User>;
+  created_at: Scalars['DateTime']['output'];
+  discount_total: Scalars['String']['output'];
+  grand_total: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  items: Array<LineItem>;
+  notes?: Maybe<Scalars['String']['output']>;
+  payment_methods: Array<Payment>;
+  receipt_number?: Maybe<Scalars['String']['output']>;
+  store?: Maybe<Store>;
+  sub_total: Scalars['String']['output'];
+  tax_total: Scalars['String']['output'];
+  tip_total: Scalars['String']['output'];
+  updated_at: Scalars['DateTime']['output'];
 };
 
 export enum ReferenceType {
@@ -817,6 +914,20 @@ export type UpdateProductInput = {
   sku?: InputMaybe<Scalars['String']['input']>;
   /** Supplier UUID */
   supplierId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type UpdateReceiptInput = {
+  cashierId?: InputMaybe<Scalars['String']['input']>;
+  discount_total: Scalars['String']['input'];
+  grand_total: Scalars['String']['input'];
+  id: Scalars['ID']['input'];
+  items: Array<LineItemInput>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  payment_methods: Array<PaymentInput>;
+  storeId: Scalars['String']['input'];
+  sub_total: Scalars['String']['input'];
+  tax_total: Scalars['String']['input'];
+  tip_total: Scalars['String']['input'];
 };
 
 export type UpdateReorderRequestInput = {

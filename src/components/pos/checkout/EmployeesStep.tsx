@@ -4,10 +4,17 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Search, Users, UserCheck, DollarSign, Percent, Minus, Plus } from "lucide-react";
+import {
+  Clock,
+  Search,
+  Users,
+  UserCheck,
+  DollarSign,
+  Percent,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Employee {
   id: string;
@@ -42,26 +49,35 @@ export const EmployeesStep = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [salesAllocations, setSalesAllocations] = useState<EmployeeSalesAllocation[]>([]);
-  const [allocationMode, setAllocationMode] = useState<'percentage' | 'amount'>('percentage');
+  const [salesAllocations, setSalesAllocations] = useState<
+    EmployeeSalesAllocation[]
+  >([]);
+  const [allocationMode, setAllocationMode] = useState<"percentage" | "amount">(
+    "percentage",
+  );
 
   // Get cart data for sales amount calculation
-  const cartData = JSON.parse(localStorage.getItem('pos_cart') || '{"items": [], "total": 0, "subtotal": 0}');
+  const cartData = JSON.parse(
+    localStorage.getItem("pos_cart") ||
+      '{"items": [], "total": 0, "subtotal": 0}',
+  );
   const subtotal = cartData.subtotal || cartData.total || 0; // Use subtotal (pre-tax) amount
 
   // Save selected employees and allocations to localStorage whenever they change
   useEffect(() => {
     const salesTeamData = {
-      employees: selectedSalesPeople,
+      employees: Array.isArray(selectedSalesPeople)
+        ? selectedSalesPeople
+        : (selectedSalesPeople?.employees ?? []),
       allocations: salesAllocations,
-      allocationMode
+      allocationMode,
     };
-    localStorage.setItem('checkout_sales_team', JSON.stringify(salesTeamData));
+    localStorage.setItem("checkout_sales_team", JSON.stringify(salesTeamData));
   }, [selectedSalesPeople, salesAllocations, allocationMode]);
 
   // Load saved data on component mount
   useEffect(() => {
-    const saved = localStorage.getItem('checkout_sales_team');
+    const saved = localStorage.getItem("checkout_sales_team");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -75,7 +91,7 @@ export const EmployeesStep = ({
           }
         }
       } catch (error) {
-        console.error('Error parsing saved sales team data:', error);
+        console.error("Error parsing saved sales team data:", error);
       }
     }
   }, []);
@@ -87,10 +103,12 @@ export const EmployeesStep = ({
   const fetchEmployees = async () => {
     try {
       // Get business context first
-      const { data: businessContext } = await supabase.rpc('get_user_business_context_secure');
-      
+      const { data: businessContext } = await supabase.rpc(
+        "get_user_business_context_secure",
+      );
+
       if (!businessContext || businessContext.length === 0) {
-        console.error('No business context found');
+        console.error("No business context found");
         setLoading(false);
         return;
       }
@@ -99,14 +117,14 @@ export const EmployeesStep = ({
 
       // Get all business members
       const { data: businessMembers, error: membersError } = await supabase
-        .from('user_business_memberships')
-        .select('user_id')
-        .eq('business_id', businessId)
-        .eq('is_active', true);
+        .from("user_business_memberships")
+        .select("user_id")
+        .eq("business_id", businessId)
+        .eq("is_active", true);
 
       if (membersError) throw membersError;
 
-      const userIds = businessMembers?.map(m => m.user_id) || [];
+      const userIds = businessMembers?.map((m) => m.user_id) || [];
 
       if (userIds.length === 0) {
         setLoading(false);
@@ -115,41 +133,43 @@ export const EmployeesStep = ({
 
       // Then fetch their profiles
       const { data: allMembers, error: allError } = await supabase
-        .from('profiles')
-        .select(`
+        .from("profiles")
+        .select(
+          `
           user_id,
           username,
           full_name,
           position_type
-        `)
-        .in('user_id', userIds);
+        `,
+        )
+        .in("user_id", userIds);
 
       if (allError) throw allError;
 
       // Get currently clocked in users
       const { data: clockedIn, error: clockError } = await supabase
-        .from('employee_clock_status')
-        .select('user_id')
-        .eq('business_id', businessId)
-        .eq('is_active', true);
+        .from("employee_clock_status")
+        .select("user_id")
+        .eq("business_id", businessId)
+        .eq("is_active", true);
 
       if (clockError) throw clockError;
 
-      const clockedInUserIds = new Set(clockedIn?.map(c => c.user_id) || []);
+      const clockedInUserIds = new Set(clockedIn?.map((c) => c.user_id) || []);
 
-      const formattedPeople: Employee[] = allMembers?.map(member => ({
-        id: member.user_id,
-        username: member.username || 'Unknown',
-        full_name: member.full_name,
-        position_type: member.position_type,
-        is_clocked_in: clockedInUserIds.has(member.user_id),
-      })) || [];
+      const formattedPeople: Employee[] =
+        allMembers?.map((member) => ({
+          id: member.user_id,
+          username: member.username || "Unknown",
+          full_name: member.full_name,
+          position_type: member.position_type,
+          is_clocked_in: clockedInUserIds.has(member.user_id),
+        })) || [];
 
       setAllPeople(formattedPeople);
-      setClockedInPeople(formattedPeople.filter(p => p.is_clocked_in));
-
+      setClockedInPeople(formattedPeople.filter((p) => p.is_clocked_in));
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      console.error("Error fetching employees:", error);
       toast({
         title: "Error",
         description: "Failed to load employees. Please try again.",
@@ -170,28 +190,34 @@ export const EmployeesStep = ({
     const equalPercentage = 100 / employees.length;
     const equalAmount = subtotal / employees.length;
 
-    const newAllocations: EmployeeSalesAllocation[] = employees.map(employeeId => ({
-      employeeId,
-      percentage: Math.round(equalPercentage * 100) / 100,
-      amount: Math.round(equalAmount * 100) / 100,
-    }));
+    const newAllocations: EmployeeSalesAllocation[] = employees.map(
+      (employeeId) => ({
+        employeeId,
+        percentage: Math.round(equalPercentage * 100) / 100,
+        amount: Math.round(equalAmount * 100) / 100,
+      }),
+    );
 
     setSalesAllocations(newAllocations);
   };
 
   const toggleEmployeeSelection = (employeeId: string) => {
     const newSelection = selectedSalesPeople.includes(employeeId)
-      ? selectedSalesPeople.filter(id => id !== employeeId)
+      ? selectedSalesPeople.filter((id) => id !== employeeId)
       : [...selectedSalesPeople, employeeId];
-    
+
     onSalesPeopleChange(newSelection);
     recalculateAllocations(newSelection);
   };
 
-  const updateAllocation = (employeeId: string, value: number, type: 'percentage' | 'amount') => {
-    const newAllocations = salesAllocations.map(allocation => {
+  const updateAllocation = (
+    employeeId: string,
+    value: number,
+    type: "percentage" | "amount",
+  ) => {
+    const newAllocations = salesAllocations.map((allocation) => {
       if (allocation.employeeId === employeeId) {
-        if (type === 'percentage') {
+        if (type === "percentage") {
           const newPercentage = Math.max(0, Math.min(100, value));
           const newAmount = (subtotal * newPercentage) / 100;
           return {
@@ -220,7 +246,7 @@ export const EmployeesStep = ({
   };
 
   const selectAllClocked = () => {
-    const clockedInIds = clockedInPeople.map(p => p.id);
+    const clockedInIds = clockedInPeople.map((p) => p.id);
     onSalesPeopleChange(clockedInIds);
     recalculateAllocations(clockedInIds);
   };
@@ -230,28 +256,35 @@ export const EmployeesStep = ({
     setSalesAllocations([]);
   };
 
-  const filteredPeople = (showAll ? allPeople : clockedInPeople).filter(person =>
-    person.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    person.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredPeople = (showAll ? allPeople : clockedInPeople).filter(
+    (person) =>
+      person.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      person.full_name?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const getPositionBadgeVariant = (position: string | null) => {
     switch (position) {
-      case 'opener':
-        return 'default';
-      case 'upseller':
-        return 'secondary';
-      case 'manager':
-        return 'destructive';
+      case "opener":
+        return "default";
+      case "upseller":
+        return "secondary";
+      case "manager":
+        return "destructive";
       default:
-        return 'outline';
+        return "outline";
     }
   };
 
-  const getEmployeeById = (id: string) => allPeople.find(p => p.id === id);
+  const getEmployeeById = (id: string) => allPeople.find((p) => p.id === id);
 
-  const totalAllocatedPercentage = salesAllocations.reduce((sum, allocation) => sum + allocation.percentage, 0);
-  const totalAllocatedAmount = salesAllocations.reduce((sum, allocation) => sum + allocation.amount, 0);
+  const totalAllocatedPercentage = salesAllocations.reduce(
+    (sum, allocation) => sum + allocation.percentage,
+    0,
+  );
+  const totalAllocatedAmount = salesAllocations.reduce(
+    (sum, allocation) => sum + allocation.amount,
+    0,
+  );
 
   if (loading) {
     return (
@@ -293,26 +326,22 @@ export const EmployeesStep = ({
                 />
               </div>
             </div>
-            
+
             <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowAll(!showAll)}
               >
-                {showAll ? 'Show Active Only' : 'Show All'}
+                {showAll ? "Show Active Only" : "Show All"}
               </Button>
-              
+
               {!showAll && clockedInPeople.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={selectAllClocked}
-                >
+                <Button variant="outline" size="sm" onClick={selectAllClocked}>
                   Select All Active
                 </Button>
               )}
-              
+
               <Button
                 variant="outline"
                 size="sm"
@@ -330,7 +359,8 @@ export const EmployeesStep = ({
               <div className="flex items-center gap-2 text-sm">
                 <UserCheck className="h-4 w-4 text-success" />
                 <span className="font-medium">
-                  {selectedSalesPeople.length} employee{selectedSalesPeople.length === 1 ? '' : 's'} selected
+                  {selectedSalesPeople.length} employee
+                  {selectedSalesPeople.length === 1 ? "" : "s"} selected
                 </span>
                 <span className="text-muted-foreground">
                   • Sales Amount: ${subtotal.toFixed(2)}
@@ -342,12 +372,15 @@ export const EmployeesStep = ({
           {/* People Grid */}
           {filteredPeople.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {searchTerm ? 'No employees found matching your search.' : 
-               showAll ? 'No employees found.' : 'No employees are currently active.'}
+              {searchTerm
+                ? "No employees found matching your search."
+                : showAll
+                  ? "No employees found."
+                  : "No employees are currently active."}
               {!showAll && (
-                <Button 
-                  variant="link" 
-                  className="mt-2" 
+                <Button
+                  variant="link"
+                  className="mt-2"
                   onClick={() => setShowAll(true)}
                 >
                   Show all employees instead
@@ -361,19 +394,22 @@ export const EmployeesStep = ({
                   key={person.id}
                   className={`
                     p-4 border rounded-lg cursor-pointer transition-all hover:shadow-sm
-                    ${selectedSalesPeople.includes(person.id) 
-                      ? 'border-primary bg-primary/5 shadow-sm' 
-                      : 'border-border hover:border-primary/50'
+                    ${
+                      selectedSalesPeople.includes(person.id)
+                        ? "border-primary bg-primary/5 shadow-sm"
+                        : "border-border hover:border-primary/50"
                     }
                   `}
                   onClick={() => toggleEmployeeSelection(person.id)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`
+                      <div
+                        className={`
                         w-3 h-3 rounded-full flex-shrink-0
-                        ${selectedSalesPeople.includes(person.id) ? 'bg-primary' : 'bg-muted'}
-                      `} />
+                        ${selectedSalesPeople.includes(person.id) ? "bg-primary" : "bg-muted"}
+                      `}
+                      />
                       <div>
                         <p className="font-medium">
                           {person.full_name || person.username}
@@ -385,7 +421,11 @@ export const EmployeesStep = ({
                     </div>
                     <div className="flex items-center gap-2">
                       {person.position_type && (
-                        <Badge variant={getPositionBadgeVariant(person.position_type)}>
+                        <Badge
+                          variant={getPositionBadgeVariant(
+                            person.position_type,
+                          )}
+                        >
                           {person.position_type}
                         </Badge>
                       )}
@@ -416,20 +456,35 @@ export const EmployeesStep = ({
           <CardContent className="space-y-4">
             {/* Allocation Mode and Controls */}
             <div className="flex justify-between items-center">
-              <Tabs value={allocationMode} onValueChange={(value) => setAllocationMode(value as 'percentage' | 'amount')}>
+              <Tabs
+                value={allocationMode}
+                onValueChange={(value) =>
+                  setAllocationMode(value as "percentage" | "amount")
+                }
+              >
                 <TabsList>
-                  <TabsTrigger value="percentage" className="flex items-center gap-2">
+                  <TabsTrigger
+                    value="percentage"
+                    className="flex items-center gap-2"
+                  >
                     <Percent className="h-4 w-4" />
                     Percentage
                   </TabsTrigger>
-                  <TabsTrigger value="amount" className="flex items-center gap-2">
+                  <TabsTrigger
+                    value="amount"
+                    className="flex items-center gap-2"
+                  >
                     <DollarSign className="h-4 w-4" />
                     Amount
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
 
-              <Button variant="outline" size="sm" onClick={autoDistributeEqually}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={autoDistributeEqually}
+              >
                 Distribute Equally
               </Button>
             </div>
@@ -442,11 +497,12 @@ export const EmployeesStep = ({
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span>Allocated:</span>
-                <span className={`font-medium ${Math.abs(totalAllocatedPercentage - 100) > 0.01 || Math.abs(totalAllocatedAmount - subtotal) > 0.01 ? 'text-amber-600' : 'text-green-600'}`}>
-                  {allocationMode === 'percentage' 
-                    ? `${totalAllocatedPercentage.toFixed(1)}%` 
-                    : `$${totalAllocatedAmount.toFixed(2)}`
-                  }
+                <span
+                  className={`font-medium ${Math.abs(totalAllocatedPercentage - 100) > 0.01 || Math.abs(totalAllocatedAmount - subtotal) > 0.01 ? "text-amber-600" : "text-green-600"}`}
+                >
+                  {allocationMode === "percentage"
+                    ? `${totalAllocatedPercentage.toFixed(1)}%`
+                    : `$${totalAllocatedAmount.toFixed(2)}`}
                 </span>
               </div>
             </div>
@@ -458,14 +514,25 @@ export const EmployeesStep = ({
                 if (!employee) return null;
 
                 return (
-                  <div key={allocation.employeeId} className="border rounded-lg p-4">
+                  <div
+                    key={allocation.employeeId}
+                    className="border rounded-lg p-4"
+                  >
                     <div className="flex items-center justify-between mb-3">
                       <div>
-                        <p className="font-medium">{employee.full_name || employee.username}</p>
-                        <p className="text-sm text-muted-foreground">@{employee.username}</p>
+                        <p className="font-medium">
+                          {employee.full_name || employee.username}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          @{employee.username}
+                        </p>
                       </div>
                       {employee.position_type && (
-                        <Badge variant={getPositionBadgeVariant(employee.position_type)}>
+                        <Badge
+                          variant={getPositionBadgeVariant(
+                            employee.position_type,
+                          )}
+                        >
                           {employee.position_type}
                         </Badge>
                       )}
@@ -474,24 +541,38 @@ export const EmployeesStep = ({
                     <div className="flex items-center gap-4">
                       <div className="flex-1">
                         <Label>
-                          {allocationMode === 'percentage' ? 'Percentage' : 'Amount'}
+                          {allocationMode === "percentage"
+                            ? "Percentage"
+                            : "Amount"}
                         </Label>
                         <div className="flex items-center gap-2">
                           <Input
                             type="number"
                             min="0"
-                            max={allocationMode === 'percentage' ? "100" : subtotal.toString()}
-                            step={allocationMode === 'percentage' ? "0.1" : "0.01"}
-                            value={allocationMode === 'percentage' ? allocation.percentage : allocation.amount}
-                            onChange={(e) => updateAllocation(
-                              allocation.employeeId, 
-                              parseFloat(e.target.value) || 0, 
-                              allocationMode
-                            )}
+                            max={
+                              allocationMode === "percentage"
+                                ? "100"
+                                : subtotal.toString()
+                            }
+                            step={
+                              allocationMode === "percentage" ? "0.1" : "0.01"
+                            }
+                            value={
+                              allocationMode === "percentage"
+                                ? allocation.percentage
+                                : allocation.amount
+                            }
+                            onChange={(e) =>
+                              updateAllocation(
+                                allocation.employeeId,
+                                parseFloat(e.target.value) || 0,
+                                allocationMode,
+                              )
+                            }
                             className="text-center"
                           />
                           <span className="text-sm text-muted-foreground">
-                            {allocationMode === 'percentage' ? '%' : '$'}
+                            {allocationMode === "percentage" ? "%" : "$"}
                           </span>
                         </div>
                       </div>
@@ -499,10 +580,9 @@ export const EmployeesStep = ({
                       <div className="text-right">
                         <Label>Equivalent</Label>
                         <p className="text-sm font-medium">
-                          {allocationMode === 'percentage' 
+                          {allocationMode === "percentage"
                             ? `$${allocation.amount.toFixed(2)}`
-                            : `${allocation.percentage.toFixed(1)}%`
-                          }
+                            : `${allocation.percentage.toFixed(1)}%`}
                         </p>
                       </div>
                     </div>
@@ -519,10 +599,10 @@ export const EmployeesStep = ({
         <Button variant="outline" onClick={onBack}>
           Back to Payment
         </Button>
-        
+
         <Button
           onClick={onNext}
-          disabled={selectedSalesPeople.length === 0}
+          // disabled={selectedSalesPeople.length === 0}
         >
           Complete Sale
         </Button>

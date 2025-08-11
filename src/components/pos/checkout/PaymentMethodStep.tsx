@@ -1,19 +1,33 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Plus, CreditCard, Banknote, Check, DollarSign } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Banknote,
+  Check,
+  CreditCard,
+  DollarSign,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { showError } from "@/hooks/useToastMessages.tsx";
+import { CardType, PaymentType } from "@/graphql";
 
 export interface PaymentMethod {
   id: string;
-  type: "card" | "cash" | "check";
+  type: PaymentType;
   amount: number;
-  cardType?: "visa" | "mastercard" | "amex" | "discover" | "debit" | "other";
-  lastFourDigits?: string;
-  checkNumber?: string;
+  card_type?: CardType;
+  last_four_digits?: string;
+  check_number?: string;
 }
 
 interface PaymentMethodStepProps {
@@ -31,98 +45,118 @@ export const PaymentMethodStep = ({
   onNext,
   onBack,
 }: PaymentMethodStepProps) => {
-  const { toast } = useToast();
   const [currentMethod, setCurrentMethod] = useState<Partial<PaymentMethod>>({
-    type: "card",
+    type: PaymentType.Card,
     amount: 0,
   });
+  const totalAllocated = useMemo(
+    () => paymentMethods.reduce((sum, method) => sum + method.amount, 0),
+    [paymentMethods],
+  );
+  const remainingAmount = useMemo(
+    () => grandTotal - totalAllocated,
+    [grandTotal, totalAllocated],
+  );
+
+  useEffect(() => {
+    if (currentMethod.amount === 0 && !!remainingAmount) {
+      setCurrentMethod((prev) => ({
+        ...prev,
+        amount: remainingAmount,
+      }));
+    }
+  }, [remainingAmount]);
 
   // Save payment methods to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('checkout_payment', JSON.stringify(paymentMethods));
+    localStorage.setItem("checkout_payment", JSON.stringify(paymentMethods));
   }, [paymentMethods]);
 
-  const totalAllocated = paymentMethods.reduce((sum, method) => sum + method.amount, 0);
-  const remainingAmount = grandTotal - totalAllocated;
-
+  console.log("curr", currentMethod);
   const addPaymentMethod = () => {
-    if (!currentMethod.type || !currentMethod.amount || currentMethod.amount <= 0) {
-      toast({
-        title: "Invalid Payment",
-        description: "Please select a payment type and enter a valid amount.",
-        variant: "destructive",
-      });
+    if (
+      !currentMethod.type ||
+      !currentMethod.amount ||
+      currentMethod.amount <= 0
+    ) {
+      showError(
+        "Invalid Payment",
+        "Please select a payment type and enter a valid amount.",
+      );
       return;
     }
 
     if (currentMethod.amount > remainingAmount) {
-      toast({
-        title: "Amount Too High",
-        description: `Maximum amount allowed: $${remainingAmount.toFixed(2)}`,
-        variant: "destructive",
-      });
+      showError(
+        "Amount Too High",
+        `Maximum amount allowed: $${remainingAmount.toFixed(2)}`,
+      );
       return;
     }
 
-    if (currentMethod.type === "card" && (!currentMethod.cardType || !currentMethod.lastFourDigits)) {
-      toast({
-        title: "Missing Card Details",
-        description: "Please select card type and enter last 4 digits.",
-        variant: "destructive",
-      });
+    if (
+      currentMethod.type === PaymentType.Card &&
+      (!currentMethod.card_type || !currentMethod.last_four_digits)
+    ) {
+      showError(
+        "Missing Card Details",
+        "Please select card type and enter last 4 digits.",
+      );
       return;
     }
 
-    if (currentMethod.type === "check" && !currentMethod.checkNumber) {
-      toast({
-        title: "Missing Check Number",
-        description: "Please enter the check number.",
-        variant: "destructive",
-      });
+    if (
+      currentMethod.type === PaymentType.Check &&
+      !currentMethod.check_number
+    ) {
+      showError("Missing Check Number", "Please enter the check number.");
       return;
     }
 
     const newMethod: PaymentMethod = {
       id: Date.now().toString(),
-      type: currentMethod.type as "card" | "cash" | "check",
+      type: currentMethod.type as PaymentType,
       amount: currentMethod.amount,
-      ...(currentMethod.type === "card" && {
-        cardType: currentMethod.cardType,
-        lastFourDigits: currentMethod.lastFourDigits,
+      ...(currentMethod.type === PaymentType.Card && {
+        card_type: currentMethod.card_type,
+        last_four_digits: currentMethod.last_four_digits,
       }),
-      ...(currentMethod.type === "check" && {
-        checkNumber: currentMethod.checkNumber,
+      ...(currentMethod.type === PaymentType.Check && {
+        check_number: currentMethod.check_number,
       }),
     };
 
     onPaymentMethodsChange([...paymentMethods, newMethod]);
-    
+
     // Save to localStorage for persistence
-    localStorage.setItem('checkout_payment', JSON.stringify([...paymentMethods, newMethod]));
-    
+    localStorage.setItem(
+      "checkout_payment",
+      JSON.stringify([...paymentMethods, newMethod]),
+    );
+
     // Reset form
     setCurrentMethod({
-      type: "card",
+      type: PaymentType.Card,
       amount: remainingAmount > 0 ? Math.round(remainingAmount * 100) / 100 : 0,
     });
   };
 
   const removePaymentMethod = (id: string) => {
-    const updatedMethods = paymentMethods.filter(method => method.id !== id);
+    const updatedMethods = paymentMethods.filter((method) => method.id !== id);
     onPaymentMethodsChange(updatedMethods);
     // Save to localStorage for persistence
-    localStorage.setItem('checkout_payment', JSON.stringify(updatedMethods));
+    localStorage.setItem("checkout_payment", JSON.stringify(updatedMethods));
   };
 
   const canProceed = Math.abs(remainingAmount) < 0.01; // Allow for small floating point differences
 
-  const getPaymentIcon = (type: string) => {
+  const getPaymentIcon = (type: PaymentType) => {
     switch (type) {
-      case "card":
+      case PaymentType.Card:
         return <CreditCard className="h-4 w-4" />;
-      case "cash":
+      case PaymentType.Cash:
         return <Banknote className="h-4 w-4" />;
-      case "check":
+      case PaymentType.Check:
         return <Check className="h-4 w-4" />;
       default:
         return <DollarSign className="h-4 w-4" />;
@@ -139,9 +173,8 @@ export const PaymentMethodStep = ({
       <div className="text-center">
         <h2 className="text-2xl font-bold">Payment Methods</h2>
         <p className="text-muted-foreground">
-          Total: ${grandTotal.toFixed(2)} | 
-          Allocated: ${totalAllocated.toFixed(2)} | 
-          Remaining: ${remainingAmount.toFixed(2)}
+          Total: ${grandTotal.toFixed(2)} | Allocated: $
+          {totalAllocated.toFixed(2)} | Remaining: ${remainingAmount.toFixed(2)}
         </p>
       </div>
 
@@ -153,14 +186,19 @@ export const PaymentMethodStep = ({
           </CardHeader>
           <CardContent className="space-y-3">
             {paymentMethods.map((method) => (
-              <div key={method.id} className="flex items-center justify-between p-3 border rounded-lg">
+              <div
+                key={method.id}
+                className="flex items-center justify-between p-3 border rounded-lg"
+              >
                 <div className="flex items-center gap-3">
                   {getPaymentIcon(method.type)}
                   <div>
                     <p className="font-medium">
-                      {method.type === "card" && `${formatCardType(method.cardType)} ****${method.lastFourDigits}`}
-                      {method.type === "cash" && "Cash Payment"}
-                      {method.type === "check" && `Check #${method.checkNumber}`}
+                      {method.type === PaymentType.Card &&
+                        `${formatCardType(method.card_type)} ****${method.last_four_digits}`}
+                      {method.type === PaymentType.Cash && "Cash Payment"}
+                      {method.type === PaymentType.Check &&
+                        `Check #${method.check_number}`}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       ${method.amount.toFixed(2)}
@@ -192,12 +230,15 @@ export const PaymentMethodStep = ({
                 <Label>Payment Type</Label>
                 <Select
                   value={currentMethod.type}
-                  onValueChange={(value: "card" | "cash" | "check") => {
-                    setCurrentMethod({ 
-                      ...currentMethod, 
+                  onValueChange={(value: PaymentType) => {
+                    setCurrentMethod({
+                      ...currentMethod,
                       type: value,
                       // Auto-fill the remaining amount rounded to cents when payment type is selected
-                      amount: remainingAmount > 0 ? Math.round(remainingAmount * 100) / 100 : currentMethod.amount
+                      amount:
+                        remainingAmount > 0
+                          ? Math.round(remainingAmount * 100) / 100
+                          : currentMethod.amount,
                     });
                   }}
                 >
@@ -205,9 +246,11 @@ export const PaymentMethodStep = ({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="card">Credit/Debit Card</SelectItem>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="check">Check</SelectItem>
+                    <SelectItem value={PaymentType.Card}>
+                      Credit/Debit Card
+                    </SelectItem>
+                    <SelectItem value={PaymentType.Cash}>Cash</SelectItem>
+                    <SelectItem value={PaymentType.Check}>Check</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -217,7 +260,11 @@ export const PaymentMethodStep = ({
                 <Input
                   type="number"
                   placeholder="0.00"
-                  value={currentMethod.amount || ""}
+                  value={
+                    Math.round(remainingAmount * 100) / 100 ||
+                    currentMethod.amount ||
+                    ""
+                  }
                   onChange={(e) =>
                     setCurrentMethod({
                       ...currentMethod,
@@ -230,26 +277,32 @@ export const PaymentMethodStep = ({
               </div>
             </div>
 
-            {currentMethod.type === "card" && (
+            {currentMethod.type === PaymentType.Card && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Card Type</Label>
                   <Select
-                    value={currentMethod.cardType}
-                    onValueChange={(value: "visa" | "mastercard" | "amex" | "discover" | "debit" | "other") =>
-                      setCurrentMethod({ ...currentMethod, cardType: value })
+                    value={currentMethod.card_type}
+                    onValueChange={(value: CardType) =>
+                      setCurrentMethod({ ...currentMethod, card_type: value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select card type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="visa">Visa</SelectItem>
-                      <SelectItem value="mastercard">Mastercard</SelectItem>
-                      <SelectItem value="amex">American Express</SelectItem>
-                      <SelectItem value="discover">Discover</SelectItem>
-                      <SelectItem value="debit">Debit Card</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value={CardType.Visa}>Visa</SelectItem>
+                      <SelectItem value={CardType.Mastercard}>
+                        Mastercard
+                      </SelectItem>
+                      <SelectItem value={CardType.Amex}>
+                        American Express
+                      </SelectItem>
+                      <SelectItem value={CardType.Discover}>
+                        Discover
+                      </SelectItem>
+                      <SelectItem value={CardType.Debit}>Debit Card</SelectItem>
+                      <SelectItem value={CardType.Other}>Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -260,11 +313,11 @@ export const PaymentMethodStep = ({
                     type="text"
                     placeholder="1234"
                     maxLength={4}
-                    value={currentMethod.lastFourDigits || ""}
+                    value={currentMethod.last_four_digits || ""}
                     onChange={(e) =>
                       setCurrentMethod({
                         ...currentMethod,
-                        lastFourDigits: e.target.value.replace(/\D/g, ""),
+                        last_four_digits: e.target.value.replace(/\D/g, ""),
                       })
                     }
                   />
@@ -272,17 +325,17 @@ export const PaymentMethodStep = ({
               </div>
             )}
 
-            {currentMethod.type === "check" && (
+            {currentMethod.type === PaymentType.Check && (
               <div>
                 <Label>Check Number</Label>
                 <Input
                   type="text"
                   placeholder="Enter check number"
-                  value={currentMethod.checkNumber || ""}
+                  value={currentMethod.check_number || ""}
                   onChange={(e) =>
                     setCurrentMethod({
                       ...currentMethod,
-                      checkNumber: e.target.value,
+                      check_number: e.target.value,
                     })
                   }
                 />
@@ -302,13 +355,11 @@ export const PaymentMethodStep = ({
         <Button variant="outline" onClick={onBack}>
           Back to Customer
         </Button>
-        
-        <Button
-          onClick={onNext}
-          disabled={!canProceed}
-          className="min-w-32"
-        >
-          {canProceed ? "Next: Employees" : `$${remainingAmount.toFixed(2)} Remaining`}
+
+        <Button onClick={onNext} disabled={!canProceed} className="min-w-32">
+          {canProceed
+            ? "Next: Employees"
+            : `$${remainingAmount.toFixed(2)} Remaining`}
         </Button>
       </div>
     </div>

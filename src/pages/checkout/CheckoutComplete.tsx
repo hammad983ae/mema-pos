@@ -1,125 +1,168 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Receipt, CreditCard, Users, ArrowLeft, Home } from "lucide-react";
+import {
+  CheckCircle,
+  Receipt,
+  CreditCard,
+  Users,
+  ArrowLeft,
+  Home,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { useMutation } from "@apollo/client";
+import {
+  CREATE_RECEIPT,
+  Mutation,
+  MutationCreateReceiptArgs,
+  PaymentType,
+  PosSession,
+} from "@/graphql";
+import { showSuccess } from "@/hooks/useToastMessages.tsx";
 
 export default function CheckoutComplete() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, business } = useAuth();
   const { createNotification } = useNotifications();
-  const [isProcessing, setIsProcessing] = useState(true);
   const [orderNumber, setOrderNumber] = useState<string>("");
-  
+  const [createReceipt, { loading }] = useMutation<
+    Mutation,
+    MutationCreateReceiptArgs
+  >(CREATE_RECEIPT);
+
   // Get all checkout data
-  const cartData = JSON.parse(localStorage.getItem('pos_cart') || '{"items": [], "total": 0}');
-  const customerData = JSON.parse(localStorage.getItem('checkout_customer') || 'null');
-  const paymentData = JSON.parse(localStorage.getItem('checkout_payment') || '[]');
-  const salesTeamData = JSON.parse(localStorage.getItem('checkout_sales_team') || '[]');
+  const cartData = useMemo(
+    () =>
+      JSON.parse(
+        localStorage.getItem("pos_cart") || '{"items": [], "total": 0}',
+      ),
+    [],
+  );
+  const customerData = useMemo(
+    () => JSON.parse(localStorage.getItem("checkout_customer") || "null"),
+    [],
+  );
+  const paymentData = useMemo(
+    () => JSON.parse(localStorage.getItem("checkout_payment") || "[]"),
+    [],
+  );
+  const salesTeamData = useMemo(
+    () =>
+      JSON.parse(
+        localStorage.getItem("checkout_sales_team") || '{"employees": []}',
+      ),
+    [],
+  );
 
   useEffect(() => {
     // Redirect if missing data
-    if (!customerData || !paymentData.length || !salesTeamData.length) {
-      navigate('/checkout/customer');
+    if (!paymentData.length) {
+      // TODO
+      // if (!customerData || !paymentData.length || !salesTeamData.length) {
+      navigate("/checkout/customer");
       return;
     }
 
     // Simulate processing the sale
-    processOrder();
+    if (!loading && !orderNumber) processOrder();
   }, [customerData, paymentData, salesTeamData, navigate]);
 
-  const processOrder = async () => {
-    try {
-      // Simulate API call to process the order
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Generate order number
-      const newOrderNumber = `ORD-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
-      setOrderNumber(newOrderNumber);
-      
-      setIsProcessing(false);
-      
-      // Send notifications to managers and business owners
-      await sendOrderCompletionNotifications(newOrderNumber);
-      
-      toast({
-        title: "Order Completed!",
-        description: `Order ${newOrderNumber} has been processed successfully.`,
-      });
+  const processOrder = () => {
+    const session = PosSession();
 
-    } catch (error) {
-      console.error('Error processing order:', error);
-      toast({
-        title: "Error",
-        description: "Failed to process order. Please try again.",
-        variant: "destructive",
+    createReceipt({
+      variables: {
+        input: {
+          payment_methods: paymentData.map(({ id, ...item }) => ({
+            ...item,
+            amount: item.amount.toString(),
+          })),
+          items: cartData.items.map((item) => ({
+            product_id: item.id,
+            quantity: item.quantity,
+            unit_price: item.price.toString(),
+          })),
+          sub_total: cartData.subtotal.toString(),
+          discount_total: cartData.discount.toString(),
+          tax_total: cartData.tax.toString(),
+          tip_total: cartData.tip.toString(),
+          grand_total: cartData.total.toString(),
+          storeId: session.store.id,
+          cashierId: user.id,
+        },
+      },
+    })
+      .then((res) => {
+        const newOrderNumber = res.data.createReceipt.receipt_number;
+
+        setOrderNumber(newOrderNumber);
+
+        sendOrderCompletionNotifications(newOrderNumber);
+
+        showSuccess("Order Completed!");
+      })
+      .catch(() => {
+        navigate("/checkout/customer");
       });
-    }
   };
 
   const sendOrderCompletionNotifications = async (orderNumber: string) => {
-    try {
-      if (!user) return;
+    // try {
+    if (!user || !business) return;
 
-      // Get business context to find managers and owners
-      const { data: businessContext } = await supabase.rpc('get_user_business_context_secure');
-      
-      if (!businessContext || businessContext.length === 0) return;
+    // TODO
 
-      const businessId = businessContext[0].business_id;
+    // Get all managers and business owners in this business
+    // const { data: managersAndOwners } = await supabase
+    //   .from("user_business_memberships")
+    //   .select("user_id")
+    //   .eq("business_id", business.id)
+    //   .in("role", ["business_owner", "manager"])
+    //   .eq("is_active", true);
+    //
+    // if (!managersAndOwners) return;
 
-      // Get all managers and business owners in this business
-      const { data: managersAndOwners } = await supabase
-        .from('user_business_memberships')
-        .select('user_id')
-        .eq('business_id', businessId)
-        .in('role', ['business_owner', 'manager'])
-        .eq('is_active', true);
-
-      if (!managersAndOwners) return;
-
-      // Create notifications for each manager/owner
-      const customerName = customerData?.first_name && customerData?.last_name 
-        ? `${customerData.first_name} ${customerData.last_name}`
-        : 'Walk-in Customer';
-
-      const notificationPromises = managersAndOwners.map(member => 
-        createNotification(
-          'order_completed',
-          'New Order Completed',
-          `Order ${orderNumber} completed for ${customerName} - Total: $${cartData.total?.toFixed(2) || '0.00'}`,
-          {
-            orderNumber,
-            customerName,
-            total: cartData.total,
-            employeeCount: salesTeamData.length,
-            paymentMethodCount: paymentData.length
-          },
-          member.user_id
-        )
-      );
-
-      await Promise.all(notificationPromises);
-      
-    } catch (error) {
-      console.error('Error sending order completion notifications:', error);
-    }
+    // Create notifications for each manager/owner
+    // const customerName =
+    //   customerData?.first_name && customerData?.last_name
+    //     ? `${customerData.first_name} ${customerData.last_name}`
+    //     : "Walk-in Customer";
+    //
+    // const notificationPromises = managersAndOwners.map((member) =>
+    //   createNotification(
+    //     "order_completed",
+    //     "New Order Completed",
+    //     `Order ${orderNumber} completed for ${customerName} - Total: $${cartData.total?.toFixed(2) || "0.00"}`,
+    //     {
+    //       orderNumber,
+    //       customerName,
+    //       total: cartData.total,
+    //       employeeCount: salesTeamData.length,
+    //       paymentMethodCount: paymentData.length,
+    //     },
+    //     member.user_id,
+    //   ),
+    // );
+    //
+    // await Promise.all(notificationPromises);
+    // } catch (error) {
+    //   console.error("Error sending order completion notifications:", error);
+    // }
   };
 
   const handleNewOrder = () => {
     // Clear checkout data
-    localStorage.removeItem('pos_cart');
-    localStorage.removeItem('checkout_customer');
-    localStorage.removeItem('checkout_payment');
-    localStorage.removeItem('checkout_sales_team');
-    
-    navigate('/pos');
+    localStorage.removeItem("pos_cart");
+    localStorage.removeItem("checkout_customer");
+    localStorage.removeItem("checkout_payment");
+    localStorage.removeItem("checkout_sales_team");
+
+    navigate("/pos");
   };
 
   const handlePrintReceipt = () => {
@@ -131,16 +174,16 @@ export default function CheckoutComplete() {
   };
 
   const formatPaymentMethod = (method: any) => {
-    if (method.type === "card") {
-      return `${method.cardType?.toUpperCase()} ****${method.lastFourDigits}`;
-    } else if (method.type === "check") {
-      return `Check #${method.checkNumber}`;
+    if (method.type === PaymentType.Card) {
+      return `${method.card_type?.toUpperCase()} ****${method.last_four_digits}`;
+    } else if (method.type === PaymentType.Check) {
+      return `Check #${method.check_number}`;
     } else {
       return method.type.charAt(0).toUpperCase() + method.type.slice(1);
     }
   };
 
-  if (isProcessing) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="w-96">
@@ -148,7 +191,9 @@ export default function CheckoutComplete() {
             <div className="text-center space-y-4">
               <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
               <h2 className="text-xl font-semibold">Processing Order...</h2>
-              <p className="text-muted-foreground">Please wait while we complete your transaction</p>
+              <p className="text-muted-foreground">
+                Please wait while we complete your transaction
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -163,22 +208,30 @@ export default function CheckoutComplete() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-success text-white rounded-full flex items-center justify-center text-sm font-semibold">✓</div>
+              <div className="w-8 h-8 bg-success text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                ✓
+              </div>
               <span className="text-muted-foreground">Customer</span>
             </div>
             <div className="flex-1 h-1 bg-success mx-4"></div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-success text-white rounded-full flex items-center justify-center text-sm font-semibold">✓</div>
+              <div className="w-8 h-8 bg-success text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                ✓
+              </div>
               <span className="text-muted-foreground">Payment</span>
             </div>
             <div className="flex-1 h-1 bg-success mx-4"></div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-success text-white rounded-full flex items-center justify-center text-sm font-semibold">✓</div>
+              <div className="w-8 h-8 bg-success text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                ✓
+              </div>
               <span className="text-muted-foreground">Employees</span>
             </div>
             <div className="flex-1 h-1 bg-success mx-4"></div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-success text-white rounded-full flex items-center justify-center text-sm font-semibold">✓</div>
+              <div className="w-8 h-8 bg-success text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                ✓
+              </div>
               <span className="font-medium text-success">Complete</span>
             </div>
           </div>
@@ -189,9 +242,15 @@ export default function CheckoutComplete() {
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
               <CheckCircle className="h-16 w-16 text-success mx-auto" />
-              <h1 className="text-3xl font-bold text-success">Order Complete!</h1>
-              <p className="text-xl">Order Number: <span className="font-mono font-bold">{orderNumber}</span></p>
-              <p className="text-muted-foreground">Thank you for your business</p>
+              <h1 className="text-3xl font-bold text-success">
+                Order Complete!
+              </h1>
+              <p className="text-xl">
+                Ref: <span className="font-mono font-bold">{orderNumber}</span>
+              </p>
+              <p className="text-muted-foreground">
+                Thank you for your business
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -211,18 +270,21 @@ export default function CheckoutComplete() {
                 <div>
                   <p className="text-sm text-muted-foreground">Customer</p>
                   <p className="font-medium">
-                    {customerData?.first_name && customerData?.last_name 
+                    {customerData?.first_name && customerData?.last_name
                       ? `${customerData.first_name} ${customerData.last_name}`
-                      : 'Walk-in Customer'
-                    }
+                      : "Walk-in Customer"}
                   </p>
                   {customerData?.email && (
-                    <p className="text-sm text-muted-foreground">{customerData.email}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {customerData.email}
+                    </p>
                   )}
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Amount</p>
-                  <p className="text-2xl font-bold">${cartData.total?.toFixed(2) || '0.00'}</p>
+                  <p className="text-2xl font-bold">
+                    ${cartData.total?.toFixed(2) || "0.00"}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -239,9 +301,14 @@ export default function CheckoutComplete() {
             <CardContent>
               <div className="space-y-2">
                 {paymentData.map((method: any, index: number) => (
-                  <div key={index} className="flex justify-between items-center">
+                  <div
+                    key={index}
+                    className="flex justify-between items-center"
+                  >
                     <span>{formatPaymentMethod(method)}</span>
-                    <span className="font-medium">${method.amount.toFixed(2)}</span>
+                    <span className="font-medium">
+                      ${method.amount.toFixed(2)}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -256,22 +323,24 @@ export default function CheckoutComplete() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {salesTeamData.map((personId: string) => (
-                <Badge key={personId} variant="outline">
-                  Sales Person ID: {personId}
-                </Badge>
-              ))}
+              {/*{salesTeamData?.employees?.map((personId: string) => (*/}
+              <Badge variant="outline">Sales Person ID: {user.id}</Badge>
+              {/*))}*/}
             </div>
           </CardContent>
         </Card>
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4">
-          <Button onClick={handlePrintReceipt} variant="outline" className="flex-1">
+          <Button
+            onClick={handlePrintReceipt}
+            variant="outline"
+            className="flex-1"
+          >
             <Receipt className="h-4 w-4 mr-2" />
             Print Receipt
           </Button>
-          
+
           <Button onClick={handleNewOrder} className="flex-1">
             <Home className="h-4 w-4 mr-2" />
             New Order

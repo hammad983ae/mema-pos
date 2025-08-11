@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
-import { useRealtime } from './useRealtime';
-import { useToast } from './use-toast';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "./useAuth";
+import { useRealtime } from "./useRealtime";
+import { useToast } from "./use-toast";
 
 interface Notification {
   id: string;
@@ -21,68 +21,50 @@ interface Notification {
  * Hook for managing real-time notifications
  */
 export const useNotifications = () => {
-  const { user } = useAuth();
+  const { user, business } = useAuth();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [businessId, setBusinessId] = useState<string | null>(null);
-
-  // Get user's business ID
-  useEffect(() => {
-    const getUserBusiness = async () => {
-      if (!user) return;
-
-      const { data } = await supabase
-        .from('user_business_memberships')
-        .select('business_id')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .single();
-
-      if (data) {
-        setBusinessId(data.business_id);
-      }
-    };
-
-    getUserBusiness();
-  }, [user]);
 
   // Load initial notifications
   useEffect(() => {
     const loadNotifications = async () => {
-      if (!businessId) return;
+      if (!business?.id) return;
 
       const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('business_id', businessId)
+        .from("notifications")
+        .select("*")
+        .eq("business_id", business?.id)
         .or(`user_id.is.null,user_id.eq.${user?.id}`)
-        .order('created_at', { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(50);
 
       if (data && !error) {
         setNotifications(data);
-        setUnreadCount(data.filter(n => !n.is_read).length);
+        setUnreadCount(data.filter((n) => !n.is_read).length);
       }
     };
 
     loadNotifications();
-  }, [businessId, user]);
+  }, [business?.id, user]);
 
   // Set up real-time subscription for new notifications
   useRealtime(
-    businessId
+    business?.id
       ? [
           {
-            table: 'notifications',
-            filter: `business_id=eq.${businessId}`,
+            table: "notifications",
+            filter: `business_id=eq.${business?.id}`,
             onInsert: (payload) => {
               const newNotification = payload.new as Notification;
-              
+
               // Only show notifications for current user or global notifications
-              if (!newNotification.user_id || newNotification.user_id === user?.id) {
-                setNotifications(prev => [newNotification, ...prev]);
-                setUnreadCount(prev => prev + 1);
+              if (
+                !newNotification.user_id ||
+                newNotification.user_id === user?.id
+              ) {
+                setNotifications((prev) => [newNotification, ...prev]);
+                setUnreadCount((prev) => prev + 1);
 
                 // Show toast for new notifications
                 toast({
@@ -93,51 +75,57 @@ export const useNotifications = () => {
             },
             onUpdate: (payload) => {
               const updatedNotification = payload.new as Notification;
-              setNotifications(prev =>
-                prev.map(n => n.id === updatedNotification.id ? updatedNotification : n)
+              setNotifications((prev) =>
+                prev.map((n) =>
+                  n.id === updatedNotification.id ? updatedNotification : n,
+                ),
               );
-              
+
               // Update unread count
               if (updatedNotification.is_read) {
-                setUnreadCount(prev => Math.max(0, prev - 1));
+                setUnreadCount((prev) => Math.max(0, prev - 1));
               }
             },
             onDelete: (payload) => {
               const deletedId = payload.old.id;
-              setNotifications(prev => prev.filter(n => n.id !== deletedId));
+              setNotifications((prev) =>
+                prev.filter((n) => n.id !== deletedId),
+              );
             },
           },
         ]
       : [],
-    businessId || undefined
+    business?.id || undefined,
   );
 
   const markAsRead = async (notificationId: string) => {
     const { error } = await supabase
-      .from('notifications')
+      .from("notifications")
       .update({ is_read: true })
-      .eq('id', notificationId);
+      .eq("id", notificationId);
 
     if (!error) {
-      setNotifications(prev =>
-        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notificationId ? { ...n, is_read: true } : n,
+        ),
       );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     }
   };
 
   const markAllAsRead = async () => {
-    if (!businessId || !user) return;
+    if (!business?.id || !user) return;
 
     const { error } = await supabase
-      .from('notifications')
+      .from("notifications")
       .update({ is_read: true })
-      .eq('business_id', businessId)
+      .eq("business_id", business?.id)
       .or(`user_id.is.null,user_id.eq.${user.id}`)
-      .eq('is_read', false);
+      .eq("is_read", false);
 
     if (!error) {
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
       setUnreadCount(0);
     }
   };
@@ -148,35 +136,33 @@ export const useNotifications = () => {
     message: string,
     data: any = {},
     userId?: string | null,
-    expiresAt?: Date
+    expiresAt?: Date,
   ) => {
-    if (!businessId) return;
+    if (!business?.id) return;
 
-    const { error } = await supabase
-      .from('notifications')
-      .insert({
-        business_id: businessId,
-        user_id: userId || null,
-        type,
-        title,
-        message,
-        data,
-        expires_at: expiresAt?.toISOString(),
-      });
+    const { error } = await supabase.from("notifications").insert({
+      business_id: business?.id,
+      user_id: userId || null,
+      type,
+      title,
+      message,
+      data,
+      expires_at: expiresAt?.toISOString(),
+    });
 
     if (error) {
-      console.error('Error creating notification:', error);
+      console.error("Error creating notification:", error);
     }
   };
 
   const deleteNotification = async (notificationId: string) => {
     const { error } = await supabase
-      .from('notifications')
+      .from("notifications")
       .delete()
-      .eq('id', notificationId);
+      .eq("id", notificationId);
 
     if (!error) {
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
     }
   };
 

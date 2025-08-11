@@ -217,3 +217,19 @@ export const UPDATE_REORDER_REQUEST = gql`
     updateReorderRequest(input: $input)
   }
 `;
+
+export const CREATE_RECEIPT = gql`
+  mutation CreateReceipt($input: CreateReceiptInput!) {
+    createReceipt(input: $input) {
+      id
+      receipt_number
+      sub_total
+      discount_total
+      tax_total
+      grand_total
+      notes
+      created_at
+      updated_at
+    }
+  }
+`;
