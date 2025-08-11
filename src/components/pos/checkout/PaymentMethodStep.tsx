@@ -86,7 +86,7 @@ export const PaymentMethodStep = ({
       return;
     }
 
-    if (currentMethod.amount.toFixed(2) > remainingAmount.toFixed(2)) {
+    if (Number(currentMethod.amount.toFixed(2)) > remainingAmount.toFixed(2)) {
       showError(
         "Amount Too High",
         `Maximum amount allowed: $${remainingAmount.toFixed(2)}`,
