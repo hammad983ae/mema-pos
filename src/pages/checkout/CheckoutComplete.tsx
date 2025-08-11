@@ -25,7 +25,7 @@ export default function CheckoutComplete() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, business } = useAuth();
-  const { createNotification } = useNotifications();
+  const { createNotification, refetchNotifications } = useNotifications();
   const [orderNumber, setOrderNumber] = useState<string>("");
   const [createReceipt, { loading }] = useMutation<
     Mutation,
@@ -136,6 +136,7 @@ export default function CheckoutComplete() {
       );
 
       await Promise.all(notificationPromises);
+      refetchNotifications();
     } catch (error) {
       console.error("Error sending order completion notifications:", error);
     }

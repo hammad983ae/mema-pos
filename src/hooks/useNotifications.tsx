@@ -24,7 +24,7 @@ export const useNotifications = () => {
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const { data, loading } = useQuery<Query>(GET_NOTIFICATIONS, {
+  const { data, loading, refetch } = useQuery<Query>(GET_NOTIFICATIONS, {
     fetchPolicy: "network-only",
     pollInterval: 2 * 60 * 1000,
   });
@@ -163,6 +163,7 @@ export const useNotifications = () => {
 
   return {
     loading,
+    refetchNotifications: refetch,
     notifications,
     unreadCount,
     markAsRead,

@@ -72,7 +72,6 @@ export const PaymentMethodStep = ({
     localStorage.setItem("checkout_payment", JSON.stringify(paymentMethods));
   }, [paymentMethods]);
 
-  console.log("curr", currentMethod);
   const addPaymentMethod = () => {
     if (
       !currentMethod.type ||
