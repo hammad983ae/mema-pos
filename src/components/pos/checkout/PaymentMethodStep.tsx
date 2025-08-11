@@ -59,7 +59,7 @@ export const PaymentMethodStep = ({
   );
 
   useEffect(() => {
-    if (currentMethod.amount === 0 && !!remainingAmount) {
+    if (currentMethod.amount !== remainingAmount && !!remainingAmount) {
       setCurrentMethod((prev) => ({
         ...prev,
         amount: remainingAmount,
@@ -86,7 +86,7 @@ export const PaymentMethodStep = ({
       return;
     }
 
-    if (currentMethod.amount > remainingAmount) {
+    if (currentMethod.amount.toFixed(2) > remainingAmount.toFixed(2)) {
       showError(
         "Amount Too High",
         `Maximum amount allowed: $${remainingAmount.toFixed(2)}`,
@@ -260,11 +260,7 @@ export const PaymentMethodStep = ({
                 <Input
                   type="number"
                   placeholder="0.00"
-                  value={
-                    Math.round(remainingAmount * 100) / 100 ||
-                    currentMethod.amount ||
-                    ""
-                  }
+                  value={currentMethod.amount || ""}
                   onChange={(e) =>
                     setCurrentMethod({
                       ...currentMethod,
