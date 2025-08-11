@@ -233,3 +233,29 @@ export const CREATE_RECEIPT = gql`
     }
   }
 `;
+
+export const CREATE_NOTIFICATION = gql`
+  mutation CreateNotification($input: CreateNotificationInput!) {
+    createNotification(input: $input) {
+      id
+    }
+  }
+`;
+
+export const UPDATE_NOTIFICATION = gql`
+  mutation UpdateNotification($input: UpdateNotificationInput!) {
+    updateNotification(input: $input)
+  }
+`;
+
+export const DELETE_NOTIFICATION = gql`
+  mutation DeleteNotification($deleteNotificationId: String!) {
+    deleteNotification(id: $deleteNotificationId)
+  }
+`;
+
+export const MARK_ALL_NOTIFICATION_READ = gql`
+  mutation Mutation {
+    markAllRead
+  }
+`;

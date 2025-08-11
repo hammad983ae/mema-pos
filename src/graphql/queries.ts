@@ -45,6 +45,14 @@ export const GET_BUSINESS_STATS = gql`
   }
 `;
 
+export const GET_OWNERS_AND_MANAGERS = gql`
+  query GetOwnersAndManagersOfBusiness {
+    getOwnersAndManagersOfBusiness {
+      id
+    }
+  }
+`;
+
 export const GET_INVENTORY_STATS = gql`
   query GetInventoryStats {
     getInventoryStats {
@@ -375,6 +383,28 @@ export const GET_RECEIPTS = gql`
       tax_total
       grand_total
       notes
+      created_at
+      updated_at
+    }
+  }
+`;
+
+export const GET_NOTIFICATIONS = gql`
+  query GetNotifications {
+    getNotifications {
+      id
+      type
+      title
+      message
+      data
+      expires_at
+      is_read
+      user {
+        id
+        full_name
+        email
+        username
+      }
       created_at
       updated_at
     }

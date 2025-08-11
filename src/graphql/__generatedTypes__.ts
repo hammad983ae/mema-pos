@@ -96,6 +96,15 @@ export type CreateInventoryMovementInput = {
   storeId: Scalars['ID']['input'];
 };
 
+export type CreateNotificationInput = {
+  data?: InputMaybe<Scalars['JSONObject']['input']>;
+  expires_at?: InputMaybe<Scalars['DateTime']['input']>;
+  message: Scalars['String']['input'];
+  title: Scalars['String']['input'];
+  type: NotificationType;
+  userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
 export type CreateProductCategoryInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   is_active?: InputMaybe<Scalars['Boolean']['input']>;
@@ -324,6 +333,7 @@ export type Mutation = {
   createInventoryAlert: InventoryAlert;
   createInventoryMovement: InventoryMovement;
   createLowStockAlert: LowStockAlert;
+  createNotification: Notification;
   createProduct: Scalars['Boolean']['output'];
   createProductCategory: ProductCategory;
   createReceipt: Receipt;
@@ -333,6 +343,7 @@ export type Mutation = {
   createStoreSession: StoreDaySession;
   createSupplier: Supplier;
   deleteInventory: Scalars['Boolean']['output'];
+  deleteNotification: Scalars['Boolean']['output'];
   deleteProduct: Scalars['Boolean']['output'];
   deleteProductCategory: Scalars['Boolean']['output'];
   deleteReceipt: Scalars['Boolean']['output'];
@@ -340,6 +351,7 @@ export type Mutation = {
   deleteStoreLocation: Scalars['Boolean']['output'];
   deleteSupplier: Scalars['Boolean']['output'];
   loginBusinessOwner: LoginResponse;
+  markAllRead: Scalars['Boolean']['output'];
   registerBusinessOwner: LoginResponse;
   reorderInventory: Scalars['Boolean']['output'];
   resendVerificationEmail: Scalars['Boolean']['output'];
@@ -348,6 +360,7 @@ export type Mutation = {
   updateInventoryAlert: Scalars['Boolean']['output'];
   updateInventoryMovement: Scalars['Boolean']['output'];
   updateLowStockAlert: Scalars['Boolean']['output'];
+  updateNotification: Scalars['Boolean']['output'];
   updateProduct: Scalars['Boolean']['output'];
   updateProductCategory: Scalars['Boolean']['output'];
   updateReceipt: Scalars['Boolean']['output'];
@@ -381,6 +394,11 @@ export type MutationCreateInventoryMovementArgs = {
 
 export type MutationCreateLowStockAlertArgs = {
   input: LowStockAlertInput;
+};
+
+
+export type MutationCreateNotificationArgs = {
+  input: CreateNotificationInput;
 };
 
 
@@ -426,6 +444,11 @@ export type MutationCreateSupplierArgs = {
 
 
 export type MutationDeleteInventoryArgs = {
+  id: Scalars['String']['input'];
+};
+
+
+export type MutationDeleteNotificationArgs = {
   id: Scalars['String']['input'];
 };
 
@@ -502,6 +525,11 @@ export type MutationUpdateLowStockAlertArgs = {
 };
 
 
+export type MutationUpdateNotificationArgs = {
+  input: UpdateNotificationInput;
+};
+
+
 export type MutationUpdateProductArgs = {
   input: UpdateProductInput;
   inventory?: InputMaybe<UpdateInventoryInput>;
@@ -541,6 +569,28 @@ export type MutationUpdateSupplierArgs = {
 export type MutationVerifyEmailArgs = {
   token: Scalars['String']['input'];
 };
+
+export type Notification = {
+  __typename?: 'Notification';
+  business: Business;
+  created_at: Scalars['DateTime']['output'];
+  data?: Maybe<Scalars['JSONObject']['output']>;
+  expires_at?: Maybe<Scalars['DateTime']['output']>;
+  id: Scalars['ID']['output'];
+  is_read: Scalars['Boolean']['output'];
+  message: Scalars['String']['output'];
+  title: Scalars['String']['output'];
+  type: NotificationType;
+  updated_at: Scalars['DateTime']['output'];
+  user?: Maybe<User>;
+};
+
+export enum NotificationType {
+  GoalAchieved = 'GOAL_ACHIEVED',
+  OrderCompleted = 'ORDER_COMPLETED',
+  Sale = 'SALE',
+  Test = 'TEST'
+}
 
 export type PaginationInput = {
   page?: InputMaybe<Scalars['Float']['input']>;
@@ -626,6 +676,8 @@ export type Query = {
   getLocations: Array<StoreLocation>;
   getLowStockInventoryByBusiness: InventoryPagination;
   getMovementsByBusiness: InventoryMovementPagination;
+  getNotifications: Array<Notification>;
+  getOwnersAndManagersOfBusiness: Array<User>;
   getProductsByBusiness: ProductPagination;
   getReceipts: Array<Receipt>;
   getReorderRequestsByBusiness: ReorderRequestPagination;
@@ -888,6 +940,17 @@ export type UpdateInventoryMovementInput = {
   reference_id?: InputMaybe<Scalars['String']['input']>;
   reference_type?: InputMaybe<ReferenceType>;
   storeId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type UpdateNotificationInput = {
+  data?: InputMaybe<Scalars['JSONObject']['input']>;
+  expires_at?: InputMaybe<Scalars['DateTime']['input']>;
+  id: Scalars['ID']['input'];
+  is_read?: InputMaybe<Scalars['Boolean']['input']>;
+  message?: InputMaybe<Scalars['String']['input']>;
+  title?: InputMaybe<Scalars['String']['input']>;
+  type?: InputMaybe<NotificationType>;
+  userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type UpdateProductCategoryInput = {

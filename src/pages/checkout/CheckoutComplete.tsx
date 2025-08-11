@@ -1,28 +1,25 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  CheckCircle,
-  Receipt,
-  CreditCard,
-  Users,
-  ArrowLeft,
-  Home,
-} from "lucide-react";
+import { CheckCircle, CreditCard, Home, Receipt, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@/hooks/useAuth";
-import { useMutation } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import {
   CREATE_RECEIPT,
+  GET_OWNERS_AND_MANAGERS,
   Mutation,
   MutationCreateReceiptArgs,
+  NotificationType,
   PaymentType,
   PosSession,
+  Query,
 } from "@/graphql";
 import { showSuccess } from "@/hooks/useToastMessages.tsx";
+import { PaymentMethod } from "@/components/pos/checkout/PaymentMethodStep.tsx";
 
 export default function CheckoutComplete() {
   const navigate = useNavigate();
@@ -34,6 +31,7 @@ export default function CheckoutComplete() {
     Mutation,
     MutationCreateReceiptArgs
   >(CREATE_RECEIPT);
+  const { data } = useQuery<Query>(GET_OWNERS_AND_MANAGERS);
 
   // Get all checkout data
   const cartData = useMemo(
@@ -112,47 +110,35 @@ export default function CheckoutComplete() {
   };
 
   const sendOrderCompletionNotifications = async (orderNumber: string) => {
-    // try {
-    if (!user || !business) return;
+    try {
+      if (!user || !business || !data.getOwnersAndManagersOfBusiness) return;
 
-    // TODO
+      const customerName =
+        customerData?.first_name && customerData?.last_name
+          ? `${customerData.first_name} ${customerData.last_name}`
+          : "Walk-in Customer";
 
-    // Get all managers and business owners in this business
-    // const { data: managersAndOwners } = await supabase
-    //   .from("user_business_memberships")
-    //   .select("user_id")
-    //   .eq("business_id", business.id)
-    //   .in("role", ["business_owner", "manager"])
-    //   .eq("is_active", true);
-    //
-    // if (!managersAndOwners) return;
+      const notificationPromises = data.getOwnersAndManagersOfBusiness.map(
+        (member) =>
+          createNotification(
+            NotificationType.OrderCompleted,
+            "New Order Completed",
+            `Order ${orderNumber} completed for ${customerName} - Total: $${cartData.total?.toFixed(2) || "0.00"}`,
+            {
+              orderNumber,
+              customerName,
+              total: cartData.total,
+              employeeCount: salesTeamData.length,
+              paymentMethodCount: paymentData.length,
+            },
+            member.id,
+          ),
+      );
 
-    // Create notifications for each manager/owner
-    // const customerName =
-    //   customerData?.first_name && customerData?.last_name
-    //     ? `${customerData.first_name} ${customerData.last_name}`
-    //     : "Walk-in Customer";
-    //
-    // const notificationPromises = managersAndOwners.map((member) =>
-    //   createNotification(
-    //     "order_completed",
-    //     "New Order Completed",
-    //     `Order ${orderNumber} completed for ${customerName} - Total: $${cartData.total?.toFixed(2) || "0.00"}`,
-    //     {
-    //       orderNumber,
-    //       customerName,
-    //       total: cartData.total,
-    //       employeeCount: salesTeamData.length,
-    //       paymentMethodCount: paymentData.length,
-    //     },
-    //     member.user_id,
-    //   ),
-    // );
-    //
-    // await Promise.all(notificationPromises);
-    // } catch (error) {
-    //   console.error("Error sending order completion notifications:", error);
-    // }
+      await Promise.all(notificationPromises);
+    } catch (error) {
+      console.error("Error sending order completion notifications:", error);
+    }
   };
 
   const handleNewOrder = () => {
@@ -173,7 +159,7 @@ export default function CheckoutComplete() {
     });
   };
 
-  const formatPaymentMethod = (method: any) => {
+  const formatPaymentMethod = (method: PaymentMethod) => {
     if (method.type === PaymentType.Card) {
       return `${method.card_type?.toUpperCase()} ****${method.last_four_digits}`;
     } else if (method.type === PaymentType.Check) {
@@ -300,7 +286,7 @@ export default function CheckoutComplete() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {paymentData.map((method: any, index: number) => (
+                {paymentData.map((method: PaymentMethod, index: number) => (
                   <div
                     key={index}
                     className="flex justify-between items-center"
