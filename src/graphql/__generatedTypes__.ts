@@ -679,7 +679,8 @@ export type Query = {
   getNotifications: Array<Notification>;
   getOwnersAndManagersOfBusiness: Array<User>;
   getProductsByBusiness: ProductPagination;
-  getReceipts: Array<Receipt>;
+  getReceiptStats: ReceiptStats;
+  getReceipts: ReceiptPagination;
   getReorderRequestsByBusiness: ReorderRequestPagination;
   getStoreSessionById: StoreDaySession;
   getStores: Array<Store>;
@@ -718,6 +719,18 @@ export type QueryGetProductsByBusinessArgs = {
 };
 
 
+export type QueryGetReceiptStatsArgs = {
+  storeId: Scalars['String']['input'];
+};
+
+
+export type QueryGetReceiptsArgs = {
+  filters?: InputMaybe<ReceiptFilterInput>;
+  pagination: PaginationInput;
+  storeId: Scalars['String']['input'];
+};
+
+
 export type QueryGetReorderRequestsByBusinessArgs = {
   pagination: PaginationInput;
 };
@@ -744,12 +757,39 @@ export type Receipt = {
   notes?: Maybe<Scalars['String']['output']>;
   payment_methods: Array<Payment>;
   receipt_number?: Maybe<Scalars['String']['output']>;
+  status: ReceiptStatus;
   store?: Maybe<Store>;
   sub_total: Scalars['String']['output'];
   tax_total: Scalars['String']['output'];
   tip_total: Scalars['String']['output'];
   updated_at: Scalars['DateTime']['output'];
 };
+
+export type ReceiptFilterInput = {
+  date?: InputMaybe<Scalars['String']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<ReceiptStatus>;
+};
+
+export type ReceiptPagination = {
+  __typename?: 'ReceiptPagination';
+  count: Scalars['Int']['output'];
+  data: Array<Receipt>;
+};
+
+/** Receipt stats */
+export type ReceiptStats = {
+  __typename?: 'ReceiptStats';
+  totalCompleted: Scalars['Float']['output'];
+  totalCount: Scalars['Float']['output'];
+  totalSales: Scalars['String']['output'];
+};
+
+export enum ReceiptStatus {
+  Cancelled = 'CANCELLED',
+  Completed = 'COMPLETED',
+  Pending = 'PENDING'
+}
 
 export enum ReferenceType {
   Adjustment = 'ADJUSTMENT',
@@ -981,16 +1021,17 @@ export type UpdateProductInput = {
 
 export type UpdateReceiptInput = {
   cashierId?: InputMaybe<Scalars['String']['input']>;
-  discount_total: Scalars['String']['input'];
-  grand_total: Scalars['String']['input'];
+  discount_total?: InputMaybe<Scalars['String']['input']>;
+  grand_total?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
-  items: Array<LineItemInput>;
+  items?: InputMaybe<Array<LineItemInput>>;
   notes?: InputMaybe<Scalars['String']['input']>;
-  payment_methods: Array<PaymentInput>;
-  storeId: Scalars['String']['input'];
-  sub_total: Scalars['String']['input'];
-  tax_total: Scalars['String']['input'];
-  tip_total: Scalars['String']['input'];
+  payment_methods?: InputMaybe<Array<PaymentInput>>;
+  status?: InputMaybe<ReceiptStatus>;
+  storeId?: InputMaybe<Scalars['String']['input']>;
+  sub_total?: InputMaybe<Scalars['String']['input']>;
+  tax_total?: InputMaybe<Scalars['String']['input']>;
+  tip_total?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type UpdateReorderRequestInput = {

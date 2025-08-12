@@ -1,22 +1,18 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { EditOrderModal } from "./EditOrderModal";
 import { ActivityLogsModal } from "./ActivityLogsModal";
 import {
   Activity,
-  Calendar,
+  CalendarIcon,
   DollarSign,
   Edit,
-  Eye,
-  Filter,
-  Receipt,
+  Receipt as ReceiptIcon,
   Search,
   User,
 } from "lucide-react";
@@ -27,188 +23,88 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { UserRole } from "@/graphql";
+import {
+  GET_RECEIPT_STATS,
+  GET_RECEIPTS,
+  PosSession,
+  Query,
+  QueryGetReceiptsArgs,
+  QueryGetReceiptStatsArgs,
+  ReceiptStatus,
+  Receipt,
+  UserRole,
+} from "@/graphql";
+import { useQuery } from "@apollo/client";
+import Pagination from "@/components/ui/pagination.tsx";
+import { useDebounce } from "@/hooks/useDebounce.ts";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover.tsx";
+import { cn } from "@/lib/utils.ts";
+import { format, parseISO } from "date-fns";
+import { Calendar } from "@/components/ui/calendar.tsx";
 
-interface Order {
-  id: string;
-  order_number: string;
-  total: number;
-  payment_method: string;
-  created_at: string;
-  customer_id: string;
-  user_id: string;
-  status: string;
-  notes: string;
-  customers?: {
-    first_name: string;
-    last_name: string;
-    phone: string;
-    email: string;
-  };
-  profiles?: {
-    full_name: string;
-    email: string;
-  };
-}
-
-interface ReceiptManagementProps {}
-
-export const ReceiptManagement = ({}: ReceiptManagementProps) => {
+export const ReceiptManagement = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
+  const session = PosSession();
 
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [selectedDate, setSelectedDate] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("all");
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<ReceiptStatus | "all">(
+    "all",
+  );
+  const [selectedOrder, setSelectedOrder] = useState<Receipt | null>(null);
+  const [page, setPage] = useState<number>(1);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [selectedOrderForLogs, setSelectedOrderForLogs] = useState<
     string | null
   >(null);
+  const {
+    data: receiptData,
+    loading: receiptsLoading,
+    refetch: refetchReceipts,
+  } = useQuery<Query, QueryGetReceiptsArgs>(GET_RECEIPTS, {
+    variables: {
+      storeId: session.store.id,
+      pagination: { page, take: 10 },
+      filters: {
+        status: selectedStatus === "all" ? null : selectedStatus,
+        search: debouncedSearch,
+        date: selectedDate,
+      },
+    },
+  });
+  const {
+    data: statsData,
+    loading: statsLoading,
+    refetch: refetchStats,
+  } = useQuery<Query, QueryGetReceiptStatsArgs>(GET_RECEIPT_STATS, {
+    variables: { storeId: session.store.id },
+  });
 
   // Check permissions
   const canEdit =
     user.role === UserRole.BusinessOwner || user.role === UserRole.Manager;
+
   const canView =
     user.role === UserRole.BusinessOwner ||
     user.role === UserRole.Manager ||
     user.role === UserRole.Office;
 
-  useEffect(() => {
-    if (canView) {
-      fetchOrders();
-    }
-  }, [canView]);
-
-  const fetchOrders = async () => {
-    if (!user) return;
-
-    setLoading(true);
-    try {
-      let query = supabase
-        .from("orders")
-        .select(
-          `
-          id,
-          order_number,
-          total,
-          payment_method,
-          created_at,
-          customer_id,
-          user_id,
-          status,
-          notes
-        `,
-        )
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      // Apply date filter if selected
-      if (selectedDate) {
-        const startDate = new Date(selectedDate);
-        const endDate = new Date(selectedDate);
-        endDate.setDate(endDate.getDate() + 1);
-
-        query = query
-          .gte("created_at", startDate.toISOString())
-          .lt("created_at", endDate.toISOString());
-      }
-
-      // Apply status filter
-      if (selectedStatus !== "all") {
-        query = query.eq("status", selectedStatus);
-      }
-
-      const { data: ordersData, error } = await query;
-
-      if (error) throw error;
-
-      // Fetch related data separately
-      const orders = ordersData || [];
-
-      // Get customers
-      const customerIds = [
-        ...new Set(orders.map((o) => o.customer_id).filter(Boolean)),
-      ];
-      const { data: customersData } =
-        customerIds.length > 0
-          ? await supabase
-              .from("customers")
-              .select("id, first_name, last_name, phone, email")
-              .in("id", customerIds)
-          : { data: null };
-
-      // Get user profiles
-      const userIds = [...new Set(orders.map((o) => o.user_id))];
-      const { data: profilesData } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, email")
-        .in("user_id", userIds);
-
-      // Map related data to orders
-      const ordersWithData = orders.map((order) => ({
-        ...order,
-        customers:
-          customersData?.find((c) => c.id === order.customer_id) || null,
-        profiles:
-          profilesData?.find((p) => p.user_id === order.user_id) || null,
-      }));
-
-      setOrders(ordersWithData);
-    } catch (error: any) {
-      console.error("Error fetching orders:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load orders",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredOrders = orders.filter((order) => {
-    const matchesSearch =
-      !searchTerm ||
-      order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customers?.first_name
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      order.customers?.last_name
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      order.customers?.phone?.includes(searchTerm) ||
-      order.profiles?.full_name
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase());
-
-    return matchesSearch;
-  });
-
-  const handleEditOrder = (order: Order) => {
+  const handleEditOrder = (order: Receipt) => {
     setSelectedOrder(order);
     setIsEditModalOpen(true);
-  };
-
-  const handleViewLogs = (orderId: string) => {
-    setSelectedOrderForLogs(orderId);
-    setIsActivityModalOpen(true);
-  };
-
-  const getTotalSales = () => {
-    return filteredOrders
-      .filter((order) => order.status === "completed")
-      .reduce((sum, order) => sum + order.total, 0);
   };
 
   if (!canView) {
     return (
       <Card>
         <CardContent className="p-8 text-center">
-          <Receipt className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <ReceiptIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">Access Denied</h3>
           <p className="text-muted-foreground">
             You don't have permission to view receipt management.
@@ -237,32 +133,50 @@ export const ReceiptManagement = ({}: ReceiptManagementProps) => {
       {/* Search and Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label>Search</Label>
-              <div className="flex gap-2 mt-1">
+              <div className="flex gap-2">
                 <Input
                   placeholder="Order number, customer, or salesperson..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                <Button
-                  variant="outline"
-                  onClick={fetchOrders}
-                  disabled={loading}
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
+                <Search className="h-4 w-4" />
               </div>
             </div>
 
             <div>
               <Label>Date</Label>
-              <Input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-              />
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !selectedDate && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? (
+                      format(new Date(selectedDate), "PPP")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate ? new Date(selectedDate) : undefined}
+                    onSelect={(date) =>
+                      setSelectedDate(date === selectedDate ? "" : date)
+                    }
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div>
@@ -273,23 +187,15 @@ export const ReceiptManagement = ({}: ReceiptManagementProps) => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value={ReceiptStatus.Completed}>
+                    Completed
+                  </SelectItem>
+                  <SelectItem value={ReceiptStatus.Pending}>Pending</SelectItem>
+                  <SelectItem value={ReceiptStatus.Cancelled}>
+                    Cancelled
+                  </SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div>
-              <Label>Actions</Label>
-              <Button
-                onClick={fetchOrders}
-                disabled={loading}
-                className="w-full mt-1"
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Apply Filters
-              </Button>
             </div>
           </div>
         </CardContent>
@@ -300,7 +206,9 @@ export const ReceiptManagement = ({}: ReceiptManagementProps) => {
         <Card>
           <CardContent className="p-4">
             <div className="text-center">
-              <div className="text-2xl font-bold">{filteredOrders.length}</div>
+              <div className="text-2xl font-bold">
+                {statsData?.getReceiptStats?.totalCount}
+              </div>
               <div className="text-sm text-muted-foreground">Total Orders</div>
             </div>
           </CardContent>
@@ -310,7 +218,8 @@ export const ReceiptManagement = ({}: ReceiptManagementProps) => {
           <CardContent className="p-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-success">
-                ${getTotalSales().toFixed(2)}
+                $
+                {Number(statsData?.getReceiptStats?.totalSales ?? 0).toFixed(2)}
               </div>
               <div className="text-sm text-muted-foreground">Total Sales</div>
             </div>
@@ -321,7 +230,7 @@ export const ReceiptManagement = ({}: ReceiptManagementProps) => {
           <CardContent className="p-4">
             <div className="text-center">
               <div className="text-2xl font-bold">
-                {filteredOrders.filter((o) => o.status === "completed").length}
+                {statsData?.getReceiptStats?.totalCompleted}
               </div>
               <div className="text-sm text-muted-foreground">
                 Completed Orders
@@ -338,127 +247,128 @@ export const ReceiptManagement = ({}: ReceiptManagementProps) => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {loading ? (
+            {receiptsLoading ? (
               <div className="text-center py-8">Loading orders...</div>
-            ) : filteredOrders.length === 0 ? (
+            ) : !receiptData?.getReceipts?.data?.length ? (
               <div className="text-center py-8 text-muted-foreground">
                 No orders found
               </div>
             ) : (
-              filteredOrders.map((order) => (
-                <Card
-                  key={order.id}
-                  className="hover:shadow-md transition-shadow"
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-start gap-4 flex-1">
-                        <Receipt className="h-5 w-5 text-primary mt-1" />
+              <>
+                {receiptData?.getReceipts?.data.map((order) => (
+                  <Card
+                    key={order.id}
+                    className="hover:shadow-md transition-shadow"
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-start gap-4 flex-1">
+                          <ReceiptIcon className="h-5 w-5 text-primary mt-1" />
 
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="font-bold">
-                              {order.order_number}
-                            </span>
-                            <Badge
-                              variant={
-                                order.status === "completed"
-                                  ? "default"
-                                  : "secondary"
-                              }
-                            >
-                              {order.status}
-                            </Badge>
-                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-bold">
+                                {order.receipt_number}
+                              </span>
+                              <Badge
+                                variant={
+                                  order.status === ReceiptStatus.Completed
+                                    ? "default"
+                                    : "secondary"
+                                }
+                              >
+                                {order.status}
+                              </Badge>
+                            </div>
 
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                            <div>
-                              <div className="flex items-center gap-1 text-muted-foreground">
-                                <User className="h-3 w-3" />
-                                Customer
-                              </div>
-                              <div className="font-medium">
-                                {order.customers
-                                  ? `${order.customers.first_name} ${order.customers.last_name}`
-                                  : "Walk-in Customer"}
-                              </div>
-                              {order.customers?.phone && (
-                                <div className="text-xs text-muted-foreground">
-                                  {order.customers.phone}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <User className="h-3 w-3" />
+                                  Customer
                                 </div>
-                              )}
-                            </div>
-
-                            <div>
-                              <div className="flex items-center gap-1 text-muted-foreground">
-                                <User className="h-3 w-3" />
-                                Salesperson
-                              </div>
-                              <div className="font-medium">
-                                {order.profiles?.full_name || "Unknown"}
-                              </div>
-                            </div>
-
-                            <div>
-                              <div className="flex items-center gap-1 text-muted-foreground">
-                                <Calendar className="h-3 w-3" />
-                                Date
-                              </div>
-                              <div className="font-medium">
-                                {new Date(
-                                  order.created_at,
-                                ).toLocaleDateString()}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {new Date(order.created_at).toLocaleTimeString(
-                                  [],
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
+                                <div className="font-medium">
+                                  {order.customers
+                                    ? `${order.customers.first_name} ${order.customers.last_name}`
+                                    : "Walk-in Customer"}
+                                </div>
+                                {order.customers?.phone && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {order.customers.phone}
+                                  </div>
                                 )}
                               </div>
-                            </div>
 
-                            <div>
-                              <div className="flex items-center gap-1 text-muted-foreground">
-                                <DollarSign className="h-3 w-3" />
-                                Total
+                              <div>
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <User className="h-3 w-3" />
+                                  Salesperson
+                                </div>
+                                <div className="font-medium">
+                                  {order.cashier?.full_name || "Unknown"}
+                                </div>
                               </div>
-                              <div className="font-bold text-lg text-success">
-                                ${order.total.toFixed(2)}
+
+                              <div>
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <CalendarIcon className="h-3 w-3" />
+                                  Date
+                                </div>
+                                <div className="font-medium">
+                                  {new Date(
+                                    order.created_at,
+                                  ).toLocaleDateString()}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {new Date(
+                                    order.created_at,
+                                  ).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </div>
                               </div>
-                              <div className="text-xs text-muted-foreground capitalize">
-                                {order.payment_method}
+
+                              <div>
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <DollarSign className="h-3 w-3" />
+                                  Total
+                                </div>
+                                <div className="font-bold text-lg text-success">
+                                  ${Number(order.grand_total).toFixed(2)}
+                                </div>
+                                <div className="text-xs text-muted-foreground capitalize">
+                                  {order.payment_methods?.length > 1
+                                    ? `${order.payment_methods?.length} payment methods used`
+                                    : order.payment_methods[0].type}
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewLogs(order.id)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-
-                        {canEdit && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditOrder(order)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <div className="flex gap-2">
+                          {canEdit && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditOrder(order)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                    </CardContent>
+                  </Card>
+                ))}
+
+                <Pagination
+                  count={receiptData?.getReceipts?.count}
+                  page={page}
+                  setPage={setPage}
+                />
+              </>
             )}
           </div>
         </CardContent>
@@ -473,7 +383,8 @@ export const ReceiptManagement = ({}: ReceiptManagementProps) => {
         }}
         order={selectedOrder}
         onOrderUpdated={() => {
-          fetchOrders();
+          refetchReceipts();
+          refetchStats();
           setSelectedOrder(null);
         }}
       />

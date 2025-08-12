@@ -351,40 +351,58 @@ export const GET_STORE_SESSION = gql`
 `;
 
 export const GET_RECEIPTS = gql`
-  query GetReceipts {
-    getReceipts {
-      id
-      receipt_number
-      items {
-        product_id
-        quantity
-        unit_price
-      }
-      payment_methods {
-        type
-        amount
-        card_type
-        check_number
-        last_four_digits
-        reference
-      }
-      store {
+  query GetReceipts(
+    $storeId: String!
+    $pagination: PaginationInput!
+    $filters: ReceiptFilterInput
+  ) {
+    getReceipts(storeId: $storeId, pagination: $pagination, filters: $filters) {
+      data {
         id
-        name
+        receipt_number
+        items {
+          product_id
+          quantity
+          unit_price
+        }
+        payment_methods {
+          type
+          amount
+          card_type
+          check_number
+          last_four_digits
+          reference
+        }
+        store {
+          id
+          name
+        }
+        cashier {
+          id
+          full_name
+          email
+          username
+        }
+        sub_total
+        status
+        discount_total
+        tax_total
+        grand_total
+        notes
+        created_at
+        updated_at
       }
-      cashier {
-        id
-        full_name
-        email
-        username
-      }
-      subtotal
-      discount_total
-      tax_total
-      grand_total
-      notes
-      created_at
-      updated_at
+      count
+    }
+  }
+`;
+
+export const GET_RECEIPT_STATS = gql`
+  query GetReceiptStats($storeId: String!) {
+    getReceiptStats(storeId: $storeId) {
+      totalCount
+      totalCompleted
+      totalSales
     }
   }
 `;

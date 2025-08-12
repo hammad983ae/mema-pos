@@ -31,7 +31,7 @@ export const useNotifications = () => {
   const [createNotification] = useMutation<
     Mutation,
     MutationCreateNotificationArgs
-  >(CREATE_NOTIFICATION);
+  >(CREATE_NOTIFICATION, { fetchPolicy: "network-only" });
   const [updateNotification] = useMutation<
     Mutation,
     MutationUpdateNotificationArgs

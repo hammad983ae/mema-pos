@@ -485,10 +485,9 @@ const Dashboard = () => {
                   </h4>
                   <p className="text-sm text-emerald-700">
                     Your POS system is loaded with{" "}
-                    {statsData.getBusinessStats.productsCount > 0
-                      ? `${statsData.getBusinessStats.productsCount} products`
-                      : "10 sample products"}{" "}
-                    across 3 stores with 10 test employees
+                    {statsData.getBusinessStats.productsCount} products across{" "}
+                    {statsData.getBusinessStats.storesCount} stores with 10 test
+                    employees
                   </p>
                 </div>
               </div>

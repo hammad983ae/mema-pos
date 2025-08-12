@@ -234,6 +234,18 @@ export const CREATE_RECEIPT = gql`
   }
 `;
 
+export const UPDATE_RECEIPT = gql`
+  mutation UpdateReceipt($input: UpdateReceiptInput!) {
+    updateReceipt(input: $input)
+  }
+`;
+
+export const DELETE_RECEIPT = gql`
+  mutation DeleteReceipt($id: String!) {
+    deleteReceipt(id: $id)
+  }
+`;
+
 export const CREATE_NOTIFICATION = gql`
   mutation CreateNotification($input: CreateNotificationInput!) {
     createNotification(input: $input) {
@@ -249,8 +261,8 @@ export const UPDATE_NOTIFICATION = gql`
 `;
 
 export const DELETE_NOTIFICATION = gql`
-  mutation DeleteNotification($deleteNotificationId: String!) {
-    deleteNotification(id: $deleteNotificationId)
+  mutation DeleteNotification($id: String!) {
+    deleteNotification(id: $id)
   }
 `;
 

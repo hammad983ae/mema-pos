@@ -838,22 +838,24 @@ const POS = () => {
             {renderMainContent()}
 
             {/* Cart Sidebar with Shipping Options */}
-            <div className="w-80 flex flex-col">
-              <div className="flex-1">
-                <CartSidebar
-                  items={cartItems}
-                  onUpdateItem={updateCartItem}
-                  onRemoveItem={removeFromCart}
-                  onClearCart={clearCart}
-                  onUpdateShipping={updateCartItemShipping}
-                  totalPrice={getTotalPrice()}
-                  businessId={business.id || ""}
-                  selectedCustomer={selectedCustomer}
-                  onSelectCustomer={setSelectedCustomer}
-                  userRole={user.role || "employee"}
-                />
+            {activeView === "sale" && (
+              <div className="w-80 flex flex-col">
+                <div className="flex-1">
+                  <CartSidebar
+                    items={cartItems}
+                    onUpdateItem={updateCartItem}
+                    onRemoveItem={removeFromCart}
+                    onClearCart={clearCart}
+                    onUpdateShipping={updateCartItemShipping}
+                    totalPrice={getTotalPrice()}
+                    businessId={business.id || ""}
+                    selectedCustomer={selectedCustomer}
+                    onSelectCustomer={setSelectedCustomer}
+                    userRole={user.role || "employee"}
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>
