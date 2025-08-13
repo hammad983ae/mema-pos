@@ -745,7 +745,7 @@ export type ProductPagination = {
 export type Query = {
   __typename?: 'Query';
   employeeClockStatusesByUser: Array<EmployeeClockStatus>;
-  findUserActiveEmployeeClocks: EmployeeClockStatus;
+  findUserActiveEmployeeClock?: Maybe<EmployeeClockStatus>;
   getAllEmployeeClockStatus: Array<EmployeeClockStatus>;
   getBusinessStats: BusinessStats;
   getCategories: Array<ProductCategory>;
@@ -778,7 +778,7 @@ export type QueryEmployeeClockStatusesByUserArgs = {
 };
 
 
-export type QueryFindUserActiveEmployeeClocksArgs = {
+export type QueryFindUserActiveEmployeeClockArgs = {
   userId: Scalars['String']['input'];
 };
 

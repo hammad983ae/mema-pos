@@ -59,6 +59,7 @@ import {
   useReactiveVar,
 } from "@apollo/client";
 import { useDebounce } from "@/hooks/useDebounce.ts";
+import { ClockIn } from "@/pages/ClockIn.tsx";
 
 export interface CartItem {
   id: string;
@@ -540,11 +541,7 @@ const POS = () => {
         return (
           <div className="flex-1 p-6 overflow-auto">
             <div className="max-w-4xl mx-auto">
-              <ClockInManager
-                storeId={posUser?.store?.id}
-                businessId={business.id}
-                currentEmployeeId={posUser?.opened_by?.id}
-              />
+              <ClockInManager />
             </div>
           </div>
         );
@@ -590,47 +587,7 @@ const POS = () => {
           );
         }
       case "clockin":
-        return (
-          <div className="flex-1 p-6 overflow-auto">
-            <div className="max-w-2xl mx-auto">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-foreground mb-2">
-                  Clock In/Out
-                </h2>
-                <p className="text-muted-foreground">
-                  Simple daily attendance tracking
-                </p>
-              </div>
-              <Card className="p-8">
-                <div className="text-center space-y-6">
-                  <div className="text-6xl font-bold text-muted-foreground">
-                    {new Date().toLocaleTimeString("en-US", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </div>
-                  <div className="text-xl text-muted-foreground">
-                    {new Date().toLocaleDateString("en-US", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </div>
-                  <div className="space-y-4">
-                    <Button size="lg" className="w-full text-lg py-6">
-                      <Calendar className="h-6 w-6 mr-3" />
-                      Clock In for Today
-                    </Button>
-                    <p className="text-sm text-muted-foreground">
-                      Click to record your arrival for today's shift
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          </div>
-        );
+        return <ClockIn />;
       case "settings":
         return (
           <div className="flex-1 p-6 overflow-auto">

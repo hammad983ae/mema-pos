@@ -271,3 +271,15 @@ export const MARK_ALL_NOTIFICATION_READ = gql`
     markAllRead
   }
 `;
+
+export const CLOCK_IN = gql`
+  mutation ClockIn($storeId: String!) {
+    clockIn(storeId: $storeId)
+  }
+`;
+
+export const CLOCK_OUT = gql`
+  mutation Mutation {
+    clockOut
+  }
+`;

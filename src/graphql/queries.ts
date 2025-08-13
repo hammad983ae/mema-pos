@@ -74,6 +74,33 @@ export const GET_EMPLOYEE_CLOCKS = gql`
         full_name
         email
         username
+        avatar_url
+        role
+      }
+      clocked_in_at
+      clocked_out_at
+      is_active
+      created_at
+      updated_at
+    }
+  }
+`;
+
+export const GET_USER_ACTIVE_CLOCK = gql`
+  query FindUserActiveEmployeeClock($userId: String!) {
+    findUserActiveEmployeeClock(userId: $userId) {
+      id
+      store {
+        id
+        name
+      }
+      user {
+        id
+        full_name
+        username
+        email
+        avatar_url
+        role
       }
       clocked_in_at
       clocked_out_at

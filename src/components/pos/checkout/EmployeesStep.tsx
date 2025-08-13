@@ -17,6 +17,7 @@ import { useQuery } from "@apollo/client";
 import {
   GET_EMPLOYEE_CLOCKS,
   GET_USERS_BY_BUSINESS,
+  PosSession,
   Query,
   QueryGetEmployeeClocksByBusinessArgs,
   QueryGetUsersByBusinessArgs,
@@ -60,7 +61,7 @@ export const EmployeesStep = ({
     "percentage",
   );
   const debouncedSearch = useDebounce(searchTerm, 500);
-
+  const session = PosSession();
   const { data: allEmployeeData, loading: allLoading } = useQuery<
     Query,
     QueryGetUsersByBusinessArgs
@@ -68,7 +69,9 @@ export const EmployeesStep = ({
   const { data: clockedEmployeeData, loading: clockedLoading } = useQuery<
     Query,
     QueryGetEmployeeClocksByBusinessArgs
-  >(GET_EMPLOYEE_CLOCKS, { variables: { filters: { is_active: true } } });
+  >(GET_EMPLOYEE_CLOCKS, {
+    variables: { filters: { is_active: true, store_id: session.store.id } },
+  });
 
   // Get cart data for sales amount calculation
   const cartData = JSON.parse(
