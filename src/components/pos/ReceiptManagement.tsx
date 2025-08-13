@@ -305,7 +305,8 @@ export const ReceiptManagement = () => {
                                   Salesperson
                                 </div>
                                 <div className="font-medium">
-                                  {order.cashier?.full_name || "Unknown"}
+                                  {order.employees[0]?.user?.full_name ||
+                                    "Unknown"}
                                 </div>
                               </div>
 

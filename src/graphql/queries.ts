@@ -53,6 +53,18 @@ export const GET_OWNERS_AND_MANAGERS = gql`
   }
 `;
 
+export const GET_USERS_BY_BUSINESS = gql`
+  query GetUsersByBusiness($search: String) {
+    getUsersByBusiness(search: $search) {
+      id
+      email
+      full_name
+      role
+      username
+    }
+  }
+`;
+
 export const GET_INVENTORY_STATS = gql`
   query GetInventoryStats {
     getInventoryStats {
@@ -377,11 +389,14 @@ export const GET_RECEIPTS = gql`
           id
           name
         }
-        cashier {
-          id
-          full_name
-          email
-          username
+        employees {
+          user {
+            id
+            full_name
+            email
+            username
+          }
+          split_share
         }
         sub_total
         status

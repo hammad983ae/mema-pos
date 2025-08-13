@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Edit, Trash2, DollarSign } from "lucide-react";
 import {
@@ -22,15 +21,17 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   DELETE_RECEIPT,
+  GET_USERS_BY_BUSINESS,
   Mutation,
   MutationDeleteReceiptArgs,
   MutationUpdateReceiptArgs,
+  Query,
   Receipt,
   ReceiptStatus,
   UPDATE_RECEIPT,
 } from "@/graphql";
 import { DeleteDialog } from "@/components/inventory/DeleteDialog.tsx";
-import { useMutation } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import { showSuccess } from "@/hooks/useToastMessages.tsx";
 
 interface Employee {
@@ -54,7 +55,6 @@ export const EditOrderModal = ({
 }: EditOrderModalProps) => {
   const { user } = useAuth();
   const [showDelete, setShowDelete] = useState(false);
-  const [employees, setEmployees] = useState<Employee[]>([]);
   const [formData, setFormData] = useState({
     user_id: "",
     customer_id: "",
@@ -70,13 +70,13 @@ export const EditOrderModal = ({
     Mutation,
     MutationDeleteReceiptArgs
   >(DELETE_RECEIPT);
+  const { data } = useQuery<Query>(GET_USERS_BY_BUSINESS);
 
   useEffect(() => {
     if (isOpen) {
-      fetchEmployees();
       if (order) {
         setFormData({
-          user_id: order.cashier?.id ?? "",
+          user_id: order.employees[0]?.user?.id ?? "",
           customer_id: order.customer_id || "",
           total: Number(order.grand_total),
           notes: order.notes || "",
@@ -86,47 +86,6 @@ export const EditOrderModal = ({
     }
   }, [isOpen, order]);
 
-  const fetchEmployees = async () => {
-    try {
-      // Get business context
-      const { data: membershipData } = await supabase
-        .from("user_business_memberships")
-        .select("business_id")
-        .eq("user_id", user?.id)
-        .eq("is_active", true)
-        .single();
-
-      if (!membershipData) return;
-
-      // Get all employees in the business
-      const { data: employeeData } = await supabase
-        .from("user_business_memberships")
-        .select("user_id")
-        .eq("business_id", membershipData.business_id)
-        .eq("is_active", true);
-
-      if (employeeData) {
-        const userIds = employeeData.map((emp) => emp.user_id);
-
-        const { data: profilesData } = await supabase
-          .from("profiles")
-          .select("user_id, full_name, email")
-          .in("user_id", userIds);
-
-        const formattedEmployees =
-          profilesData?.map((profile) => ({
-            user_id: profile.user_id,
-            full_name: profile.full_name || "Unknown",
-            email: profile.email || "",
-          })) || [];
-
-        setEmployees(formattedEmployees);
-      }
-    } catch (error) {
-      console.error("Error fetching employees:", error);
-    }
-  };
-
   const handleSave = async () => {
     if (!order || !user) return;
 
@@ -134,7 +93,9 @@ export const EditOrderModal = ({
       variables: {
         input: {
           id: order.id,
-          cashierId: formData.user_id,
+          ...(formData.user_id && {
+            employees: [{ user_id: formData.user_id }],
+          }),
           grand_total: formData.total.toString(),
           notes: formData.notes,
           status: formData.status,
@@ -214,11 +175,8 @@ export const EditOrderModal = ({
                     <SelectValue placeholder="Select salesperson" />
                   </SelectTrigger>
                   <SelectContent>
-                    {employees.map((employee) => (
-                      <SelectItem
-                        key={employee.user_id}
-                        value={employee.user_id}
-                      >
+                    {data.getUsersByBusiness.map((employee) => (
+                      <SelectItem key={employee.id} value={employee.id}>
                         {employee.full_name} ({employee.email})
                       </SelectItem>
                     ))}

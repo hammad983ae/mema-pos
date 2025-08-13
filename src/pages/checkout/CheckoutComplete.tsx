@@ -58,10 +58,7 @@ export default function CheckoutComplete() {
   );
 
   useEffect(() => {
-    // Redirect if missing data
-    if (!paymentData.length) {
-      // TODO
-      // if (!customerData || !paymentData.length || !salesTeamData.length) {
+    if (!paymentData.length || !salesTeamData.length) {
       navigate("/checkout/customer");
       return;
     }
@@ -85,13 +82,16 @@ export default function CheckoutComplete() {
             quantity: item.quantity,
             unit_price: item.price.toString(),
           })),
+          employees: salesTeamData.map((item) => ({
+            user_id: item.employeeId,
+            split_share: item.amount.toString(),
+          })),
           sub_total: cartData.subtotal.toString(),
           discount_total: cartData.discount.toString(),
           tax_total: cartData.tax.toString(),
           tip_total: cartData.tip.toString(),
           grand_total: cartData.total.toString(),
           storeId: session.store.id,
-          cashierId: user.id,
         },
       },
     })
@@ -310,25 +310,23 @@ export default function CheckoutComplete() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {/*{salesTeamData?.employees?.map((personId: string) => (*/}
-              <Badge variant="outline">Sales Person ID: {user.id}</Badge>
-              {/*))}*/}
+              {salesTeamData?.map((employee) => (
+                <Badge variant="outline">
+                  Sales Person ID: {employee.employeeId}
+                </Badge>
+              ))}
             </div>
           </CardContent>
         </Card>
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4">
-          <Button
-            onClick={handlePrintReceipt}
-            variant="outline"
-            className="flex-1"
-          >
+          <Button onClick={handlePrintReceipt} className="flex-1">
             <Receipt className="h-4 w-4 mr-2" />
             Print Receipt
           </Button>
 
-          <Button onClick={handleNewOrder} className="flex-1">
+          <Button onClick={handleNewOrder} variant="outline" className="flex-1">
             <Home className="h-4 w-4 mr-2" />
             New Order
           </Button>

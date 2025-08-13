@@ -128,8 +128,8 @@ export type CreateProductInput = {
 };
 
 export type CreateReceiptInput = {
-  cashierId?: InputMaybe<Scalars['String']['input']>;
   discount_total: Scalars['String']['input'];
+  employees: Array<ReceiptUserInput>;
   grand_total: Scalars['String']['input'];
   items: Array<LineItemInput>;
   notes?: InputMaybe<Scalars['String']['input']>;
@@ -138,6 +138,12 @@ export type CreateReceiptInput = {
   sub_total: Scalars['String']['input'];
   tax_total: Scalars['String']['input'];
   tip_total: Scalars['String']['input'];
+};
+
+export type CreateReceiptUserInput = {
+  receipt_id: Scalars['String']['input'];
+  split_share?: InputMaybe<Scalars['String']['input']>;
+  user_id: Scalars['String']['input'];
 };
 
 export type CreateReorderRequestInput = {
@@ -337,6 +343,7 @@ export type Mutation = {
   createProduct: Scalars['Boolean']['output'];
   createProductCategory: ProductCategory;
   createReceipt: Receipt;
+  createReceiptUser: ReceiptUser;
   createReorderRequest: ReorderRequest;
   createStore: Store;
   createStoreLocation: StoreLocation;
@@ -353,6 +360,7 @@ export type Mutation = {
   loginBusinessOwner: LoginResponse;
   markAllRead: Scalars['Boolean']['output'];
   registerBusinessOwner: LoginResponse;
+  removeReceiptUser: Scalars['Boolean']['output'];
   reorderInventory: Scalars['Boolean']['output'];
   resendVerificationEmail: Scalars['Boolean']['output'];
   updateBusiness: Scalars['Boolean']['output'];
@@ -364,6 +372,7 @@ export type Mutation = {
   updateProduct: Scalars['Boolean']['output'];
   updateProductCategory: Scalars['Boolean']['output'];
   updateReceipt: Scalars['Boolean']['output'];
+  updateReceiptUser: Scalars['Boolean']['output'];
   updateReorderRequest: Scalars['Boolean']['output'];
   updateStore: Scalars['Boolean']['output'];
   updateStoreLocation: Scalars['Boolean']['output'];
@@ -415,6 +424,11 @@ export type MutationCreateProductCategoryArgs = {
 
 export type MutationCreateReceiptArgs = {
   input: CreateReceiptInput;
+};
+
+
+export type MutationCreateReceiptUserArgs = {
+  input: CreateReceiptUserInput;
 };
 
 
@@ -493,6 +507,11 @@ export type MutationRegisterBusinessOwnerArgs = {
 };
 
 
+export type MutationRemoveReceiptUserArgs = {
+  id: Scalars['String']['input'];
+};
+
+
 export type MutationReorderInventoryArgs = {
   id: Scalars['String']['input'];
 };
@@ -543,6 +562,11 @@ export type MutationUpdateProductCategoryArgs = {
 
 export type MutationUpdateReceiptArgs = {
   input: UpdateReceiptInput;
+};
+
+
+export type MutationUpdateReceiptUserArgs = {
+  input: UpdateReceiptUserInput;
 };
 
 
@@ -686,6 +710,9 @@ export type Query = {
   getStores: Array<Store>;
   getSuppliers: Array<Supplier>;
   getUploadUrl: SignedUrlResponse;
+  getUsersByBusiness: Array<User>;
+  receiptUsersByReceipt: Array<ReceiptUser>;
+  receiptUsersByUser: Array<ReceiptUser>;
   sayHello: Scalars['String']['output'];
 };
 
@@ -746,11 +773,26 @@ export type QueryGetUploadUrlArgs = {
   folder?: InputMaybe<Scalars['String']['input']>;
 };
 
+
+export type QueryGetUsersByBusinessArgs = {
+  search?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryReceiptUsersByReceiptArgs = {
+  receiptId: Scalars['String']['input'];
+};
+
+
+export type QueryReceiptUsersByUserArgs = {
+  userId: Scalars['String']['input'];
+};
+
 export type Receipt = {
   __typename?: 'Receipt';
-  cashier?: Maybe<User>;
   created_at: Scalars['DateTime']['output'];
   discount_total: Scalars['String']['output'];
+  employees: Array<ReceiptUser>;
   grand_total: Scalars['String']['output'];
   id: Scalars['ID']['output'];
   items: Array<LineItem>;
@@ -790,6 +832,21 @@ export enum ReceiptStatus {
   Completed = 'COMPLETED',
   Pending = 'PENDING'
 }
+
+export type ReceiptUser = {
+  __typename?: 'ReceiptUser';
+  created_at: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  receipt: Receipt;
+  split_share?: Maybe<Scalars['String']['output']>;
+  updated_at: Scalars['DateTime']['output'];
+  user: User;
+};
+
+export type ReceiptUserInput = {
+  split_share?: InputMaybe<Scalars['String']['input']>;
+  user_id: Scalars['String']['input'];
+};
 
 export enum ReferenceType {
   Adjustment = 'ADJUSTMENT',
@@ -1020,8 +1077,8 @@ export type UpdateProductInput = {
 };
 
 export type UpdateReceiptInput = {
-  cashierId?: InputMaybe<Scalars['String']['input']>;
   discount_total?: InputMaybe<Scalars['String']['input']>;
+  employees?: InputMaybe<Array<ReceiptUserInput>>;
   grand_total?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
   items?: InputMaybe<Array<LineItemInput>>;
@@ -1032,6 +1089,11 @@ export type UpdateReceiptInput = {
   sub_total?: InputMaybe<Scalars['String']['input']>;
   tax_total?: InputMaybe<Scalars['String']['input']>;
   tip_total?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateReceiptUserInput = {
+  id: Scalars['String']['input'];
+  split_share?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type UpdateReorderRequestInput = {
@@ -1098,6 +1160,7 @@ export type User = {
   pos_pin: Scalars['String']['output'];
   position?: Maybe<Scalars['String']['output']>;
   position_type?: Maybe<Scalars['String']['output']>;
+  receiptUsers: Array<ReceiptUser>;
   role: UserRole;
   specialties: Array<Scalars['String']['output']>;
   store: Store;

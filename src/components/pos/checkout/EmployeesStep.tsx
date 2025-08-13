@@ -12,9 +12,14 @@ import {
   DollarSign,
   Percent,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery } from "@apollo/client";
+import {
+  GET_USERS_BY_BUSINESS,
+  Query,
+  QueryGetUsersByBusinessArgs,
+} from "@/graphql";
+import { useDebounce } from "@/hooks/useDebounce.ts";
 
 interface Employee {
   id: string;
@@ -43,17 +48,20 @@ export const EmployeesStep = ({
   onNext,
   onBack,
 }: EmployeesStepProps) => {
-  const { toast } = useToast();
   const [clockedInPeople, setClockedInPeople] = useState<Employee[]>([]);
-  const [allPeople, setAllPeople] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAll, setShowAll] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [salesAllocations, setSalesAllocations] = useState<
     EmployeeSalesAllocation[]
   >([]);
   const [allocationMode, setAllocationMode] = useState<"percentage" | "amount">(
     "percentage",
+  );
+  const debouncedSearch = useDebounce(searchTerm, 500);
+
+  const { data, loading } = useQuery<Query, QueryGetUsersByBusinessArgs>(
+    GET_USERS_BY_BUSINESS,
+    { variables: { search: debouncedSearch } },
   );
 
   // Get cart data for sales amount calculation
@@ -65,14 +73,17 @@ export const EmployeesStep = ({
 
   // Save selected employees and allocations to localStorage whenever they change
   useEffect(() => {
-    const salesTeamData = {
-      employees: Array.isArray(selectedSalesPeople)
-        ? selectedSalesPeople
-        : (selectedSalesPeople?.employees ?? []),
-      allocations: salesAllocations,
-      allocationMode,
-    };
-    localStorage.setItem("checkout_sales_team", JSON.stringify(salesTeamData));
+    const salesAlloc = localStorage.getItem("checkout_sales_team");
+
+    setSalesAllocations(JSON.parse(salesAlloc));
+  }, []);
+
+  // Save selected employees and allocations to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(
+      "checkout_sales_team",
+      JSON.stringify(salesAllocations),
+    );
   }, [selectedSalesPeople, salesAllocations, allocationMode]);
 
   // Load saved data on component mount
@@ -96,89 +107,41 @@ export const EmployeesStep = ({
     }
   }, []);
 
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
-
-  const fetchEmployees = async () => {
-    try {
-      // Get business context first
-      const { data: businessContext } = await supabase.rpc(
-        "get_user_business_context_secure",
-      );
-
-      if (!businessContext || businessContext.length === 0) {
-        console.error("No business context found");
-        setLoading(false);
-        return;
-      }
-
-      const businessId = businessContext[0].business_id;
-
-      // Get all business members
-      const { data: businessMembers, error: membersError } = await supabase
-        .from("user_business_memberships")
-        .select("user_id")
-        .eq("business_id", businessId)
-        .eq("is_active", true);
-
-      if (membersError) throw membersError;
-
-      const userIds = businessMembers?.map((m) => m.user_id) || [];
-
-      if (userIds.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      // Then fetch their profiles
-      const { data: allMembers, error: allError } = await supabase
-        .from("profiles")
-        .select(
-          `
-          user_id,
-          username,
-          full_name,
-          position_type
-        `,
-        )
-        .in("user_id", userIds);
-
-      if (allError) throw allError;
-
-      // Get currently clocked in users
-      const { data: clockedIn, error: clockError } = await supabase
-        .from("employee_clock_status")
-        .select("user_id")
-        .eq("business_id", businessId)
-        .eq("is_active", true);
-
-      if (clockError) throw clockError;
-
-      const clockedInUserIds = new Set(clockedIn?.map((c) => c.user_id) || []);
-
-      const formattedPeople: Employee[] =
-        allMembers?.map((member) => ({
-          id: member.user_id,
-          username: member.username || "Unknown",
-          full_name: member.full_name,
-          position_type: member.position_type,
-          is_clocked_in: clockedInUserIds.has(member.user_id),
-        })) || [];
-
-      setAllPeople(formattedPeople);
-      setClockedInPeople(formattedPeople.filter((p) => p.is_clocked_in));
-    } catch (error) {
-      console.error("Error fetching employees:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load employees. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const fetchEmployees = async () => {
+  //   try {
+  //
+  //     // Get currently clocked in users
+  //     const { data: clockedIn, error: clockError } = await supabase
+  //       .from("employee_clock_status")
+  //       .select("user_id")
+  //       .eq("business_id", businessId)
+  //       .eq("is_active", true);
+  //
+  //     if (clockError) throw clockError;
+  //
+  //     const clockedInUserIds = new Set(clockedIn?.map((c) => c.user_id) || []);
+  //
+  //     const formattedPeople: Employee[] =
+  //       allMembers?.map((member) => ({
+  //         id: member.user_id,
+  //         username: member.username || "Unknown",
+  //         full_name: member.full_name,
+  //         position_type: member.position_type,
+  //         is_clocked_in: clockedInUserIds.has(member.user_id),
+  //       })) || [];
+  //
+  //     setClockedInPeople(formattedPeople.filter((p) => p.is_clocked_in));
+  //   } catch (error) {
+  //     console.error("Error fetching employees:", error);
+  //     toast({
+  //       title: "Error",
+  //       description: "Failed to load employees. Please try again.",
+  //       variant: "destructive",
+  //     });
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const recalculateAllocations = (employees: string[]) => {
     if (employees.length === 0) {
@@ -241,6 +204,8 @@ export const EmployeesStep = ({
     setSalesAllocations(newAllocations);
   };
 
+  console.log("sales", salesAllocations);
+
   const autoDistributeEqually = () => {
     recalculateAllocations(selectedSalesPeople);
   };
@@ -256,7 +221,9 @@ export const EmployeesStep = ({
     setSalesAllocations([]);
   };
 
-  const filteredPeople = (showAll ? allPeople : clockedInPeople).filter(
+  const filteredPeople = (
+    showAll ? (data?.getUsersByBusiness ?? []) : clockedInPeople
+  ).filter(
     (person) =>
       person.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
       person.full_name?.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -275,7 +242,8 @@ export const EmployeesStep = ({
     }
   };
 
-  const getEmployeeById = (id: string) => allPeople.find((p) => p.id === id);
+  const getEmployeeById = (id: string) =>
+    data?.getUsersByBusiness?.find((p) => p.id === id);
 
   const totalAllocatedPercentage = salesAllocations.reduce(
     (sum, allocation) => sum + allocation.percentage,
@@ -370,7 +338,7 @@ export const EmployeesStep = ({
           )}
 
           {/* People Grid */}
-          {filteredPeople.length === 0 ? (
+          {data?.getUsersByBusiness?.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {searchTerm
                 ? "No employees found matching your search."
@@ -602,7 +570,7 @@ export const EmployeesStep = ({
 
         <Button
           onClick={onNext}
-          // disabled={selectedSalesPeople.length === 0}
+          disabled={!selectedSalesPeople.length || !salesAllocations.length}
         >
           Complete Sale
         </Button>

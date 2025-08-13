@@ -10,7 +10,7 @@ export default function CheckoutSalesTeam() {
   const [selectedSalesPeople, setSelectedSalesPeople] = useState<string[]>(
     () => {
       const saved = localStorage.getItem("checkout_sales_team");
-      return saved ? JSON.parse(saved) : [];
+      return saved ? JSON.parse(saved).map((item) => item.employeeId) : [];
     },
   );
 
@@ -42,11 +42,6 @@ export default function CheckoutSalesTeam() {
   }, [customerData, paymentData, navigate]);
 
   const handleContinue = () => {
-    // Store sales team data for final step
-    localStorage.setItem(
-      "checkout_sales_team",
-      JSON.stringify(selectedSalesPeople),
-    );
     navigate("/checkout/complete");
   };
 
