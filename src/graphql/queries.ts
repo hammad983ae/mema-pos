@@ -65,6 +65,25 @@ export const GET_USERS_BY_BUSINESS = gql`
   }
 `;
 
+export const GET_EMPLOYEE_CLOCKS = gql`
+  query GetEmployeeClocksByBusiness($filters: EmployeeClockStatusFilterInput) {
+    getEmployeeClocksByBusiness(filters: $filters) {
+      id
+      user {
+        id
+        full_name
+        email
+        username
+      }
+      clocked_in_at
+      clocked_out_at
+      is_active
+      created_at
+      updated_at
+    }
+  }
+`;
+
 export const GET_INVENTORY_STATS = gql`
   query GetInventoryStats {
     getInventoryStats {

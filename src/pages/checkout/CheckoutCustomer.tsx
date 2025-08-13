@@ -100,6 +100,9 @@ export default function CheckoutCustomer() {
   };
 
   const handleBack = () => {
+    localStorage.removeItem("checkout_customer");
+    localStorage.removeItem("checkout_payment");
+    localStorage.removeItem("checkout_sales_team");
     navigate("/pos");
   };
 

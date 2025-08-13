@@ -15,8 +15,10 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@apollo/client";
 import {
+  GET_EMPLOYEE_CLOCKS,
   GET_USERS_BY_BUSINESS,
   Query,
+  QueryGetEmployeeClocksByBusinessArgs,
   QueryGetUsersByBusinessArgs,
 } from "@/graphql";
 import { useDebounce } from "@/hooks/useDebounce.ts";
@@ -59,10 +61,14 @@ export const EmployeesStep = ({
   );
   const debouncedSearch = useDebounce(searchTerm, 500);
 
-  const { data, loading } = useQuery<Query, QueryGetUsersByBusinessArgs>(
-    GET_USERS_BY_BUSINESS,
-    { variables: { search: debouncedSearch } },
-  );
+  const { data: allEmployeeData, loading: allLoading } = useQuery<
+    Query,
+    QueryGetUsersByBusinessArgs
+  >(GET_USERS_BY_BUSINESS, { variables: { search: debouncedSearch } });
+  const { data: clockedEmployeeData, loading: clockedLoading } = useQuery<
+    Query,
+    QueryGetEmployeeClocksByBusinessArgs
+  >(GET_EMPLOYEE_CLOCKS, { variables: { filters: { is_active: true } } });
 
   // Get cart data for sales amount calculation
   const cartData = JSON.parse(
@@ -73,7 +79,7 @@ export const EmployeesStep = ({
 
   // Save selected employees and allocations to localStorage whenever they change
   useEffect(() => {
-    const salesAlloc = localStorage.getItem("checkout_sales_team");
+    const salesAlloc = localStorage.getItem("checkout_sales_team") ?? "[]";
 
     setSalesAllocations(JSON.parse(salesAlloc));
   }, []);
@@ -204,8 +210,6 @@ export const EmployeesStep = ({
     setSalesAllocations(newAllocations);
   };
 
-  console.log("sales", salesAllocations);
-
   const autoDistributeEqually = () => {
     recalculateAllocations(selectedSalesPeople);
   };
@@ -221,13 +225,9 @@ export const EmployeesStep = ({
     setSalesAllocations([]);
   };
 
-  const filteredPeople = (
-    showAll ? (data?.getUsersByBusiness ?? []) : clockedInPeople
-  ).filter(
-    (person) =>
-      person.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      person.full_name?.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const filteredPeople = showAll
+    ? (allEmployeeData?.getUsersByBusiness ?? [])
+    : (clockedEmployeeData?.getEmployeeClocksByBusiness ?? []);
 
   const getPositionBadgeVariant = (position: string | null) => {
     switch (position) {
@@ -243,7 +243,7 @@ export const EmployeesStep = ({
   };
 
   const getEmployeeById = (id: string) =>
-    data?.getUsersByBusiness?.find((p) => p.id === id);
+    allEmployeeData?.getUsersByBusiness?.find((p) => p.id === id);
 
   const totalAllocatedPercentage = salesAllocations.reduce(
     (sum, allocation) => sum + allocation.percentage,
@@ -254,7 +254,7 @@ export const EmployeesStep = ({
     0,
   );
 
-  if (loading) {
+  if (allLoading || clockedLoading) {
     return (
       <div className="space-y-6">
         <Card>
@@ -338,7 +338,7 @@ export const EmployeesStep = ({
           )}
 
           {/* People Grid */}
-          {data?.getUsersByBusiness?.length === 0 ? (
+          {!filteredPeople.length ? (
             <div className="text-center py-8 text-muted-foreground">
               {searchTerm
                 ? "No employees found matching your search."

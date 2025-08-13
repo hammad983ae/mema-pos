@@ -67,6 +67,13 @@ export type CreateBusinessInput = {
   subscription_status?: InputMaybe<SubscriptionStatus>;
 };
 
+export type CreateEmployeeClockStatusInput = {
+  clocked_in_at?: InputMaybe<Scalars['String']['input']>;
+  clocked_out_at?: InputMaybe<Scalars['String']['input']>;
+  is_active?: InputMaybe<Scalars['Boolean']['input']>;
+  store_id: Scalars['String']['input'];
+};
+
 export type CreateInventoryInput = {
   /** Count timestamp (defaults to now) */
   last_counted_at?: InputMaybe<Scalars['DateTime']['input']>;
@@ -183,6 +190,26 @@ export type CreateSupplierInput = {
   notes?: InputMaybe<Scalars['String']['input']>;
   phone?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<SupplierStatus>;
+};
+
+export type EmployeeClockStatus = {
+  __typename?: 'EmployeeClockStatus';
+  business: Business;
+  clocked_in_at: Scalars['DateTime']['output'];
+  clocked_out_at?: Maybe<Scalars['DateTime']['output']>;
+  created_at: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  is_active: Scalars['Boolean']['output'];
+  store: Store;
+  updated_at: Scalars['DateTime']['output'];
+  user: User;
+};
+
+export type EmployeeClockStatusFilterInput = {
+  business_id?: InputMaybe<Scalars['String']['input']>;
+  is_active?: InputMaybe<Scalars['Boolean']['input']>;
+  store_id?: InputMaybe<Scalars['String']['input']>;
+  user_id?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type Inventory = {
@@ -334,7 +361,10 @@ export enum MovementType {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  clockIn: Scalars['Boolean']['output'];
+  clockOut: Scalars['Boolean']['output'];
   createBusiness: Business;
+  createEmployeeClockStatus: EmployeeClockStatus;
   createInventory: Inventory;
   createInventoryAlert: InventoryAlert;
   createInventoryMovement: InventoryMovement;
@@ -349,6 +379,7 @@ export type Mutation = {
   createStoreLocation: StoreLocation;
   createStoreSession: StoreDaySession;
   createSupplier: Supplier;
+  deleteEmployeeClockStatus: Scalars['Boolean']['output'];
   deleteInventory: Scalars['Boolean']['output'];
   deleteNotification: Scalars['Boolean']['output'];
   deleteProduct: Scalars['Boolean']['output'];
@@ -364,6 +395,7 @@ export type Mutation = {
   reorderInventory: Scalars['Boolean']['output'];
   resendVerificationEmail: Scalars['Boolean']['output'];
   updateBusiness: Scalars['Boolean']['output'];
+  updateEmployeeClockStatus: Scalars['Boolean']['output'];
   updateInventory: Scalars['Boolean']['output'];
   updateInventoryAlert: Scalars['Boolean']['output'];
   updateInventoryMovement: Scalars['Boolean']['output'];
@@ -381,8 +413,18 @@ export type Mutation = {
 };
 
 
+export type MutationClockInArgs = {
+  storeId: Scalars['String']['input'];
+};
+
+
 export type MutationCreateBusinessArgs = {
   input: CreateBusinessInput;
+};
+
+
+export type MutationCreateEmployeeClockStatusArgs = {
+  input: CreateEmployeeClockStatusInput;
 };
 
 
@@ -457,6 +499,11 @@ export type MutationCreateSupplierArgs = {
 };
 
 
+export type MutationDeleteEmployeeClockStatusArgs = {
+  id: Scalars['String']['input'];
+};
+
+
 export type MutationDeleteInventoryArgs = {
   id: Scalars['String']['input'];
 };
@@ -519,6 +566,11 @@ export type MutationReorderInventoryArgs = {
 
 export type MutationUpdateBusinessArgs = {
   input: UpdateBusinessInput;
+};
+
+
+export type MutationUpdateEmployeeClockStatusArgs = {
+  input: UpdateEmployeeClockStatusInput;
 };
 
 
@@ -692,9 +744,13 @@ export type ProductPagination = {
 
 export type Query = {
   __typename?: 'Query';
+  employeeClockStatusesByUser: Array<EmployeeClockStatus>;
+  findUserActiveEmployeeClocks: EmployeeClockStatus;
+  getAllEmployeeClockStatus: Array<EmployeeClockStatus>;
   getBusinessStats: BusinessStats;
   getCategories: Array<ProductCategory>;
   getCurrentUser: User;
+  getEmployeeClocksByBusiness: Array<EmployeeClockStatus>;
   getInventoryByBusiness: InventoryPagination;
   getInventoryStats: InventoryStats;
   getLocations: Array<StoreLocation>;
@@ -717,8 +773,23 @@ export type Query = {
 };
 
 
+export type QueryEmployeeClockStatusesByUserArgs = {
+  userId: Scalars['String']['input'];
+};
+
+
+export type QueryFindUserActiveEmployeeClocksArgs = {
+  userId: Scalars['String']['input'];
+};
+
+
 export type QueryGetBusinessStatsArgs = {
   id: Scalars['String']['input'];
+};
+
+
+export type QueryGetEmployeeClocksByBusinessArgs = {
+  filters?: InputMaybe<EmployeeClockStatusFilterInput>;
 };
 
 
@@ -1005,6 +1076,13 @@ export type UpdateBusinessInput = {
   settings?: InputMaybe<Scalars['JSONObject']['input']>;
   subscription_plan?: InputMaybe<SubscriptionPlan>;
   subscription_status?: InputMaybe<SubscriptionStatus>;
+};
+
+export type UpdateEmployeeClockStatusInput = {
+  clocked_in_at?: InputMaybe<Scalars['String']['input']>;
+  clocked_out_at?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['String']['input'];
+  is_active?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type UpdateInventoryInput = {
