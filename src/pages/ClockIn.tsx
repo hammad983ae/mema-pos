@@ -1,7 +1,7 @@
-import { Card } from "@/components/ui/card.tsx";
-import { Button } from "@/components/ui/button.tsx";
-import { Calendar } from "lucide-react";
-import { useMutation, useQuery } from "@apollo/client";
+import { Card } from '@/components/ui/card.tsx';
+import { Button } from '@/components/ui/button.tsx';
+import { Calendar } from 'lucide-react';
+import { useMutation, useQuery } from '@apollo/client';
 import {
   CLOCK_IN,
   CLOCK_OUT,
@@ -11,20 +11,26 @@ import {
   PosSession,
   Query,
   QueryFindUserActiveEmployeeClockArgs,
-} from "@/graphql";
-import { useAuth } from "@/hooks/useAuth.tsx";
-import { showSuccess } from "@/hooks/useToastMessages.tsx";
+} from '@/graphql';
+import { useAuth } from '@/hooks/useAuth.tsx';
+import { showSuccess } from '@/hooks/useToastMessages.tsx';
+import { PosAuthDialog } from '@/components/auth/PosAuthDialog.tsx';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export const ClockIn = () => {
   const { user } = useAuth();
   const session = PosSession();
+  const navigate = useNavigate();
+  const [showAuthDialog, setShowAuthDialog] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const { data, loading, refetch } = useQuery<
     Query,
     QueryFindUserActiveEmployeeClockArgs
   >(GET_USER_ACTIVE_CLOCK, {
     variables: { userId: user.id },
-    fetchPolicy: "network-only",
+    fetchPolicy: 'network-only',
   });
   const [clockIn, { loading: clockingIn }] = useMutation<
     Mutation,
@@ -38,7 +44,7 @@ export const ClockIn = () => {
         storeId: session.store.id,
       },
     }).then(() => {
-      showSuccess("You have clocked in successfully");
+      showSuccess('You have clocked in successfully');
 
       refetch();
     });
@@ -48,10 +54,37 @@ export const ClockIn = () => {
     if (!data?.findUserActiveEmployeeClock) return;
 
     clockOut().then(() => {
-      showSuccess("You have clocked out successfully");
+      showSuccess('You have clocked out successfully');
       refetch();
     });
   };
+
+  const handleAuthSuccess = () => {
+    setIsAuthenticated(true);
+    setShowAuthDialog(false);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+          <p className="text-muted-foreground mb-4">
+            Please authenticate to access
+          </p>
+        </div>
+        <PosAuthDialog
+          isOpen={showAuthDialog}
+          onClose={() => {
+            navigate('/pos');
+          }}
+          onSuccess={handleAuthSuccess}
+          title="Authentication Required"
+          description="Please enter your credentials to clock in/out"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 p-6 overflow-auto">
@@ -67,17 +100,17 @@ export const ClockIn = () => {
         <Card className="p-8">
           <div className="text-center space-y-6">
             <div className="text-6xl font-bold text-muted-foreground">
-              {new Date().toLocaleTimeString("en-US", {
-                hour: "2-digit",
-                minute: "2-digit",
+              {new Date().toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
               })}
             </div>
             <div className="text-xl text-muted-foreground">
-              {new Date().toLocaleDateString("en-US", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
+              {new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
               })}
             </div>
             <div className="space-y-4">

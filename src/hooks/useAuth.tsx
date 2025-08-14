@@ -1,12 +1,12 @@
-import { supabase } from "@/integrations/supabase/client";
-import { useLazyQuery, useMutation, useReactiveVar } from "@apollo/client";
+import { supabase } from '@/integrations/supabase/client';
+import { useLazyQuery, useMutation, useReactiveVar } from '@apollo/client';
 import {
   AuthToken,
   GET_CURRENT_USER,
   LoggedInUser,
-  LOGIN_BUSINESS_OWNER,
+  LOGIN_BUSINESS_OWNER, LOGIN_EMPLOYEE,
   Mutation,
-  MutationLoginBusinessOwnerArgs,
+  MutationLoginBusinessOwnerArgs, MutationLoginEmployeeArgs,
   MutationRegisterBusinessOwnerArgs,
   MutationVerifyEmailArgs,
   Query,
@@ -14,8 +14,8 @@ import {
   User,
   UserBusiness,
   VERIFY_EMAIL,
-} from "@/graphql";
-import { showSuccess } from "@/hooks/useToastMessages.tsx";
+} from '@/graphql';
+import { showSuccess } from '@/hooks/useToastMessages.tsx';
 
 export const useAuth = () => {
   const token = useReactiveVar(AuthToken);
@@ -29,13 +29,17 @@ export const useAuth = () => {
     Mutation,
     MutationLoginBusinessOwnerArgs
   >(LOGIN_BUSINESS_OWNER);
+  const [loginEmployee, { loading: loggingEmployeeIn }] = useMutation<
+    Mutation,
+    MutationLoginEmployeeArgs
+  >(LOGIN_EMPLOYEE);
   const [verifyEmail, { loading: verifyingEmail }] = useMutation<
     Mutation,
     MutationVerifyEmailArgs
   >(VERIFY_EMAIL);
   const [getCurrentUser, { loading: fetchingUser }] = useLazyQuery<Query>(
     GET_CURRENT_USER,
-    { fetchPolicy: "network-only" },
+    { fetchPolicy: 'network-only' },
   );
 
   const fetchCurrentUser = () => {
@@ -47,91 +51,111 @@ export const useAuth = () => {
     });
   };
 
-  // const signInEmployee = async (username: string, pin: string) => {
-  //   try {
-  //     // Employee login: username + PIN
-  //     // Get profile with pos_pin field
-  //     const { data: profile, error: profileError } = await supabase
-  //       .from("profiles")
-  //       .select("user_id, email, pos_pin")
-  //       .eq("username", username.toLowerCase())
-  //       .maybeSingle();
-  //
-  //     if (profileError || !profile) {
-  //       toast({
-  //         title: "Sign In Error",
-  //         description: "Invalid username or PIN",
-  //         variant: "destructive",
-  //       });
-  //       return { data: null, error: { message: "Invalid username or PIN" } };
-  //     }
-  //
-  //     // Check rate limiting before attempting login
-  //     const { data: rateLimitCheck, error: rateLimitError } =
-  //       await supabase.rpc("check_pin_rate_limit", {
-  //         p_user_id: profile.user_id,
-  //       });
-  //
-  //     if (rateLimitError || !rateLimitCheck) {
-  //       // Log failed attempt
-  //       await supabase.rpc("log_pin_attempt", {
-  //         p_user_id: profile.user_id,
-  //         p_success: false,
-  //       });
-  //
-  //       toast({
-  //         title: "Account Locked",
-  //         description: "Too many failed attempts. Please try again in 1 hour.",
-  //         variant: "destructive",
-  //       });
-  //       return { data: null, error: { message: "Account temporarily locked" } };
-  //     }
-  //
-  //     // Verify PIN directly (stored as plain text)
-  //     if (!profile.pos_pin || pin !== profile.pos_pin) {
-  //       await supabase.rpc("log_pin_attempt", {
-  //         p_user_id: profile.user_id,
-  //         p_success: false,
-  //       });
-  //
-  //       toast({
-  //         title: "Sign In Error",
-  //         description: "Invalid username or PIN",
-  //         variant: "destructive",
-  //       });
-  //       return { data: null, error: { message: "Invalid username or PIN" } };
-  //     }
-  //
-  //     // Use email and PIN for Supabase auth (PIN stored as password)
-  //     const { data, error } = await supabase.auth.signInWithPassword({
-  //       email: profile.email,
-  //       password: pin,
-  //     });
-  //
-  //     // Log successful attempt
-  //     await supabase.rpc("log_pin_attempt", {
-  //       p_user_id: profile.user_id,
-  //       p_success: !error,
-  //     });
-  //
-  //     if (error) {
-  //       toast({
-  //         title: "Sign In Error",
-  //         description: "Authentication failed. Please try again.",
-  //         variant: "destructive",
-  //       });
-  //     }
-  //
-  //     return { data, error };
-  //   } catch (err: any) {
-  //     toast({
-  //       title: "Sign In Error",
-  //       description: "An error occurred during sign in",
-  //       variant: "destructive",
-  //     });
-  //     return { data: null, error: { message: err.message } };
-  //   }
-  // };
+  const signInEmployee = (username: string, pin: string, saveAccess: boolean = true, onSuccess?: () => void) => {
+    loginEmployee({ variables: { input: { username, pin } } }).then((res) => {
+      if (saveAccess) {
+        AuthToken(res.data.loginEmployee.access_token);
+        localStorage.setItem(
+          'accessToken',
+          res.data.loginEmployee.access_token,
+        );
+
+        showSuccess('Welcome back!');
+
+        setTimeout(() => {
+          fetchCurrentUser();
+        }, 500);
+      } else {
+        showSuccess('Authenticated!');
+      }
+
+      onSuccess?.();
+    });
+
+    // try {
+    //   // Employee login: username + PIN
+    //   // Get profile with pos_pin field
+    //   const { data: profile, error: profileError } = await supabase
+    //     .from("profiles")
+    //     .select("user_id, email, pos_pin")
+    //     .eq("username", username.toLowerCase())
+    //     .maybeSingle();
+    //
+    //   if (profileError || !profile) {
+    //     toast({
+    //       title: "Sign In Error",
+    //       description: "Invalid username or PIN",
+    //       variant: "destructive",
+    //     });
+    //     return { data: null, error: { message: "Invalid username or PIN" } };
+    //   }
+    //
+    //   // Check rate limiting before attempting login
+    //   const { data: rateLimitCheck, error: rateLimitError } =
+    //     await supabase.rpc("check_pin_rate_limit", {
+    //       p_user_id: profile.user_id,
+    //     });
+    //
+    //   if (rateLimitError || !rateLimitCheck) {
+    //     // Log failed attempt
+    //     await supabase.rpc("log_pin_attempt", {
+    //       p_user_id: profile.user_id,
+    //       p_success: false,
+    //     });
+    //
+    //     toast({
+    //       title: "Account Locked",
+    //       description: "Too many failed attempts. Please try again in 1 hour.",
+    //       variant: "destructive",
+    //     });
+    //     return { data: null, error: { message: "Account temporarily locked" } };
+    //   }
+    //
+    //   // Verify PIN directly (stored as plain text)
+    //   if (!profile.pos_pin || pin !== profile.pos_pin) {
+    //     await supabase.rpc("log_pin_attempt", {
+    //       p_user_id: profile.user_id,
+    //       p_success: false,
+    //     });
+    //
+    //     toast({
+    //       title: "Sign In Error",
+    //       description: "Invalid username or PIN",
+    //       variant: "destructive",
+    //     });
+    //     return { data: null, error: { message: "Invalid username or PIN" } };
+    //   }
+    //
+    //   // Use email and PIN for Supabase auth (PIN stored as password)
+    //   const { data, error } = await supabase.auth.signInWithPassword({
+    //     email: profile.email,
+    //     password: pin,
+    //   });
+    //
+    //   // Log successful attempt
+    //   await supabase.rpc("log_pin_attempt", {
+    //     p_user_id: profile.user_id,
+    //     p_success: !error,
+    //   });
+    //
+    //   if (error) {
+    //     toast({
+    //       title: "Sign In Error",
+    //       description: "Authentication failed. Please try again.",
+    //       variant: "destructive",
+    //     });
+    //   }
+    //
+    //   return { data, error };
+    // } catch (err: any) {
+    //   toast({
+    //     title: "Sign In Error",
+    //     description: "An error occurred during sign in",
+    //     variant: "destructive",
+    //   });
+    //   return { data: null, error: { message: err.message } };
+    // }
+  };
 
   const signUp = (
     input: {
@@ -153,7 +177,7 @@ export const useAuth = () => {
       onSuccess?.();
 
       showSuccess(
-        "Account created! Please check your email to verify your account.",
+        'Account created! Please check your email to verify your account.',
       );
     });
   };
@@ -169,11 +193,11 @@ export const useAuth = () => {
     }).then((res) => {
       AuthToken(res.data.loginBusinessOwner.access_token);
       localStorage.setItem(
-        "accessToken",
+        'accessToken',
         res.data.loginBusinessOwner.access_token,
       );
 
-      showSuccess("Welcome back!");
+      showSuccess('Welcome back!');
 
       setTimeout(() => {
         fetchCurrentUser();
@@ -193,7 +217,7 @@ export const useAuth = () => {
         token,
       },
     }).then(() => {
-      showSuccess("Email Verified!");
+      showSuccess('Email Verified!');
       onSuccess();
     });
   };
@@ -215,11 +239,11 @@ export const useAuth = () => {
   return {
     user,
     token,
-    loading: registering || verifyingEmail || fetchingUser || loggingIn,
+    loading: registering || verifyingEmail || fetchingUser || loggingIn || loggingEmployeeIn,
     signOut,
     verifyEmail: handleVerifyEmail,
     fetchCurrentUser,
-    // signInEmployee,
+    signInEmployee,
     signInOwner,
     signUp,
     resetPassword,

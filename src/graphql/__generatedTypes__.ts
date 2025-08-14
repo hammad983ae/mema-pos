@@ -389,6 +389,7 @@ export type Mutation = {
   deleteStoreLocation: Scalars['Boolean']['output'];
   deleteSupplier: Scalars['Boolean']['output'];
   loginBusinessOwner: LoginResponse;
+  loginEmployee: LoginResponse;
   markAllRead: Scalars['Boolean']['output'];
   registerBusinessOwner: LoginResponse;
   removeReceiptUser: Scalars['Boolean']['output'];
@@ -549,6 +550,11 @@ export type MutationLoginBusinessOwnerArgs = {
 };
 
 
+export type MutationLoginEmployeeArgs = {
+  input: PinLoginInput;
+};
+
+
 export type MutationRegisterBusinessOwnerArgs = {
   input: RegisterInput;
 };
@@ -697,6 +703,11 @@ export enum PaymentType {
   Cash = 'CASH',
   Check = 'CHECK'
 }
+
+export type PinLoginInput = {
+  pin: Scalars['String']['input'];
+  username: Scalars['String']['input'];
+};
 
 export type Product = {
   __typename?: 'Product';

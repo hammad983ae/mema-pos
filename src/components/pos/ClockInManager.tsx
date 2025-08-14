@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Clock, LogIn, LogOut, User, Users, Timer } from "lucide-react";
-import { useMutation, useQuery } from "@apollo/client";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Clock, LogIn, LogOut, User, Users, Timer } from 'lucide-react';
+import { useMutation, useQuery } from '@apollo/client';
 import {
   CLOCK_IN,
   CLOCK_OUT,
@@ -16,13 +16,16 @@ import {
   Query,
   QueryFindUserActiveEmployeeClockArgs,
   QueryGetEmployeeClocksByBusinessArgs,
-} from "@/graphql";
-import { useAuth } from "@/hooks/useAuth.tsx";
-import { showSuccess } from "@/hooks/useToastMessages.tsx";
+} from '@/graphql';
+import { useAuth } from '@/hooks/useAuth.tsx';
+import { showSuccess } from '@/hooks/useToastMessages.tsx';
+import { PosAuthDialog } from '@/components/auth/PosAuthDialog.tsx';
 
 const ClockInManager = () => {
   const { user } = useAuth();
   const session = PosSession();
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [clockIn, { loading: clockingIn }] = useMutation<
     Mutation,
     MutationClockInArgs
@@ -36,7 +39,7 @@ const ClockInManager = () => {
     GET_EMPLOYEE_CLOCKS,
     {
       variables: { filters: { is_active: true, store_id: session.store.id } },
-      fetchPolicy: "network-only",
+      fetchPolicy: 'network-only',
     },
   );
   const {
@@ -47,7 +50,7 @@ const ClockInManager = () => {
     GET_USER_ACTIVE_CLOCK,
     {
       variables: { userId: user.id },
-      fetchPolicy: "network-only",
+      fetchPolicy: 'network-only',
     },
   );
 
@@ -56,31 +59,32 @@ const ClockInManager = () => {
     refetchEmployees();
   };
 
-  const handleClockIn = async () => {
+  const handleClockIn = () => {
     clockIn({
       variables: {
         storeId: session.store.id,
       },
     }).then(() => {
-      showSuccess("You have clocked in successfully");
-
+      showSuccess('You have clocked in successfully');
       refetch();
+      handleAuthSuccess();
     });
   };
 
-  const handleClockOut = async () => {
+  const handleClockOut = () => {
     if (!currentEmployeeData?.findUserActiveEmployeeClock) return;
 
     clockOut().then(() => {
-      showSuccess("You have clocked out successfully");
+      showSuccess('You have clocked out successfully');
       refetch();
+      handleAuthSuccess();
     });
   };
 
   const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
+    return new Date(timestamp).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
@@ -95,6 +99,24 @@ const ClockInManager = () => {
       return `${diffHours}h ${diffMinutes}m`;
     }
     return `${diffMinutes}m`;
+  };
+
+  const handleAuth = () => {
+    if (!isAuthenticated) {
+      setShowAuthDialog(true);
+      return;
+    } else {
+      if (currentEmployeeData?.findUserActiveEmployeeClock) {
+        handleClockOut();
+      } else {
+        handleClockIn();
+      }
+    }
+  };
+
+  const handleAuthSuccess = () => {
+    setIsAuthenticated(true);
+    setShowAuthDialog(false);
   };
 
   return (
@@ -115,7 +137,7 @@ const ClockInManager = () => {
                 <span className="text-sm">
                   {currentEmployeeData?.findUserActiveEmployeeClock ? (
                     <>
-                      Clocked in at{" "}
+                      Clocked in at{' '}
                       {formatTime(
                         currentEmployeeData?.findUserActiveEmployeeClock
                           .clocked_in_at,
@@ -128,7 +150,7 @@ const ClockInManager = () => {
                       </Badge>
                     </>
                   ) : (
-                    "Not clocked in"
+                    'Not clocked in'
                   )}
                 </span>
               </div>
@@ -136,7 +158,7 @@ const ClockInManager = () => {
 
             {currentEmployeeData?.findUserActiveEmployeeClock ? (
               <Button
-                onClick={handleClockOut}
+                onClick={handleAuth}
                 disabled={clockingOut}
                 variant="outline"
                 className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
@@ -146,7 +168,7 @@ const ClockInManager = () => {
               </Button>
             ) : (
               <Button
-                onClick={handleClockIn}
+                onClick={handleAuth}
                 disabled={clockingIn}
                 className="bg-success hover:bg-success/90"
               >
@@ -211,6 +233,22 @@ const ClockInManager = () => {
           )}
         </CardContent>
       </Card>
+
+      {!isAuthenticated && showAuthDialog && <PosAuthDialog
+        isOpen={showAuthDialog}
+        onClose={() => {
+          setShowAuthDialog(false);
+        }}
+        onSuccess={() => {
+          if (currentEmployeeData?.findUserActiveEmployeeClock) {
+            handleClockOut();
+          } else {
+            handleClockIn();
+          }
+        }}
+        title="Authentication Required"
+        description="Please enter your credentials to clock in/out"
+      />}
     </div>
   );
 };
