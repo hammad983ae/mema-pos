@@ -1,17 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { 
-  User, 
-  Phone, 
-  Mail, 
-  Calendar, 
-  DollarSign, 
+import {
+  Phone,
+  Mail,
+  Calendar,
+  DollarSign,
   Star,
   MapPin,
   Gift,
@@ -20,36 +17,11 @@ import {
   History,
   Shield,
   FileText,
-  PenTool
+  PenTool,
 } from "lucide-react";
 import { format } from "date-fns";
-
-interface Customer {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  date_of_birth: string;
-  total_spent: number;
-  visit_count: number;
-  last_visit_date: string;
-  loyalty_points: number;
-  skin_type: string;
-  skin_concerns: string[];
-  notes: string;
-  address_line_1: string;
-  address_line_2: string;
-  city: string;
-  state_province: string;
-  postal_code: string;
-  country: string;
-  id_document_path: string;
-  id_document_type: string;
-  signature_path: string;
-  verification_date: string;
-  verified_by: string;
-}
+import { GET_CUSTOMER_BY_ID, Query, QueryGetCustomerByIdArgs } from "@/graphql";
+import { useQuery } from "@apollo/client";
 
 interface CustomerProfileProps {
   customerId: string;
@@ -57,98 +29,111 @@ interface CustomerProfileProps {
   onClose: () => void;
 }
 
-export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfileProps) => {
-  const [customer, setCustomer] = useState<Customer | null>(null);
+export const CustomerProfile = ({
+  customerId,
+  onEdit,
+  onClose,
+}: CustomerProfileProps) => {
   const [visits, setVisits] = useState<any[]>([]);
   const [preferences, setPreferences] = useState<any[]>([]);
   const [communications, setCommunications] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+  const { data, loading, refetch } = useQuery<Query, QueryGetCustomerByIdArgs>(
+    GET_CUSTOMER_BY_ID,
+    {
+      variables: {
+        id: customerId,
+      },
+      fetchPolicy: "network-only",
+    },
+  );
 
-  useEffect(() => {
-    if (customerId) {
-      fetchCustomerData();
-    }
-  }, [customerId]);
-
-  const fetchCustomerData = async () => {
-    try {
-      setLoading(true);
-
-      // Fetch customer details
-      const { data: customerData, error: customerError } = await supabase
-        .from("customers")
-        .select("*")
-        .eq("id", customerId)
-        .single();
-
-      if (customerError) throw customerError;
-      setCustomer(customerData);
-
-      // Fetch visits
-      const { data: visitsData } = await supabase
-        .from("customer_visits")
-        .select("*")
-        .eq("customer_id", customerId)
-        .order("visit_date", { ascending: false });
-      
-      setVisits(visitsData || []);
-
-      // Fetch preferences
-      const { data: preferencesData } = await supabase
-        .from("customer_preferences")
-        .select("*")
-        .eq("customer_id", customerId);
-      
-      setPreferences(preferencesData || []);
-
-      // Fetch communications
-      const { data: communicationsData } = await supabase
-        .from("customer_communications")
-        .select("*")
-        .eq("customer_id", customerId)
-        .order("sent_at", { ascending: false });
-      
-      setCommunications(communicationsData || []);
-
-      // Fetch order history
-      const { data: ordersData } = await supabase
-        .from("orders")
-        .select(`
-          *,
-          order_items(
-            *,
-            products(name, price)
-          )
-        `)
-        .eq("customer_id", customerId)
-        .order("created_at", { ascending: false });
-      
-      setOrders(ordersData || []);
-
-    } catch (error: any) {
-      console.error("Error fetching customer data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load customer data",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const fetchCustomerData = async () => {
+  //   try {
+  //     setLoading(true);
+  //
+  //     // Fetch customer details
+  //     const { data: customerData, error: customerError } = await supabase
+  //       .from("customers")
+  //       .select("*")
+  //       .eq("id", customerId)
+  //       .single();
+  //
+  //     if (customerError) throw customerError;
+  //     setCustomer(customerData);
+  //
+  //     // Fetch visits
+  //     const { data: visitsData } = await supabase
+  //       .from("customer_visits")
+  //       .select("*")
+  //       .eq("customer_id", customerId)
+  //       .order("visit_date", { ascending: false });
+  //
+  //     setVisits(visitsData || []);
+  //
+  //     // Fetch preferences
+  //     const { data: preferencesData } = await supabase
+  //       .from("customer_preferences")
+  //       .select("*")
+  //       .eq("customer_id", customerId);
+  //
+  //     setPreferences(preferencesData || []);
+  //
+  //     // Fetch communications
+  //     const { data: communicationsData } = await supabase
+  //       .from("customer_communications")
+  //       .select("*")
+  //       .eq("customer_id", customerId)
+  //       .order("sent_at", { ascending: false });
+  //
+  //     setCommunications(communicationsData || []);
+  //
+  //     // Fetch order history
+  //     const { data: ordersData } = await supabase
+  //       .from("orders")
+  //       .select(
+  //         `
+  //         *,
+  //         order_items(
+  //           *,
+  //           products(name, price)
+  //         )
+  //       `,
+  //       )
+  //       .eq("customer_id", customerId)
+  //       .order("created_at", { ascending: false });
+  //
+  //     setOrders(ordersData || []);
+  //   } catch (error: any) {
+  //     console.error("Error fetching customer data:", error);
+  //     toast({
+  //       title: "Error",
+  //       description: "Failed to load customer data",
+  //       variant: "destructive",
+  //     });
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64">Loading customer profile...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        Loading customer profile...
+      </div>
+    );
   }
 
-  if (!customer) {
-    return <div className="text-center text-muted-foreground">Customer not found</div>;
+  if (!data?.getCustomerById) {
+    return (
+      <div className="text-center text-muted-foreground">
+        Customer not found
+      </div>
+    );
   }
 
-  const customerName = `${customer.first_name} ${customer.last_name}`;
-  
+  const customerName = `${data?.getCustomerById.first_name} ${data?.getCustomerById.last_name}`;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -156,16 +141,28 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
         <div className="flex items-center space-x-4">
           <Avatar className="h-16 w-16">
             <AvatarFallback className="text-lg">
-              {customer.first_name?.charAt(0)}{customer.last_name?.charAt(0)}
+              {data?.getCustomerById.first_name?.charAt(0)}
+              {data?.getCustomerById.last_name?.charAt(0)}
             </AvatarFallback>
           </Avatar>
           <div>
             <h2 className="text-2xl font-bold">{customerName}</h2>
-            <p className="text-muted-foreground">Customer since {format(new Date(customer.last_visit_date || new Date()), 'MMM yyyy')}</p>
+            <p className="text-muted-foreground">
+              Customer since{" "}
+              {format(
+                new Date(data?.getCustomerById.last_visit_date || new Date()),
+                "MMM yyyy",
+              )}
+            </p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="sm" onClick={onClose} className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="flex items-center gap-2"
+          >
             ← Back
           </Button>
           <Button variant="outline" onClick={onEdit}>
@@ -183,7 +180,11 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
               <DollarSign className="h-4 w-4 text-green-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Total Spent</p>
-                <p className="text-lg font-semibold">${customer.total_spent?.toFixed(2) || '0.00'}</p>
+                <p className="text-lg font-semibold">
+                  $
+                  {Number(data?.getCustomerById.total_spent)?.toFixed(2) ||
+                    "0.00"}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -195,7 +196,9 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
               <History className="h-4 w-4 text-blue-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Total Visits</p>
-                <p className="text-lg font-semibold">{customer.visit_count || 0}</p>
+                <p className="text-lg font-semibold">
+                  {data?.getCustomerById.visit_count || 0}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -207,7 +210,9 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
               <Gift className="h-4 w-4 text-purple-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Loyalty Points</p>
-                <p className="text-lg font-semibold">{customer.loyalty_points || 0}</p>
+                <p className="text-lg font-semibold">
+                  {data?.getCustomerById.loyalty_points || 0}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -220,7 +225,12 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
               <div>
                 <p className="text-sm text-muted-foreground">Last Visit</p>
                 <p className="text-lg font-semibold">
-                  {customer.last_visit_date ? format(new Date(customer.last_visit_date), 'MMM dd') : 'Never'}
+                  {data?.getCustomerById.last_visit_date
+                    ? format(
+                        new Date(data?.getCustomerById.last_visit_date),
+                        "MMM dd",
+                      )
+                    : "Never"}
                 </p>
               </div>
             </div>
@@ -248,19 +258,21 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
               <CardContent className="space-y-3">
                 <div className="flex items-center space-x-2">
                   <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span>{customer.email || 'No email'}</span>
+                  <span>{data?.getCustomerById.email || "No email"}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{customer.phone || 'No phone'}</span>
+                  <span>{data?.getCustomerById.phone || "No phone"}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span>
-                    {customer.date_of_birth 
-                      ? format(new Date(customer.date_of_birth), 'MMM dd, yyyy')
-                      : 'No birthday set'
-                    }
+                    {data?.getCustomerById.date_of_birth
+                      ? format(
+                          new Date(data?.getCustomerById.date_of_birth),
+                          "MMM dd, yyyy",
+                        )
+                      : "No birthday set"}
                   </span>
                 </div>
               </CardContent>
@@ -274,19 +286,27 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
                 <div className="flex items-start space-x-2">
                   <MapPin className="h-4 w-4 text-muted-foreground mt-1" />
                   <div className="flex-1">
-                    {customer.address_line_1 ? (
+                    {data?.getCustomerById.address_line_1 ? (
                       <div className="space-y-1">
-                        <div>{customer.address_line_1}</div>
-                        {customer.address_line_2 && <div>{customer.address_line_2}</div>}
+                        <div>{data?.getCustomerById.address_line_1}</div>
+                        {data?.getCustomerById.address_line_2 && (
+                          <div>{data?.getCustomerById.address_line_2}</div>
+                        )}
                         <div>
-                          {customer.city && `${customer.city}, `}
-                          {customer.state_province && `${customer.state_province} `}
-                          {customer.postal_code}
+                          {data?.getCustomerById.city &&
+                            `${data?.getCustomerById.city}, `}
+                          {data?.getCustomerById.state_province &&
+                            `${data?.getCustomerById.state_province} `}
+                          {data?.getCustomerById.postal_code}
                         </div>
-                        {customer.country && <div>{customer.country}</div>}
+                        {data?.getCustomerById.country && (
+                          <div>{data?.getCustomerById.country}</div>
+                        )}
                       </div>
                     ) : (
-                      <span className="text-muted-foreground">No address on file</span>
+                      <span className="text-muted-foreground">
+                        No address on file
+                      </span>
                     )}
                   </div>
                 </div>
@@ -303,15 +323,29 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
                 <div className="flex items-center space-x-2">
                   <Shield className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">
-                    {customer.verification_date ? 'Verified Customer' : 'Unverified'}
+                    {data?.getCustomerById.verification_date
+                      ? "Verified Customer"
+                      : "Unverified"}
                   </span>
-                  <Badge variant={customer.verification_date ? 'default' : 'secondary'}>
-                    {customer.verification_date ? 'Verified' : 'Pending'}
+                  <Badge
+                    variant={
+                      data?.getCustomerById.verification_date
+                        ? "default"
+                        : "secondary"
+                    }
+                  >
+                    {data?.getCustomerById.verification_date
+                      ? "Verified"
+                      : "Pending"}
                   </Badge>
                 </div>
-                {customer.verification_date && (
+                {data?.getCustomerById.verification_date && (
                   <div className="text-sm text-muted-foreground">
-                    Verified on {format(new Date(customer.verification_date), 'MMM dd, yyyy')}
+                    Verified on{" "}
+                    {format(
+                      new Date(data?.getCustomerById.verification_date),
+                      "MMM dd, yyyy",
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -323,18 +357,30 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Skin Type</p>
-                  <Badge variant="outline">{customer.skin_type || 'Not specified'}</Badge>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Skin Type
+                  </p>
+                  <Badge variant="outline">
+                    {data?.getCustomerById.skin_type || "Not specified"}
+                  </Badge>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">Skin Concerns</p>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Skin Concerns
+                  </p>
                   <div className="flex flex-wrap gap-1">
-                    {customer.skin_concerns?.length > 0 ? (
-                      customer.skin_concerns.map((concern, index) => (
-                        <Badge key={index} variant="secondary">{concern}</Badge>
-                      ))
+                    {data?.getCustomerById.skin_concerns?.length > 0 ? (
+                      data?.getCustomerById.skin_concerns.map(
+                        (concern, index) => (
+                          <Badge key={index} variant="secondary">
+                            {concern}
+                          </Badge>
+                        ),
+                      )
                     ) : (
-                      <span className="text-sm text-muted-foreground">None specified</span>
+                      <span className="text-sm text-muted-foreground">
+                        None specified
+                      </span>
                     )}
                   </div>
                 </div>
@@ -342,13 +388,13 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
             </Card>
           </div>
 
-          {customer.notes && (
+          {data?.getCustomerById.notes && (
             <Card>
               <CardHeader>
                 <CardTitle>Notes</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm">{customer.notes}</p>
+                <p className="text-sm">{data?.getCustomerById.notes}</p>
               </CardContent>
             </Card>
           )}
@@ -356,7 +402,7 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
 
         <TabsContent value="verification" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {customer.id_document_path && (
+            {data?.getCustomerById.id_document_path && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
@@ -366,17 +412,23 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Document Type</p>
-                    <Badge variant="outline">{customer.id_document_type}</Badge>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Document Type
+                    </p>
+                    <Badge variant="outline">
+                      {data?.getCustomerById.id_document_type}
+                    </Badge>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground mb-2">Document Preview</p>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Document Preview
+                    </p>
                     <div className="border rounded-lg p-4 bg-muted/30">
                       <p className="text-sm text-center text-muted-foreground">
                         ID document on file
                       </p>
                       <p className="text-xs text-center text-muted-foreground mt-1">
-                        {customer.id_document_path}
+                        {data?.getCustomerById.id_document_path}
                       </p>
                     </div>
                   </div>
@@ -384,7 +436,7 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
               </Card>
             )}
 
-            {customer.signature_path && (
+            {data?.getCustomerById.signature_path && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
@@ -394,13 +446,15 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-2">Signature on File</p>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Signature on File
+                    </p>
                     <div className="border rounded-lg p-4 bg-muted/30">
                       <p className="text-sm text-center text-muted-foreground">
                         Digital signature captured
                       </p>
                       <p className="text-xs text-center text-muted-foreground mt-1">
-                        {customer.signature_path}
+                        {data?.getCustomerById.signature_path}
                       </p>
                     </div>
                   </div>
@@ -408,18 +462,24 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
               </Card>
             )}
 
-            {!customer.id_document_path && !customer.signature_path && (
-              <Card className="md:col-span-2">
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <h3 className="font-medium mb-2">No Verification Documents</h3>
-                  <p className="text-sm">No ID document or signature has been uploaded for this customer.</p>
-                </CardContent>
-              </Card>
-            )}
+            {!data?.getCustomerById.id_document_path &&
+              !data?.getCustomerById.signature_path && (
+                <Card className="md:col-span-2">
+                  <CardContent className="p-8 text-center text-muted-foreground">
+                    <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <h3 className="font-medium mb-2">
+                      No Verification Documents
+                    </h3>
+                    <p className="text-sm">
+                      No ID document or signature has been uploaded for this
+                      customer.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
           </div>
 
-          {customer.verification_date && (
+          {data?.getCustomerById.verification_date && (
             <Card>
               <CardHeader>
                 <CardTitle>Verification Details</CardTitle>
@@ -427,17 +487,28 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Verification Date:</span>
-                    <span className="text-sm">{format(new Date(customer.verification_date), 'PPP')}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Verification Date:
+                    </span>
+                    <span className="text-sm">
+                      {format(
+                        new Date(data?.getCustomerById.verification_date),
+                        "PPP",
+                      )}
+                    </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Documents Status:</span>
+                    <span className="text-sm text-muted-foreground">
+                      Documents Status:
+                    </span>
                     <Badge variant="default">Complete</Badge>
                   </div>
                   <div className="mt-4 p-3 bg-green-50 dark:bg-green-950 rounded-lg">
                     <div className="flex items-center space-x-2">
                       <Shield className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-medium text-green-600">Chargeback Protection Active</span>
+                      <span className="text-sm font-medium text-green-600">
+                        Chargeback Protection Active
+                      </span>
                     </div>
                     <p className="text-xs text-green-600 mt-1">
                       Customer identity verified with supporting documentation
@@ -458,15 +529,20 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
                     <div className="flex items-center space-x-2">
                       <Badge>{visit.visit_type}</Badge>
                       <span className="font-medium">
-                        {format(new Date(visit.visit_date), 'MMM dd, yyyy')}
+                        {format(new Date(visit.visit_date), "MMM dd, yyyy")}
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium">${visit.total_spent}</span>
+                      <span className="text-sm font-medium">
+                        ${visit.total_spent}
+                      </span>
                       {visit.satisfaction_rating && (
                         <div className="flex items-center">
                           {[...Array(visit.satisfaction_rating)].map((_, i) => (
-                            <Star key={i} className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                            <Star
+                              key={i}
+                              className="h-3 w-3 fill-yellow-400 text-yellow-400"
+                            />
                           ))}
                         </div>
                       )}
@@ -474,16 +550,28 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
                   </div>
                   {visit.services_provided?.length > 0 && (
                     <div className="mb-2">
-                      <p className="text-xs text-muted-foreground mb-1">Services:</p>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Services:
+                      </p>
                       <div className="flex flex-wrap gap-1">
-                        {visit.services_provided.map((service: string, index: number) => (
-                          <Badge key={index} variant="outline" className="text-xs">{service}</Badge>
-                        ))}
+                        {visit.services_provided.map(
+                          (service: string, index: number) => (
+                            <Badge
+                              key={index}
+                              variant="outline"
+                              className="text-xs"
+                            >
+                              {service}
+                            </Badge>
+                          ),
+                        )}
                       </div>
                     </div>
                   )}
                   {visit.notes && (
-                    <p className="text-sm text-muted-foreground">{visit.notes}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {visit.notes}
+                    </p>
                   )}
                 </CardContent>
               </Card>
@@ -504,20 +592,29 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <span className="font-medium">Order #{order.order_number}</span>
+                      <span className="font-medium">
+                        Order #{order.order_number}
+                      </span>
                       <p className="text-sm text-muted-foreground">
-                        {format(new Date(order.created_at), 'MMM dd, yyyy')}
+                        {format(new Date(order.created_at), "MMM dd, yyyy")}
                       </p>
                     </div>
                     <span className="font-semibold">${order.total}</span>
                   </div>
                   {order.order_items?.length > 0 && (
                     <div className="mt-2">
-                      <p className="text-xs text-muted-foreground mb-1">Items:</p>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Items:
+                      </p>
                       <div className="space-y-1">
                         {order.order_items.map((item: any) => (
-                          <div key={item.id} className="flex justify-between text-sm">
-                            <span>{item.products?.name} x{item.quantity}</span>
+                          <div
+                            key={item.id}
+                            className="flex justify-between text-sm"
+                          >
+                            <span>
+                              {item.products?.name} x{item.quantity}
+                            </span>
                             <span>${item.total_price}</span>
                           </div>
                         ))}
@@ -543,12 +640,18 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium capitalize">{pref.preference_category.replace('_', ' ')}</p>
-                      <p className="text-sm text-muted-foreground">{pref.preference_value}</p>
+                      <p className="font-medium capitalize">
+                        {pref.preference_category.replace("_", " ")}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {pref.preference_value}
+                      </p>
                     </div>
                   </div>
                   {pref.notes && (
-                    <p className="text-sm text-muted-foreground mt-2">{pref.notes}</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {pref.notes}
+                    </p>
                   )}
                 </CardContent>
               </Card>
@@ -570,18 +673,24 @@ export const CustomerProfile = ({ customerId, onEdit, onClose }: CustomerProfile
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
                       <MessageCircle className="h-4 w-4" />
-                      <Badge variant={comm.direction === 'inbound' ? 'default' : 'secondary'}>
+                      <Badge
+                        variant={
+                          comm.direction === "inbound" ? "default" : "secondary"
+                        }
+                      >
                         {comm.communication_type} - {comm.direction}
                       </Badge>
                     </div>
                     <span className="text-sm text-muted-foreground">
-                      {format(new Date(comm.sent_at), 'MMM dd, yyyy')}
+                      {format(new Date(comm.sent_at), "MMM dd, yyyy")}
                     </span>
                   </div>
                   {comm.subject && (
                     <p className="font-medium mb-1">{comm.subject}</p>
                   )}
-                  <p className="text-sm text-muted-foreground">{comm.content}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {comm.content}
+                  </p>
                 </CardContent>
               </Card>
             ))

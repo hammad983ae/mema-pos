@@ -35,9 +35,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
 import { PosAuthDialog } from "@/components/auth/PosAuthDialog";
 import {
   Calendar,
@@ -54,23 +52,20 @@ import {
   Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
-import { UserRole } from "@/graphql";
-
-interface Customer {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  date_of_birth: string;
-  total_spent: number;
-  visit_count: number;
-  last_visit_date: string;
-  loyalty_points: number;
-  skin_type: string;
-  skin_concerns: string[];
-  created_at: string;
-}
+import {
+  Customer,
+  DELETE_CUSTOMER,
+  GET_CUSTOMERS,
+  Mutation,
+  MutationDeleteCustomerArgs,
+  Query,
+  QueryGetCustomersArgs,
+  UserRole,
+} from "@/graphql";
+import { useMutation, useQuery } from "@apollo/client";
+import { useDebounce } from "@/hooks/useDebounce.ts";
+import { showSuccess } from "@/hooks/useToastMessages.tsx";
+import Pagination from "@/components/ui/pagination.tsx";
 
 interface CustomerListProps {
   onSelectCustomer: (customerId: string) => void;
@@ -86,10 +81,6 @@ export const CustomerList = ({
   refreshTrigger,
 }: CustomerListProps) => {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("last_visit_date");
   const [filterBy, setFilterBy] = useState("all");
@@ -97,123 +88,35 @@ export const CustomerList = ({
   const [authAction, setAuthAction] = useState<() => void>(() => {});
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const debouncedSearch = useDebounce(searchQuery, 300);
+  const [deleteCustomer, { loading: deleting }] = useMutation<
+    Mutation,
+    MutationDeleteCustomerArgs
+  >(DELETE_CUSTOMER);
+  const { data, loading, refetch } = useQuery<Query, QueryGetCustomersArgs>(
+    GET_CUSTOMERS,
+    {
+      fetchPolicy: "network-only",
+      variables: {
+        pagination: { page, take: 10 },
+        filters: {
+          search: debouncedSearch,
+          filter_by: filterBy === "all" ? null : filterBy,
+          sort_by: sortBy,
+        },
+      },
+    },
+  );
 
   useEffect(() => {
-    fetchCustomers();
-  }, [user, refreshTrigger]);
+    if (page !== 1) setPage(1);
+    else refetch();
+  }, [refreshTrigger]);
 
   useEffect(() => {
-    filterAndSortCustomers();
-  }, [customers, searchQuery, sortBy, filterBy]);
-
-  const fetchCustomers = async () => {
-    if (!user) return;
-
-    try {
-      setLoading(true);
-
-      // Get user's business context
-      const { data: membershipData } = await supabase
-        .from("user_business_memberships")
-        .select("business_id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .single();
-
-      if (!membershipData) return;
-
-      const { data, error } = await supabase
-        .from("customers")
-        .select("*")
-        .eq("business_id", membershipData.business_id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setCustomers(data || []);
-    } catch (error: any) {
-      console.error("Error fetching customers:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load customers",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filterAndSortCustomers = () => {
-    let filtered = [...customers];
-
-    // Apply search filter
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (customer) =>
-          `${customer.first_name} ${customer.last_name}`
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          customer.phone?.includes(searchQuery),
-      );
-    }
-
-    // Apply category filter
-    switch (filterBy) {
-      case "recent":
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        filtered = filtered.filter(
-          (customer) =>
-            customer.last_visit_date &&
-            new Date(customer.last_visit_date) > thirtyDaysAgo,
-        );
-        break;
-      case "high_value":
-        filtered = filtered.filter(
-          (customer) => (customer.total_spent || 0) > 500,
-        );
-        break;
-      case "loyalty":
-        filtered = filtered.filter(
-          (customer) => (customer.loyalty_points || 0) > 100,
-        );
-        break;
-      case "birthdays":
-        const today = new Date();
-        const currentMonth = today.getMonth();
-        filtered = filtered.filter((customer) => {
-          if (!customer.date_of_birth) return false;
-          const birthMonth = new Date(customer.date_of_birth).getMonth();
-          return birthMonth === currentMonth;
-        });
-        break;
-    }
-
-    // Apply sorting
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "name":
-          return `${a.first_name} ${a.last_name}`.localeCompare(
-            `${b.first_name} ${b.last_name}`,
-          );
-        case "total_spent":
-          return (b.total_spent || 0) - (a.total_spent || 0);
-        case "visit_count":
-          return (b.visit_count || 0) - (a.visit_count || 0);
-        case "last_visit_date":
-        default:
-          if (!a.last_visit_date && !b.last_visit_date) return 0;
-          if (!a.last_visit_date) return 1;
-          if (!b.last_visit_date) return -1;
-          return (
-            new Date(b.last_visit_date).getTime() -
-            new Date(a.last_visit_date).getTime()
-          );
-      }
-    });
-
-    setFilteredCustomers(filtered);
-  };
+    if (page !== 1) setPage(1);
+  }, [debouncedSearch, sortBy, filterBy]);
 
   const requiresAuth = (action: () => void) => {
     // If user is business owner, allow without additional auth
@@ -228,29 +131,10 @@ export const CustomerList = ({
   };
 
   const handleDeleteCustomer = async (customerId: string) => {
-    try {
-      const { error } = await supabase
-        .from("customers")
-        .delete()
-        .eq("id", customerId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Customer deleted successfully",
-      });
-
-      // Refresh the customer list
-      fetchCustomers();
-    } catch (error: any) {
-      console.error("Error deleting customer:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete customer",
-        variant: "destructive",
-      });
-    }
+    deleteCustomer({ variables: { id: customerId } }).then(() => {
+      showSuccess("Customer deleted successfully");
+      refetch();
+    });
   };
 
   const confirmDeleteCustomer = (customerId: string) => {
@@ -286,21 +170,7 @@ export const CustomerList = ({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Customer Management</h2>
-          <p className="text-muted-foreground">
-            {filteredCustomers.length} of {customers.length} customers
-          </p>
-        </div>
-        <Button onClick={onAddCustomer}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Customer
-        </Button>
-      </div>
-
+    <div className="space-y-4">
       {/* Filters and Search */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -356,7 +226,7 @@ export const CustomerList = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredCustomers.map((customer) => {
+            {data?.getCustomers?.data?.map((customer) => {
               const status = getCustomerStatus(customer);
               const customerName = `${customer.first_name} ${customer.last_name}`;
 
@@ -416,7 +286,7 @@ export const CustomerList = ({
                     <div className="flex items-center">
                       <DollarSign className="h-4 w-4 text-green-500 mr-1" />
                       <span className="font-medium">
-                        ${(customer.total_spent || 0).toFixed(2)}
+                        ${Number(customer.total_spent || 0).toFixed(2)}
                       </span>
                     </div>
                   </TableCell>
@@ -496,19 +366,15 @@ export const CustomerList = ({
           </TableBody>
         </Table>
 
-        {filteredCustomers.length === 0 && (
+        <Pagination
+          count={data?.getCustomers?.count}
+          page={page}
+          setPage={setPage}
+        />
+
+        {data?.getCustomers?.data?.length === 0 && (
           <div className="p-8 text-center text-muted-foreground">
-            {customers.length === 0 ? (
-              <div>
-                <p className="mb-2">No customers found</p>
-                <Button variant="outline" onClick={onAddCustomer}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add your first customer
-                </Button>
-              </div>
-            ) : (
-              <p>No customers match your current filters</p>
-            )}
+            <p className="mb-2">No customers found</p>
           </div>
         )}
       </Card>
@@ -538,6 +404,7 @@ export const CustomerList = ({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
+              disabled={deleting}
               onClick={() => {
                 if (customerToDelete) {
                   handleDeleteCustomer(customerToDelete);

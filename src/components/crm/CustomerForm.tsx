@@ -3,7 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +17,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { X, Upload, FileText } from "lucide-react";
 import { SignatureCapture } from "./SignatureCapture";
+import { useMutation, useQuery } from "@apollo/client";
+import {
+  CREATE_CUSTOMER,
+  GET_CUSTOMER_BY_ID,
+  Mutation,
+  MutationCreateCustomerArgs,
+  MutationUpdateCustomerArgs,
+  Query,
+  QueryGetCustomerByIdArgs,
+  UPDATE_CUSTOMER,
+} from "@/graphql";
+import { showError, showSuccess } from "@/hooks/useToastMessages.tsx";
 
 interface CustomerFormProps {
   customerId?: string;
@@ -18,116 +36,117 @@ interface CustomerFormProps {
   onCancel: () => void;
 }
 
-export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps) => {
+export const CustomerForm = ({
+  customerId,
+  onSave,
+  onCancel,
+}: CustomerFormProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const { data } = useQuery<Query, QueryGetCustomerByIdArgs>(
+    GET_CUSTOMER_BY_ID,
+    {
+      skip: !customerId,
+      variables: {
+        id: customerId,
+      },
+      fetchPolicy: "network-only",
+    },
+  );
+  const [createCustomer, { loading: creating }] = useMutation<
+    Mutation,
+    MutationCreateCustomerArgs
+  >(CREATE_CUSTOMER);
+  const [updateCustomer, { loading: updating }] = useMutation<
+    Mutation,
+    MutationUpdateCustomerArgs
+  >(UPDATE_CUSTOMER);
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    date_of_birth: '',
-    skin_type: '',
-    notes: '',
-    address_line_1: '',
-    address_line_2: '',
-    city: '',
-    state_province: '',
-    postal_code: '',
-    country: 'United States',
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    date_of_birth: "",
+    skin_type: "",
+    notes: "",
+    address_line_1: "",
+    address_line_2: "",
+    city: "",
+    state_province: "",
+    postal_code: "",
+    country: "United States",
   });
   const [skinConcerns, setSkinConcerns] = useState<string[]>([]);
-  const [newSkinConcern, setNewSkinConcern] = useState('');
+  const [newSkinConcern, setNewSkinConcern] = useState("");
   const [idDocument, setIdDocument] = useState<File | null>(null);
-  const [idDocumentType, setIdDocumentType] = useState('');
-  const [signatureDataUrl, setSignatureDataUrl] = useState<string>('');
+  const [idDocumentType, setIdDocumentType] = useState("");
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string>("");
   const [uploading, setUploading] = useState(false);
 
   const skinTypes = [
-    'Normal',
-    'Dry',
-    'Oily',
-    'Combination',
-    'Sensitive',
-    'Mature',
-    'Acne-prone'
+    "Normal",
+    "Dry",
+    "Oily",
+    "Combination",
+    "Sensitive",
+    "Mature",
+    "Acne-prone",
   ];
 
   const commonSkinConcerns = [
-    'Acne',
-    'Dark spots',
-    'Fine lines',
-    'Wrinkles',
-    'Dryness',
-    'Oiliness',
-    'Sensitivity',
-    'Rosacea',
-    'Hyperpigmentation',
-    'Large pores',
-    'Blackheads',
-    'Uneven texture'
+    "Acne",
+    "Dark spots",
+    "Fine lines",
+    "Wrinkles",
+    "Dryness",
+    "Oiliness",
+    "Sensitivity",
+    "Rosacea",
+    "Hyperpigmentation",
+    "Large pores",
+    "Blackheads",
+    "Uneven texture",
   ];
 
   useEffect(() => {
-    if (customerId) {
-      fetchCustomerData();
-    }
-  }, [customerId]);
-
-  const fetchCustomerData = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('id', customerId)
-        .single();
-
-      if (error) throw error;
-
+    if (data?.getCustomerById) {
       setFormData({
-        first_name: data.first_name || '',
-        last_name: data.last_name || '',
-        email: data.email || '',
-        phone: data.phone || '',
-        date_of_birth: data.date_of_birth ? data.date_of_birth.split('T')[0] : '',
-        skin_type: data.skin_type || '',
-        notes: data.notes || '',
-        address_line_1: data.address_line_1 || '',
-        address_line_2: data.address_line_2 || '',
-        city: data.city || '',
-        state_province: data.state_province || '',
-        postal_code: data.postal_code || '',
-        country: data.country || 'United States',
+        first_name: data?.getCustomerById.first_name || "",
+        last_name: data?.getCustomerById.last_name || "",
+        email: data?.getCustomerById.email || "",
+        phone: data?.getCustomerById.phone || "",
+        date_of_birth: data?.getCustomerById.date_of_birth
+          ? data?.getCustomerById.date_of_birth.split("T")[0]
+          : "",
+        skin_type: data?.getCustomerById.skin_type || "",
+        notes: data?.getCustomerById.notes || "",
+        address_line_1: data?.getCustomerById.address_line_1 || "",
+        address_line_2: data?.getCustomerById.address_line_2 || "",
+        city: data?.getCustomerById.city || "",
+        state_province: data?.getCustomerById.state_province || "",
+        postal_code: data?.getCustomerById.postal_code || "",
+        country: data?.getCustomerById.country || "United States",
       });
-      
-      setIdDocumentType(data.id_document_type || '');
-      
+
+      setIdDocumentType(data?.getCustomerById.id_document_type || "");
+
+      setSkinConcerns(data?.getCustomerById.skin_concerns || []);
+
       // Load existing signature if available
-      if (data.signature_path) {
-        const { data: signatureData } = await supabase.storage
-          .from('customer-signatures')
-          .download(data.signature_path);
-        
-        if (signatureData) {
-          const url = URL.createObjectURL(signatureData);
-          setSignatureDataUrl(url);
-        }
+      if (data?.getCustomerById.signature_path) {
+        // const { data: signatureData } = await supabase.storage
+        //   .from('customer-signatures')
+        //   .download(data?.getCustomerById.signature_path);
+        // if (signatureData) {
+        //   const url = URL.createObjectURL(signatureData);
+        //   setSignatureDataUrl(url);
+        // }
       }
-      
-      setSkinConcerns(data.skin_concerns || []);
-    } catch (error: any) {
-      console.error('Error fetching customer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load customer data",
-        variant: "destructive",
-      });
     }
-  };
+  }, [data?.getCustomerById]);
 
   const uploadFile = async (file: File, bucket: string, folder: string) => {
-    const fileExt = file.name.split('.').pop();
+    const fileExt = file.name.split(".").pop();
     const fileName = `${Math.random()}.${fileExt}`;
     const filePath = `${folder}/${fileName}`;
 
@@ -142,117 +161,93 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
   const uploadSignature = async (dataUrl: string, customerId: string) => {
     const response = await fetch(dataUrl);
     const blob = await response.blob();
-    const file = new File([blob], `signature-${customerId}.png`, { type: 'image/png' });
-    return uploadFile(file, 'customer-signatures', customerId);
+    const file = new File([blob], `signature-${customerId}.png`, {
+      type: "image/png",
+    });
+    return uploadFile(file, "customer-signatures", customerId);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    // setLoading(true);
     setUploading(true);
 
     try {
-      // Get user's business context
-      const { data: membershipData } = await supabase
-        .from("user_business_memberships")
-        .select("business_id")
-        .eq("user_id", user?.id)
-        .eq("is_active", true)
-        .single();
-
-      if (!membershipData) {
-        throw new Error("User not associated with any business");
-      }
-
       let idDocumentPath = null;
       let signaturePath = null;
       let currentCustomerId = customerId;
 
-      // If creating a new customer, we need the ID first
       if (!customerId) {
-        const newCustomerData = {
+        const input = {
           ...formData,
           skin_concerns: skinConcerns,
-          business_id: membershipData.business_id,
           date_of_birth: formData.date_of_birth || null,
         };
 
-        const { data: newCustomer, error: createError } = await supabase
-          .from('customers')
-          .insert([newCustomerData])
-          .select('id')
-          .single();
+        const res = await createCustomer({ variables: { input } });
 
-        if (createError) throw createError;
-        currentCustomerId = newCustomer.id;
+        currentCustomerId = res.data.createCustomer.id;
       }
 
-      // Upload ID document if provided
       if (idDocument && currentCustomerId) {
-        idDocumentPath = await uploadFile(idDocument, 'customer-documents', currentCustomerId);
+        idDocumentPath = await uploadFile(
+          idDocument,
+          "customer-documents",
+          currentCustomerId,
+        );
       }
 
       // Upload signature if provided
       if (signatureDataUrl && currentCustomerId) {
-        signaturePath = await uploadSignature(signatureDataUrl, currentCustomerId);
+        signaturePath = await uploadSignature(
+          signatureDataUrl,
+          currentCustomerId,
+        );
       }
 
       const customerData = {
         ...formData,
         skin_concerns: skinConcerns,
-        business_id: membershipData.business_id,
         date_of_birth: formData.date_of_birth || null,
         id_document_path: idDocumentPath,
         id_document_type: idDocumentType,
         signature_path: signaturePath,
-        verification_date: (idDocumentPath || signaturePath) ? new Date().toISOString() : null,
-        verified_by: (idDocumentPath || signaturePath) ? user?.id : null,
+        verification_date:
+          idDocumentPath || signaturePath ? new Date().toISOString() : null,
+        verified_by: idDocumentPath || signaturePath ? user?.id : null,
       };
 
       if (customerId) {
-        // Update existing customer
-        const { error } = await supabase
-          .from('customers')
-          .update(customerData)
-          .eq('id', customerId);
-
-        if (error) throw error;
-
-        toast({
-          title: "Success",
-          description: "Customer updated successfully",
+        await updateCustomer({
+          variables: { input: { ...customerData, id: customerId } },
         });
+        showSuccess("Customer updated successfully");
       } else {
-        // Update the newly created customer with file paths
-        const { error } = await supabase
-          .from('customers')
-          .update({
-            id_document_path: idDocumentPath,
-            id_document_type: idDocumentType,
-            signature_path: signaturePath,
-            verification_date: (idDocumentPath || signaturePath) ? new Date().toISOString() : null,
-            verified_by: (idDocumentPath || signaturePath) ? user?.id : null,
-          })
-          .eq('id', currentCustomerId);
-
-        if (error) throw error;
-
-        toast({
-          title: "Success",
-          description: "Customer created successfully with verification documents",
+        await updateCustomer({
+          variables: {
+            input: {
+              id: currentCustomerId,
+              id_document_path: idDocumentPath,
+              id_document_type: idDocumentType,
+              signature_path: signaturePath,
+              verification_date:
+                idDocumentPath || signaturePath
+                  ? new Date().toISOString()
+                  : null,
+              verified_by: idDocumentPath || signaturePath ? user?.id : null,
+            },
+          },
         });
+
+        showSuccess(
+          "Customer created successfully with verification documents",
+        );
       }
 
       onSave();
     } catch (error: any) {
-      console.error('Error saving customer:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save customer",
-        variant: "destructive",
-      });
+      console.error("Error saving customer:", error);
     } finally {
-      setLoading(false);
       setUploading(false);
     }
   };
@@ -260,12 +255,12 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
   const addSkinConcern = (concern: string) => {
     if (concern && !skinConcerns.includes(concern)) {
       setSkinConcerns([...skinConcerns, concern]);
-      setNewSkinConcern('');
+      setNewSkinConcern("");
     }
   };
 
   const removeSkinConcern = (concern: string) => {
-    setSkinConcerns(skinConcerns.filter(c => c !== concern));
+    setSkinConcerns(skinConcerns.filter((c) => c !== concern));
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -284,18 +279,25 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
   };
 
   const idDocumentTypes = [
-    'Driver\'s License',
-    'Passport',
-    'State ID',
-    'Military ID',
-    'Other Government ID'
+    "Driver's License",
+    "Passport",
+    "State ID",
+    "Military ID",
+    "Other Government ID",
   ];
 
   return (
     <Card className="max-w-2xl mx-auto">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle>{customerId ? 'Edit Customer' : 'Add New Customer'}</CardTitle>
-        <Button variant="ghost" size="sm" onClick={onCancel} className="flex items-center gap-2">
+        <CardTitle>
+          {customerId ? "Edit Customer" : "Add New Customer"}
+        </CardTitle>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onCancel}
+          className="flex items-center gap-2"
+        >
           ← Back
         </Button>
       </CardHeader>
@@ -309,7 +311,9 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
                 id="first_name"
                 required
                 value={formData.first_name}
-                onChange={(e) => setFormData({...formData, first_name: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, first_name: e.target.value })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -318,7 +322,9 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
                 id="last_name"
                 required
                 value={formData.last_name}
-                onChange={(e) => setFormData({...formData, last_name: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, last_name: e.target.value })
+                }
               />
             </div>
           </div>
@@ -331,7 +337,9 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -340,7 +348,9 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
                 id="phone"
                 type="tel"
                 value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, phone: e.target.value })
+                }
               />
             </div>
           </div>
@@ -354,7 +364,9 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
                 id="address_line_1"
                 placeholder="Street address"
                 value={formData.address_line_1}
-                onChange={(e) => setFormData({...formData, address_line_1: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, address_line_1: e.target.value })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -363,7 +375,9 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
                 id="address_line_2"
                 placeholder="Apartment, suite, etc."
                 value={formData.address_line_2}
-                onChange={(e) => setFormData({...formData, address_line_2: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, address_line_2: e.target.value })
+                }
               />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -372,7 +386,9 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
                 <Input
                   id="city"
                   value={formData.city}
-                  onChange={(e) => setFormData({...formData, city: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, city: e.target.value })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -380,7 +396,9 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
                 <Input
                   id="state_province"
                   value={formData.state_province}
-                  onChange={(e) => setFormData({...formData, state_province: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, state_province: e.target.value })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -388,7 +406,9 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
                 <Input
                   id="postal_code"
                   value={formData.postal_code}
-                  onChange={(e) => setFormData({...formData, postal_code: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, postal_code: e.target.value })
+                  }
                 />
               </div>
             </div>
@@ -397,7 +417,9 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
               <Input
                 id="country"
                 value={formData.country}
-                onChange={(e) => setFormData({...formData, country: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, country: e.target.value })
+                }
               />
             </div>
           </div>
@@ -410,14 +432,18 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
                 id="date_of_birth"
                 type="date"
                 value={formData.date_of_birth}
-                onChange={(e) => setFormData({...formData, date_of_birth: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, date_of_birth: e.target.value })
+                }
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="skin_type">Skin Type</Label>
               <Select
                 value={formData.skin_type}
-                onValueChange={(value) => setFormData({...formData, skin_type: value})}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, skin_type: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select skin type" />
@@ -438,10 +464,14 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
             <Label>Skin Concerns</Label>
             <div className="flex flex-wrap gap-2 mb-2">
               {skinConcerns.map((concern) => (
-                <Badge key={concern} variant="secondary" className="flex items-center gap-1">
+                <Badge
+                  key={concern}
+                  variant="secondary"
+                  className="flex items-center gap-1"
+                >
                   {concern}
-                  <X 
-                    className="h-3 w-3 cursor-pointer" 
+                  <X
+                    className="h-3 w-3 cursor-pointer"
                     onClick={() => removeSkinConcern(concern)}
                   />
                 </Badge>
@@ -453,7 +483,7 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
                 value={newSkinConcern}
                 onChange={(e) => setNewSkinConcern(e.target.value)}
                 onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     e.preventDefault();
                     addSkinConcern(newSkinConcern);
                   }
@@ -469,7 +499,7 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
             </div>
             <div className="flex flex-wrap gap-1">
               {commonSkinConcerns
-                .filter(concern => !skinConcerns.includes(concern))
+                .filter((concern) => !skinConcerns.includes(concern))
                 .map((concern) => (
                   <Button
                     key={concern}
@@ -493,7 +523,9 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
               rows={3}
               placeholder="Any additional notes about the customer..."
               value={formData.notes}
-              onChange={(e) => setFormData({...formData, notes: e.target.value})}
+              onChange={(e) =>
+                setFormData({ ...formData, notes: e.target.value })
+              }
             />
           </div>
 
@@ -537,7 +569,8 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Upload a clear photo or scan of government-issued ID for verification
+                  Upload a clear photo or scan of government-issued ID for
+                  verification
                 </p>
               </div>
             </div>
@@ -556,15 +589,12 @@ export const CustomerForm = ({ customerId, onSave, onCancel }: CustomerFormProps
               type="button"
               variant="outline"
               onClick={onCancel}
-              disabled={loading}
+              disabled={creating || updating || uploading}
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={loading || uploading}
-            >
-              {loading || uploading ? 'Saving...' : (customerId ? 'Update Customer' : 'Create Customer')}
+            <Button type="submit" loading={creating || updating || uploading}>
+              {customerId ? "Update Customer" : "Create Customer"}
             </Button>
           </div>
         </form>

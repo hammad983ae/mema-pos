@@ -14,7 +14,7 @@ import { NewConversationDialog } from "@/components/customer-service/NewConversa
 import ShippingRequestForm from "@/components/shipping/ShippingRequestForm";
 import ShippingRequestsList from "@/components/shipping/ShippingRequestsList";
 import { PosAuthDialog } from "@/components/auth/PosAuthDialog";
-import { Users, MessageSquare, Bot, Package } from "lucide-react";
+import { Users, MessageSquare, Bot, Package, Plus } from "lucide-react";
 
 type ViewState = "list" | "profile" | "form";
 
@@ -83,7 +83,7 @@ const CRM = ({ onNavigateBack }: CRMProps = {}) => {
     setShowQuickAddDialog(true);
   };
 
-  const handleQuickCustomerCreated = (customer: any) => {
+  const handleQuickCustomerCreated = () => {
     setShowQuickAddDialog(false);
     setRefreshTrigger((prev) => prev + 1);
   };
@@ -194,26 +194,33 @@ const CRM = ({ onNavigateBack }: CRMProps = {}) => {
 
           <TabsContent value="customers" className="space-y-6">
             {currentView === "list" && (
-              <div className="space-y-4">
-                <div className="flex gap-2">
-                  <Button onClick={handleAddCustomer} size="sm">
-                    Add Customer (Full Form)
-                  </Button>
-                  <Button
-                    onClick={handleQuickAddCustomer}
-                    variant="outline"
-                    size="sm"
-                  >
-                    Quick Add Customer
-                  </Button>
+              <>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold">Customer Management</h2>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button onClick={handleAddCustomer} size="sm">
+                      Add Customer (Full Form)
+                    </Button>
+                    <Button
+                      onClick={handleQuickAddCustomer}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Quick Add Customer
+                    </Button>
+                  </div>
                 </div>
+
                 <CustomerList
                   onSelectCustomer={handleSelectCustomer}
                   onEditCustomer={handleEditCustomer}
                   onAddCustomer={handleAddCustomer}
                   refreshTrigger={refreshTrigger}
                 />
-              </div>
+              </>
             )}
 
             {currentView === "profile" && selectedCustomerId && (
@@ -294,7 +301,7 @@ const CRM = ({ onNavigateBack }: CRMProps = {}) => {
           onClose={() => setShowQuickAddDialog(false)}
           onCustomerCreated={handleQuickCustomerCreated}
           businessId={businessId}
-          simplified={false}
+          simplified={true}
         />
       </div>
     </div>

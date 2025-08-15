@@ -71,7 +71,7 @@ export const DELETE_STORE = gql`
 `;
 
 export const CREATE_STORE_SESSION = gql`
-  mutation CreateStoreSession($input: StoreSessionInput!) {
+  mutation CreateStoreSession($input: CreateStoreSessionInput!) {
     createStoreSession(input: $input) {
       id
       store {
@@ -105,6 +105,12 @@ export const CREATE_STORE_SESSION = gql`
       created_at
       updated_at
     }
+  }
+`;
+
+export const UPDATE_STORE_SESSION = gql`
+  mutation UpdateStoreSession($input: UpdateStoreSessionInput!) {
+    updateStoreSession(input: $input)
   }
 `;
 
@@ -315,7 +321,13 @@ export const CREATE_CUSTOMER = gql`
       id_document_type
       id_document_path
       signature_path
-      verified_by
+      verified_by {
+        id
+        full_name
+        email
+        username
+        role
+      }
       skin_type
       skin_concerns
       notes
@@ -332,7 +344,7 @@ export const UPDATE_CUSTOMER = gql`
 `;
 
 export const DELETE_CUSTOMER = gql`
-  mutation DeleteCustomer($deleteCustomerId: String!) {
-    deleteCustomer(id: $deleteCustomerId)
+  mutation DeleteCustomer($id: String!) {
+    deleteCustomer(id: $id)
   }
 `;

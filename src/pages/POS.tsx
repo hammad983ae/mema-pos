@@ -45,20 +45,16 @@ import {
   GET_STORE_SESSION,
   Mutation,
   MutationCreateStoreSessionArgs,
+  MutationUpdateStoreSessionArgs,
   PosSession,
   Query,
   QueryGetProductsByBusinessArgs,
   QueryGetStoreSessionByIdArgs,
   StoreDaySession,
+  UPDATE_STORE_SESSION,
   UserRole,
 } from "@/graphql";
-import {
-  useLazyQuery,
-  useMutation,
-  useQuery,
-  useReactiveVar,
-} from "@apollo/client";
-import { useDebounce } from "@/hooks/useDebounce.ts";
+import { useLazyQuery, useMutation, useReactiveVar } from "@apollo/client";
 import { ClockIn } from "@/pages/ClockIn.tsx";
 
 export interface CartItem {
@@ -114,7 +110,18 @@ const POS = () => {
     Mutation,
     MutationCreateStoreSessionArgs
   >(CREATE_STORE_SESSION);
+  const [updateStoreSession, { loading: updatingSession }] = useMutation<
+    Mutation,
+    MutationUpdateStoreSessionArgs
+  >(UPDATE_STORE_SESSION);
 
+  useEffect(() => {
+    const posSession = localStorage.getItem("pos_session");
+
+    if (posSession) {
+      PosSession(JSON.parse(posSession));
+    }
+  }, []);
   // Employee authentication state
   const [authenticatedEmployee, setAuthenticatedEmployee] =
     useState<Employee | null>(null);
@@ -179,9 +186,13 @@ const POS = () => {
             setPosUser(session);
           } else {
             PosSession(undefined);
+            localStorage.removeItem("pos_session");
           }
         })
-        .catch(() => PosSession(undefined));
+        .catch(() => {
+          PosSession(undefined);
+          localStorage.removeItem("pos_session");
+        });
     } else {
       createStoreSession({
         variables: {
@@ -194,6 +205,10 @@ const POS = () => {
         .then((res) => {
           setPosUser(res.data.createStoreSession);
           PosSession(res.data.createStoreSession);
+          localStorage.setItem(
+            "pos_session",
+            JSON.stringify(res.data.createStoreSession),
+          );
         })
         .catch(() => {
           navigate("/pos/login");
@@ -207,6 +222,11 @@ const POS = () => {
   }, [navigate]);
 
   const handleLogout = () => {
+    // updateStoreSession({
+    //   variables: {
+    //     input: {},
+    //   },
+    // });
     PosSession(undefined);
     navigate("/pos/login");
   };

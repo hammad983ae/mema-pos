@@ -506,8 +506,11 @@ export const GET_NOTIFICATIONS = gql`
 `;
 
 export const GET_CUSTOMERS = gql`
-  query GetCustomers($pagination: PaginationInput!, $search: String) {
-    getCustomers(pagination: $pagination, search: $search) {
+  query GetCustomers(
+    $pagination: PaginationInput!
+    $filters: CustomerFilterInput
+  ) {
+    getCustomers(pagination: $pagination, filters: $filters) {
       data {
         id
         first_name
@@ -526,17 +529,49 @@ export const GET_CUSTOMERS = gql`
         loyalty_points
         visit_count
         total_spent
-        id_document_type
-        id_document_path
-        signature_path
-        verified_by
-        skin_type
-        skin_concerns
-        notes
         created_at
         updated_at
       }
       count
+    }
+  }
+`;
+
+export const GET_CUSTOMER_BY_ID = gql`
+  query GetCustomerById($id: String!) {
+    getCustomerById(id: $id) {
+      id
+      first_name
+      last_name
+      email
+      phone
+      address_line_1
+      address_line_2
+      city
+      state_province
+      postal_code
+      country
+      date_of_birth
+      last_visit_date
+      verification_date
+      loyalty_points
+      visit_count
+      total_spent
+      id_document_type
+      id_document_path
+      signature_path
+      verified_by {
+        id
+        full_name
+        username
+        email
+        role
+      }
+      skin_type
+      skin_concerns
+      notes
+      created_at
+      updated_at
     }
   }
 `;

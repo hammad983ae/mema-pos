@@ -72,7 +72,10 @@ export const CustomerSelection = ({
     GET_CUSTOMERS,
     {
       fetchPolicy: "network-only",
-      variables: { pagination: { page: 1, take: 10 }, search: debouncedSearch },
+      variables: {
+        pagination: { page: 1, take: 10 },
+        filters: { search: debouncedSearch },
+      },
     },
   );
 
