@@ -300,7 +300,6 @@ const CRM = ({ onNavigateBack }: CRMProps = {}) => {
           isOpen={showQuickAddDialog}
           onClose={() => setShowQuickAddDialog(false)}
           onCustomerCreated={handleQuickCustomerCreated}
-          businessId={businessId}
           simplified={true}
         />
       </div>

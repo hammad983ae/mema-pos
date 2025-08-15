@@ -31,6 +31,8 @@ import {
   UPDATE_CUSTOMER,
 } from "@/graphql";
 import { showSuccess } from "@/hooks/useToastMessages.tsx";
+import { uploadFileToS3 } from "@/lib/utils.ts";
+import client from "@/graphql/client.ts";
 
 interface Customer {
   id: string;
@@ -55,7 +57,6 @@ interface CustomerFormDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onCustomerCreated: (customer: Customer) => void;
-  businessId: string;
   requiresShipping?: boolean;
   simplified?: boolean; // For POS quick customer creation
 }
@@ -64,7 +65,6 @@ export const CustomerFormDialog = ({
   isOpen,
   onClose,
   onCustomerCreated,
-  businessId,
   requiresShipping = false,
   simplified = false,
 }: CustomerFormDialogProps) => {
@@ -78,7 +78,6 @@ export const CustomerFormDialog = ({
     Mutation,
     MutationUpdateCustomerArgs
   >(UPDATE_CUSTOMER);
-  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -157,17 +156,10 @@ export const CustomerFormDialog = ({
     setSignatureDataUrl("");
   };
 
-  const uploadFile = async (file: File, bucket: string, folder: string) => {
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `${folder}/${fileName}`;
+  const uploadFile = async (file: File, folder: string) => {
+    const { publicUrl } = await uploadFileToS3(client, file, folder);
 
-    const { error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-    return filePath;
+    return publicUrl;
   };
 
   const uploadSignature = async (dataUrl: string, customerId: string) => {
@@ -176,12 +168,12 @@ export const CustomerFormDialog = ({
     const file = new File([blob], `signature-${customerId}.png`, {
       type: "image/png",
     });
-    return uploadFile(file, "customer-signatures", customerId);
+
+    return uploadFile(file, `customer-signatures/${customerId}`);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setUploading(true);
 
     try {
@@ -226,8 +218,7 @@ export const CustomerFormDialog = ({
         if (idDocument) {
           idDocumentPath = await uploadFile(
             idDocument,
-            "customer-documents",
-            newCustomer.id,
+            `customer-documents/${newCustomer.id}`,
           );
         }
 
@@ -269,7 +260,6 @@ export const CustomerFormDialog = ({
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
       setUploading(false);
     }
   };
@@ -628,10 +618,10 @@ export const CustomerFormDialog = ({
           <div className="flex gap-2 pt-4">
             <Button
               type="submit"
-              disabled={loading || uploading}
+              loading={creating || updating || uploading}
               className="flex-1"
             >
-              {loading || uploading ? "Creating..." : "Create Customer"}
+              Create Customer
             </Button>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel

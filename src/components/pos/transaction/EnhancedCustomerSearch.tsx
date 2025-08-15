@@ -7,7 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Search, Plus, AlertTriangle, MapPin, Phone, Mail } from "lucide-react";
+import {
+  User,
+  Search,
+  Plus,
+  AlertTriangle,
+  MapPin,
+  Phone,
+  Mail,
+} from "lucide-react";
 import { CustomerFormDialog } from "@/components/shared/CustomerFormDialog";
 
 interface Customer {
@@ -30,11 +38,11 @@ interface CustomerSearchProps {
   requiresShipping?: boolean;
 }
 
-export const EnhancedCustomerSearch = ({ 
-  customer, 
-  onCustomerFound, 
-  businessId, 
-  requiresShipping = false 
+export const EnhancedCustomerSearch = ({
+  customer,
+  onCustomerFound,
+  businessId,
+  requiresShipping = false,
 }: CustomerSearchProps) => {
   const { toast } = useToast();
   const [customerPhone, setCustomerPhone] = useState("");
@@ -68,7 +76,7 @@ export const EnhancedCustomerSearch = ({
         toast({
           title: "Customer Not Found",
           description: "No customer found with this phone number.",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     } catch (error: any) {
@@ -93,7 +101,12 @@ export const EnhancedCustomerSearch = ({
   };
 
   const hasShippingAddress = (customer: Customer) => {
-    return customer.address_line_1 && customer.city && customer.state_province && customer.postal_code;
+    return (
+      customer.address_line_1 &&
+      customer.city &&
+      customer.state_province &&
+      customer.postal_code
+    );
   };
 
   return (
@@ -109,24 +122,24 @@ export const EnhancedCustomerSearch = ({
               </Badge>
             )}
           </div>
-          
+
           <div className="flex gap-2">
             <Input
               placeholder="Enter phone number"
               value={customerPhone}
               onChange={(e) => setCustomerPhone(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && searchCustomer()}
+              onKeyPress={(e) => e.key === "Enter" && searchCustomer()}
             />
-            <Button 
-              onClick={searchCustomer} 
+            <Button
+              onClick={searchCustomer}
               disabled={!customerPhone.trim() || isSearching}
               size="sm"
             >
               <Search className="h-4 w-4" />
             </Button>
-            
-            <Button 
-              variant="outline" 
+
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => setIsCreateDialogOpen(true)}
             >
@@ -134,13 +147,15 @@ export const EnhancedCustomerSearch = ({
               New
             </Button>
           </div>
-          
+
           {/* Customer Display */}
           {customer && (
             <div className="bg-muted p-3 rounded-md">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">{customer.first_name} {customer.last_name}</p>
+                  <p className="font-medium">
+                    {customer.first_name} {customer.last_name}
+                  </p>
                   <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                     {customer.phone && (
                       <div className="flex items-center gap-1">
@@ -155,22 +170,25 @@ export const EnhancedCustomerSearch = ({
                       </div>
                     )}
                   </div>
-                  
+
                   {hasShippingAddress(customer) ? (
                     <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                       <MapPin className="h-3 w-3" />
                       <span>
-                        {customer.address_line_1}, {customer.city}, {customer.state_province} {customer.postal_code}
+                        {customer.address_line_1}, {customer.city},{" "}
+                        {customer.state_province} {customer.postal_code}
                       </span>
                     </div>
-                  ) : requiresShipping && (
-                    <div className="flex items-center gap-1 mt-1 text-xs text-amber-600">
-                      <AlertTriangle className="h-3 w-3" />
-                      <span>No shipping address on file</span>
-                    </div>
+                  ) : (
+                    requiresShipping && (
+                      <div className="flex items-center gap-1 mt-1 text-xs text-amber-600">
+                        <AlertTriangle className="h-3 w-3" />
+                        <span>No shipping address on file</span>
+                      </div>
+                    )
                   )}
                 </div>
-                
+
                 {customer.loyalty_points > 0 && (
                   <Badge variant="secondary">
                     {customer.loyalty_points} pts
@@ -179,22 +197,24 @@ export const EnhancedCustomerSearch = ({
               </div>
             </div>
           )}
-          
+
           {/* Shipping Validation Warning */}
           {requiresShipping && !customer && (
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                A customer must be selected for orders with shipping items. Search for an existing customer or create a new one.
+                A customer must be selected for orders with shipping items.
+                Search for an existing customer or create a new one.
               </AlertDescription>
             </Alert>
           )}
-          
+
           {requiresShipping && customer && !hasShippingAddress(customer) && (
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                This customer doesn't have a complete shipping address. Please update their profile before proceeding.
+                This customer doesn't have a complete shipping address. Please
+                update their profile before proceeding.
               </AlertDescription>
             </Alert>
           )}
@@ -206,7 +226,6 @@ export const EnhancedCustomerSearch = ({
         isOpen={isCreateDialogOpen}
         onClose={() => setIsCreateDialogOpen(false)}
         onCustomerCreated={handleCustomerCreated}
-        businessId={businessId}
         requiresShipping={requiresShipping}
         simplified={false}
       />

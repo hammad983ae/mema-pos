@@ -28,7 +28,9 @@ import {
   QueryGetCustomerByIdArgs,
   UPDATE_CUSTOMER,
 } from "@/graphql";
-import { showError, showSuccess } from "@/hooks/useToastMessages.tsx";
+import { showSuccess } from "@/hooks/useToastMessages.tsx";
+import { uploadFileToS3 } from "@/lib/utils.ts";
+import client from "@/graphql/client.ts";
 
 interface CustomerFormProps {
   customerId?: string;
@@ -132,30 +134,14 @@ export const CustomerForm = ({
 
       setSkinConcerns(data?.getCustomerById.skin_concerns || []);
 
-      // Load existing signature if available
-      if (data?.getCustomerById.signature_path) {
-        // const { data: signatureData } = await supabase.storage
-        //   .from('customer-signatures')
-        //   .download(data?.getCustomerById.signature_path);
-        // if (signatureData) {
-        //   const url = URL.createObjectURL(signatureData);
-        //   setSignatureDataUrl(url);
-        // }
-      }
+      setSignatureDataUrl(data?.getCustomerById.signature_path ?? "");
     }
   }, [data?.getCustomerById]);
 
-  const uploadFile = async (file: File, bucket: string, folder: string) => {
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `${folder}/${fileName}`;
+  const uploadFile = async (file: File, folder: string) => {
+    const { publicUrl } = await uploadFileToS3(client, file, folder);
 
-    const { error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-    return filePath;
+    return publicUrl;
   };
 
   const uploadSignature = async (dataUrl: string, customerId: string) => {
@@ -164,7 +150,8 @@ export const CustomerForm = ({
     const file = new File([blob], `signature-${customerId}.png`, {
       type: "image/png",
     });
-    return uploadFile(file, "customer-signatures", customerId);
+
+    return uploadFile(file, `customer-signatures/${customerId}`);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
