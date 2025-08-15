@@ -1,36 +1,44 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, User, Plus, X, MapPin, Phone, Mail, UserPlus } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  Search,
+  User,
+  Plus,
+  X,
+  MapPin,
+  Phone,
+  Mail,
+  UserPlus,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface Customer {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  phone: string | null;
-  address_line_1: string | null;
-  address_line_2: string | null;
-  city: string | null;
-  state_province: string | null;
-  postal_code: string | null;
-  country: string | null;
-  loyalty_points: number | null;
-  date_of_birth: string | null;
-  notes: string | null;
-}
+import { useMutation, useQuery } from "@apollo/client";
+import {
+  CREATE_CUSTOMER,
+  Customer,
+  GET_CUSTOMERS,
+  Mutation,
+  MutationCreateCustomerArgs,
+  Query,
+  QueryGetCustomersArgs,
+} from "@/graphql";
+import { showSuccess } from "@/hooks/useToastMessages.tsx";
+import { useDebounce } from "@/hooks/useDebounce.ts";
 
 interface CustomerSelectionProps {
   selectedCustomer: Customer | null;
   onSelectCustomer: (customer: Customer | null) => void;
-  businessId: string;
 }
 
 interface NewCustomerForm {
@@ -47,14 +55,26 @@ interface NewCustomerForm {
   notes: string;
 }
 
-export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, businessId }: CustomerSelectionProps) => {
+export const CustomerSelection = ({
+  selectedCustomer,
+  onSelectCustomer,
+}: CustomerSelectionProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [isAddingCustomer, setIsAddingCustomer] = useState(false);
   const { toast } = useToast();
+  const debouncedSearch = useDebounce(searchTerm, 300);
+  const [createCustomer, { loading: creating }] = useMutation<
+    Mutation,
+    MutationCreateCustomerArgs
+  >(CREATE_CUSTOMER);
+  const { data, loading, refetch } = useQuery<Query, QueryGetCustomersArgs>(
+    GET_CUSTOMERS,
+    {
+      fetchPolicy: "network-only",
+      variables: { pagination: { page: 1, take: 10 }, search: debouncedSearch },
+    },
+  );
 
   const [newCustomer, setNewCustomer] = useState<NewCustomerForm>({
     first_name: "",
@@ -67,47 +87,7 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
     state_province: "",
     postal_code: "",
     country: "United States",
-    notes: ""
-  });
-
-  useEffect(() => {
-    if (isOpen && businessId) {
-      fetchCustomers();
-    }
-  }, [isOpen, businessId]);
-
-  const fetchCustomers = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("customers")
-        .select("*")
-        .eq("business_id", businessId)
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      if (error) throw error;
-      setCustomers(data || []);
-    } catch (error) {
-      console.error("Error fetching customers:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load customers",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const filteredCustomers = customers.filter((customer) => {
-    const searchLower = searchTerm.toLowerCase();
-    const fullName = `${customer.first_name || ''} ${customer.last_name || ''}`.toLowerCase();
-    return (
-      fullName.includes(searchLower) ||
-      customer.email?.toLowerCase().includes(searchLower) ||
-      customer.phone?.includes(searchTerm)
-    );
+    notes: "",
   });
 
   const handleSelectCustomer = (customer: Customer) => {
@@ -117,23 +97,30 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
     setShowAddForm(false);
   };
 
-  const [isGuestMode, setIsGuestMode] = useState(localStorage.getItem('guest_checkout') === 'true');
+  const [isGuestMode, setIsGuestMode] = useState(
+    localStorage.getItem("guest_checkout") === "true",
+  );
 
   const handleClearCustomer = () => {
-    localStorage.removeItem('guest_checkout');
+    localStorage.removeItem("guest_checkout");
     setIsGuestMode(false);
     onSelectCustomer(null);
   };
 
   const handleGuestCheckout = () => {
-    console.log('Guest checkout clicked');
-    localStorage.setItem('guest_checkout', 'true');
+    console.log("Guest checkout clicked");
+    localStorage.setItem("guest_checkout", "true");
     setIsGuestMode(true);
     onSelectCustomer(null);
   };
 
   const hasShippingAddress = (customer: Customer) => {
-    return customer.address_line_1 && customer.city && customer.state_province && customer.postal_code;
+    return (
+      customer.address_line_1 &&
+      customer.city &&
+      customer.state_province &&
+      customer.postal_code
+    );
   };
 
   const handleAddCustomer = async () => {
@@ -146,28 +133,14 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
       return;
     }
 
-    setIsAddingCustomer(true);
-    try {
-      const { data, error } = await supabase
-        .from("customers")
-        .insert([{
-          ...newCustomer,
-          business_id: businessId
-        }])
-        .select()
-        .single();
+    createCustomer({
+      variables: {
+        input: newCustomer,
+      },
+    }).then((res) => {
+      showSuccess("Customer added successfully");
+      onSelectCustomer(res.data.createCustomer);
 
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Customer added successfully",
-      });
-
-      // Select the new customer
-      onSelectCustomer(data);
-      
-      // Reset form and close dialog
       setNewCustomer({
         first_name: "",
         last_name: "",
@@ -179,23 +152,13 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
         state_province: "",
         postal_code: "",
         country: "United States",
-        notes: ""
+        notes: "",
       });
       setShowAddForm(false);
       setIsOpen(false);
-      
-      // Refresh customer list
-      fetchCustomers();
-    } catch (error) {
-      console.error("Error adding customer:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add customer",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAddingCustomer(false);
-    }
+
+      refetch();
+    });
   };
 
   return (
@@ -212,13 +175,14 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
                   <span className="font-semibold text-lg">
                     {selectedCustomer.first_name} {selectedCustomer.last_name}
                   </span>
-                  {selectedCustomer.loyalty_points && selectedCustomer.loyalty_points > 0 && (
-                    <Badge variant="secondary" className="text-xs">
-                      {selectedCustomer.loyalty_points} pts
-                    </Badge>
-                  )}
+                  {!!selectedCustomer.loyalty_points &&
+                    selectedCustomer.loyalty_points > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {selectedCustomer.loyalty_points} pts
+                      </Badge>
+                    )}
                 </div>
-                
+
                 <div className="space-y-1 mt-2">
                   {selectedCustomer.email && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -236,7 +200,10 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4" />
                       <span>
-                        {selectedCustomer.address_line_1}, {selectedCustomer.city}, {selectedCustomer.state_province} {selectedCustomer.postal_code}
+                        {selectedCustomer.address_line_1},{" "}
+                        {selectedCustomer.city},{" "}
+                        {selectedCustomer.state_province}{" "}
+                        {selectedCustomer.postal_code}
                       </span>
                     </div>
                   ) : (
@@ -248,7 +215,7 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
                 </div>
               </div>
             </div>
-            
+
             <Button
               variant="ghost"
               size="sm"
@@ -271,11 +238,14 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
                   <span className="font-semibold text-lg text-green-600">
                     Guest Customer
                   </span>
-                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
+                  <Badge
+                    variant="secondary"
+                    className="text-xs bg-green-100 text-green-700"
+                  >
                     No account required
                   </Badge>
                 </div>
-                
+
                 <div className="space-y-1 mt-2">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Mail className="h-4 w-4" />
@@ -288,7 +258,7 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
                 </div>
               </div>
             </div>
-            
+
             <Button
               variant="ghost"
               size="sm"
@@ -308,14 +278,14 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
                 Select Customer
               </Button>
             </DialogTrigger>
-            
+
             <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {showAddForm ? "Add New Customer" : "Select Customer"}
                 </DialogTitle>
               </DialogHeader>
-              
+
               {!showAddForm ? (
                 <div className="space-y-4">
                   <div className="flex gap-2">
@@ -328,7 +298,7 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
                         className="pl-10 h-12"
                       />
                     </div>
-                    <Button 
+                    <Button
                       onClick={() => setShowAddForm(true)}
                       className="h-12 px-4"
                     >
@@ -336,14 +306,14 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
                       Add New
                     </Button>
                   </div>
-                  
-                  {isLoading ? (
+
+                  {loading ? (
                     <div className="text-center py-8 text-muted-foreground">
                       Loading customers...
                     </div>
                   ) : (
                     <div className="max-h-96 overflow-y-auto space-y-2">
-                      {filteredCustomers.map((customer) => (
+                      {data?.getCustomers?.data?.map((customer) => (
                         <Card
                           key={customer.id}
                           className="p-4 cursor-pointer hover:bg-muted transition-colors"
@@ -358,34 +328,47 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
                                 <span className="font-medium">
                                   {customer.first_name} {customer.last_name}
                                 </span>
-                                {customer.loyalty_points && customer.loyalty_points > 0 && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    {customer.loyalty_points} pts
-                                  </Badge>
-                                )}
+                                {!!customer.loyalty_points &&
+                                  customer.loyalty_points > 0 && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      {customer.loyalty_points} pts
+                                    </Badge>
+                                  )}
                                 {!hasShippingAddress(customer) && (
-                                  <Badge variant="outline" className="text-xs text-amber-600 border-amber-600">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs text-amber-600 border-amber-600"
+                                  >
                                     No address
                                   </Badge>
                                 )}
                               </div>
-                              
+
                               <div className="text-sm text-muted-foreground">
-                                {customer.email && <span>{customer.email}</span>}
-                                {customer.email && customer.phone && <span className="mx-2">•</span>}
-                                {customer.phone && <span>{customer.phone}</span>}
+                                {customer.email && (
+                                  <span>{customer.email}</span>
+                                )}
+                                {customer.email && customer.phone && (
+                                  <span className="mx-2">•</span>
+                                )}
+                                {customer.phone && (
+                                  <span>{customer.phone}</span>
+                                )}
                               </div>
                             </div>
                           </div>
                         </Card>
                       ))}
-                      
-                      {filteredCustomers.length === 0 && searchTerm && (
+
+                      {data?.getCustomers?.data?.length === 0 && searchTerm && (
                         <div className="text-center py-8 text-muted-foreground">
                           <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
                           <p>No customers found for "{searchTerm}"</p>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             onClick={() => setShowAddForm(true)}
                             className="mt-3"
                           >
@@ -394,21 +377,22 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
                           </Button>
                         </div>
                       )}
-                      
-                      {filteredCustomers.length === 0 && !searchTerm && (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          <p>No customers found</p>
-                          <Button 
-                            variant="outline" 
-                            onClick={() => setShowAddForm(true)}
-                            className="mt-3"
-                          >
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Add First Customer
-                          </Button>
-                        </div>
-                      )}
+
+                      {data?.getCustomers?.data?.length === 0 &&
+                        !searchTerm && (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p>No customers found</p>
+                            <Button
+                              variant="outline"
+                              onClick={() => setShowAddForm(true)}
+                              className="mt-3"
+                            >
+                              <UserPlus className="h-4 w-4 mr-2" />
+                              Add First Customer
+                            </Button>
+                          </div>
+                        )}
                     </div>
                   )}
                 </div>
@@ -420,7 +404,12 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
                       <Input
                         id="first_name"
                         value={newCustomer.first_name}
-                        onChange={(e) => setNewCustomer(prev => ({ ...prev, first_name: e.target.value }))}
+                        onChange={(e) =>
+                          setNewCustomer((prev) => ({
+                            ...prev,
+                            first_name: e.target.value,
+                          }))
+                        }
                         placeholder="Enter first name"
                       />
                     </div>
@@ -429,12 +418,17 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
                       <Input
                         id="last_name"
                         value={newCustomer.last_name}
-                        onChange={(e) => setNewCustomer(prev => ({ ...prev, last_name: e.target.value }))}
+                        onChange={(e) =>
+                          setNewCustomer((prev) => ({
+                            ...prev,
+                            last_name: e.target.value,
+                          }))
+                        }
                         placeholder="Enter last name"
                       />
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
@@ -442,7 +436,12 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
                         id="email"
                         type="email"
                         value={newCustomer.email}
-                        onChange={(e) => setNewCustomer(prev => ({ ...prev, email: e.target.value }))}
+                        onChange={(e) =>
+                          setNewCustomer((prev) => ({
+                            ...prev,
+                            email: e.target.value,
+                          }))
+                        }
                         placeholder="Enter email"
                       />
                     </div>
@@ -451,39 +450,59 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
                       <Input
                         id="phone"
                         value={newCustomer.phone}
-                        onChange={(e) => setNewCustomer(prev => ({ ...prev, phone: e.target.value }))}
+                        onChange={(e) =>
+                          setNewCustomer((prev) => ({
+                            ...prev,
+                            phone: e.target.value,
+                          }))
+                        }
                         placeholder="Enter phone number"
                       />
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="address_line_1">Address Line 1</Label>
                     <Input
                       id="address_line_1"
                       value={newCustomer.address_line_1}
-                      onChange={(e) => setNewCustomer(prev => ({ ...prev, address_line_1: e.target.value }))}
+                      onChange={(e) =>
+                        setNewCustomer((prev) => ({
+                          ...prev,
+                          address_line_1: e.target.value,
+                        }))
+                      }
                       placeholder="Enter street address"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="address_line_2">Address Line 2</Label>
                     <Input
                       id="address_line_2"
                       value={newCustomer.address_line_2}
-                      onChange={(e) => setNewCustomer(prev => ({ ...prev, address_line_2: e.target.value }))}
+                      onChange={(e) =>
+                        setNewCustomer((prev) => ({
+                          ...prev,
+                          address_line_2: e.target.value,
+                        }))
+                      }
                       placeholder="Apt, suite, etc. (optional)"
                     />
                   </div>
-                  
+
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="city">City</Label>
                       <Input
                         id="city"
                         value={newCustomer.city}
-                        onChange={(e) => setNewCustomer(prev => ({ ...prev, city: e.target.value }))}
+                        onChange={(e) =>
+                          setNewCustomer((prev) => ({
+                            ...prev,
+                            city: e.target.value,
+                          }))
+                        }
                         placeholder="Enter city"
                       />
                     </div>
@@ -492,7 +511,12 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
                       <Input
                         id="state_province"
                         value={newCustomer.state_province}
-                        onChange={(e) => setNewCustomer(prev => ({ ...prev, state_province: e.target.value }))}
+                        onChange={(e) =>
+                          setNewCustomer((prev) => ({
+                            ...prev,
+                            state_province: e.target.value,
+                          }))
+                        }
                         placeholder="Enter state"
                       />
                     </div>
@@ -501,56 +525,68 @@ export const CustomerSelection = ({ selectedCustomer, onSelectCustomer, business
                       <Input
                         id="postal_code"
                         value={newCustomer.postal_code}
-                        onChange={(e) => setNewCustomer(prev => ({ ...prev, postal_code: e.target.value }))}
+                        onChange={(e) =>
+                          setNewCustomer((prev) => ({
+                            ...prev,
+                            postal_code: e.target.value,
+                          }))
+                        }
                         placeholder="Enter postal code"
                       />
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="country">Country</Label>
                     <Input
                       id="country"
                       value={newCustomer.country}
-                      onChange={(e) => setNewCustomer(prev => ({ ...prev, country: e.target.value }))}
+                      onChange={(e) =>
+                        setNewCustomer((prev) => ({
+                          ...prev,
+                          country: e.target.value,
+                        }))
+                      }
                       placeholder="Enter country"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="notes">Notes</Label>
                     <Textarea
                       id="notes"
                       value={newCustomer.notes}
-                      onChange={(e) => setNewCustomer(prev => ({ ...prev, notes: e.target.value }))}
+                      onChange={(e) =>
+                        setNewCustomer((prev) => ({
+                          ...prev,
+                          notes: e.target.value,
+                        }))
+                      }
                       placeholder="Additional notes about the customer"
                       rows={3}
                     />
                   </div>
-                  
+
                   <div className="flex justify-end gap-3 pt-4">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={() => setShowAddForm(false)}
-                      disabled={isAddingCustomer}
+                      disabled={creating}
                     >
                       Cancel
                     </Button>
-                    <Button 
-                      onClick={handleAddCustomer}
-                      disabled={isAddingCustomer}
-                    >
-                      {isAddingCustomer ? "Adding..." : "Add Customer"}
+                    <Button onClick={handleAddCustomer} loading={creating}>
+                      Add Customer
                     </Button>
                   </div>
                 </div>
               )}
             </DialogContent>
           </Dialog>
-          
-          <Button 
-            variant="outline" 
-            className="justify-start h-12" 
+
+          <Button
+            variant="outline"
+            className="justify-start h-12"
             onClick={handleGuestCheckout}
           >
             <User className="h-4 w-4 mr-2" />

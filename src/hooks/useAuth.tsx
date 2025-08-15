@@ -51,6 +51,8 @@ export const useAuth = () => {
     });
   };
 
+  // TODO
+  // make this work to authenticate only logged in user
   const signInEmployee = (username: string, pin: string, saveAccess: boolean = true, onSuccess?: () => void) => {
     loginEmployee({ variables: { input: { username, pin } } }).then((res) => {
       if (saveAccess) {

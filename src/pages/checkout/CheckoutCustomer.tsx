@@ -4,28 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, ShoppingCart } from "lucide-react";
 import { CustomerSelection } from "@/components/checkout/CustomerSelection";
-import { useAuth } from "@/hooks/useAuth.tsx";
-
-interface Customer {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  phone: string | null;
-  address_line_1: string | null;
-  address_line_2: string | null;
-  city: string | null;
-  state_province: string | null;
-  postal_code: string | null;
-  country: string | null;
-  loyalty_points: number | null;
-  date_of_birth: string | null;
-  notes: string | null;
-}
+import { Customer } from "@/graphql";
 
 export default function CheckoutCustomer() {
   const navigate = useNavigate();
-  const { business } = useAuth();
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null,
   );
@@ -49,8 +31,7 @@ export default function CheckoutCustomer() {
 
   // Check if cart has shipping items - only items with shipping_required = true
   const hasShippingItems =
-    cartData.items?.some((item: any) => item.shipping_required === true) ||
-    false;
+    cartData.items?.some((item) => item.shipping_required === true) || false;
 
   // Debug logging
   // console.log("Has shipping items:", hasShippingItems);
@@ -100,6 +81,7 @@ export default function CheckoutCustomer() {
   };
 
   const handleBack = () => {
+    localStorage.removeItem("guest_checkout");
     localStorage.removeItem("checkout_customer");
     localStorage.removeItem("checkout_payment");
     localStorage.removeItem("checkout_sales_team");
@@ -223,7 +205,6 @@ export default function CheckoutCustomer() {
                   customer,
                 );
               }}
-              businessId={business?.id}
             />
 
             {/* Address Warning for Shipping Items */}

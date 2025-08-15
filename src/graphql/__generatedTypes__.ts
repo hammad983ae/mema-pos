@@ -67,6 +67,32 @@ export type CreateBusinessInput = {
   subscription_status?: InputMaybe<SubscriptionStatus>;
 };
 
+export type CreateCustomerInput = {
+  address_line_1?: InputMaybe<Scalars['String']['input']>;
+  address_line_2?: InputMaybe<Scalars['String']['input']>;
+  city?: InputMaybe<Scalars['String']['input']>;
+  country?: InputMaybe<Scalars['String']['input']>;
+  date_of_birth?: InputMaybe<Scalars['String']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  first_name?: InputMaybe<Scalars['String']['input']>;
+  id_document_path?: InputMaybe<Scalars['String']['input']>;
+  id_document_type?: InputMaybe<Scalars['String']['input']>;
+  last_name?: InputMaybe<Scalars['String']['input']>;
+  last_visit_date?: InputMaybe<Scalars['String']['input']>;
+  loyalty_points?: InputMaybe<Scalars['Float']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  postal_code?: InputMaybe<Scalars['String']['input']>;
+  signature_path?: InputMaybe<Scalars['String']['input']>;
+  skin_concerns?: InputMaybe<Array<Scalars['String']['input']>>;
+  skin_type?: InputMaybe<Scalars['String']['input']>;
+  state_province?: InputMaybe<Scalars['String']['input']>;
+  total_spent?: InputMaybe<Scalars['String']['input']>;
+  verification_date?: InputMaybe<Scalars['String']['input']>;
+  verified_by?: InputMaybe<Scalars['String']['input']>;
+  visit_count?: InputMaybe<Scalars['Float']['input']>;
+};
+
 export type CreateEmployeeClockStatusInput = {
   clocked_in_at?: InputMaybe<Scalars['String']['input']>;
   clocked_out_at?: InputMaybe<Scalars['String']['input']>;
@@ -135,6 +161,7 @@ export type CreateProductInput = {
 };
 
 export type CreateReceiptInput = {
+  customerId?: InputMaybe<Scalars['String']['input']>;
   discount_total: Scalars['String']['input'];
   employees: Array<ReceiptUserInput>;
   grand_total: Scalars['String']['input'];
@@ -192,6 +219,43 @@ export type CreateSupplierInput = {
   status?: InputMaybe<SupplierStatus>;
 };
 
+export type Customer = {
+  __typename?: 'Customer';
+  address_line_1?: Maybe<Scalars['String']['output']>;
+  address_line_2?: Maybe<Scalars['String']['output']>;
+  business?: Maybe<Business>;
+  city?: Maybe<Scalars['String']['output']>;
+  country?: Maybe<Scalars['String']['output']>;
+  created_at: Scalars['DateTime']['output'];
+  date_of_birth?: Maybe<Scalars['String']['output']>;
+  email?: Maybe<Scalars['String']['output']>;
+  first_name?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  id_document_path?: Maybe<Scalars['String']['output']>;
+  id_document_type?: Maybe<Scalars['String']['output']>;
+  last_name?: Maybe<Scalars['String']['output']>;
+  last_visit_date?: Maybe<Scalars['String']['output']>;
+  loyalty_points?: Maybe<Scalars['Float']['output']>;
+  notes?: Maybe<Scalars['String']['output']>;
+  phone?: Maybe<Scalars['String']['output']>;
+  postal_code?: Maybe<Scalars['String']['output']>;
+  signature_path?: Maybe<Scalars['String']['output']>;
+  skin_concerns?: Maybe<Array<Scalars['String']['output']>>;
+  skin_type?: Maybe<Scalars['String']['output']>;
+  state_province?: Maybe<Scalars['String']['output']>;
+  total_spent?: Maybe<Scalars['String']['output']>;
+  updated_at: Scalars['DateTime']['output'];
+  verification_date?: Maybe<Scalars['String']['output']>;
+  verified_by?: Maybe<Scalars['String']['output']>;
+  visit_count?: Maybe<Scalars['Float']['output']>;
+};
+
+export type CustomerPagination = {
+  __typename?: 'CustomerPagination';
+  count: Scalars['Int']['output'];
+  data: Array<Customer>;
+};
+
 export type EmployeeClockStatus = {
   __typename?: 'EmployeeClockStatus';
   business: Business;
@@ -208,6 +272,7 @@ export type EmployeeClockStatus = {
 export type EmployeeClockStatusFilterInput = {
   business_id?: InputMaybe<Scalars['String']['input']>;
   is_active?: InputMaybe<Scalars['Boolean']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
   store_id?: InputMaybe<Scalars['String']['input']>;
   user_id?: InputMaybe<Scalars['String']['input']>;
 };
@@ -364,6 +429,7 @@ export type Mutation = {
   clockIn: Scalars['Boolean']['output'];
   clockOut: Scalars['Boolean']['output'];
   createBusiness: Business;
+  createCustomer: Customer;
   createEmployeeClockStatus: EmployeeClockStatus;
   createInventory: Inventory;
   createInventoryAlert: InventoryAlert;
@@ -379,6 +445,7 @@ export type Mutation = {
   createStoreLocation: StoreLocation;
   createStoreSession: StoreDaySession;
   createSupplier: Supplier;
+  deleteCustomer: Scalars['Boolean']['output'];
   deleteEmployeeClockStatus: Scalars['Boolean']['output'];
   deleteInventory: Scalars['Boolean']['output'];
   deleteNotification: Scalars['Boolean']['output'];
@@ -396,6 +463,7 @@ export type Mutation = {
   reorderInventory: Scalars['Boolean']['output'];
   resendVerificationEmail: Scalars['Boolean']['output'];
   updateBusiness: Scalars['Boolean']['output'];
+  updateCustomer: Scalars['Boolean']['output'];
   updateEmployeeClockStatus: Scalars['Boolean']['output'];
   updateInventory: Scalars['Boolean']['output'];
   updateInventoryAlert: Scalars['Boolean']['output'];
@@ -421,6 +489,11 @@ export type MutationClockInArgs = {
 
 export type MutationCreateBusinessArgs = {
   input: CreateBusinessInput;
+};
+
+
+export type MutationCreateCustomerArgs = {
+  input: CreateCustomerInput;
 };
 
 
@@ -500,6 +573,11 @@ export type MutationCreateSupplierArgs = {
 };
 
 
+export type MutationDeleteCustomerArgs = {
+  id: Scalars['String']['input'];
+};
+
+
 export type MutationDeleteEmployeeClockStatusArgs = {
   id: Scalars['String']['input'];
 };
@@ -572,6 +650,11 @@ export type MutationReorderInventoryArgs = {
 
 export type MutationUpdateBusinessArgs = {
   input: UpdateBusinessInput;
+};
+
+
+export type MutationUpdateCustomerArgs = {
+  input: UpdateCustomerInput;
 };
 
 
@@ -761,6 +844,7 @@ export type Query = {
   getBusinessStats: BusinessStats;
   getCategories: Array<ProductCategory>;
   getCurrentUser: User;
+  getCustomers: CustomerPagination;
   getEmployeeClocksByBusiness: Array<EmployeeClockStatus>;
   getInventoryByBusiness: InventoryPagination;
   getInventoryStats: InventoryStats;
@@ -796,6 +880,12 @@ export type QueryFindUserActiveEmployeeClockArgs = {
 
 export type QueryGetBusinessStatsArgs = {
   id: Scalars['String']['input'];
+};
+
+
+export type QueryGetCustomersArgs = {
+  pagination: PaginationInput;
+  search?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -873,6 +963,7 @@ export type QueryReceiptUsersByUserArgs = {
 export type Receipt = {
   __typename?: 'Receipt';
   created_at: Scalars['DateTime']['output'];
+  customer?: Maybe<Customer>;
   discount_total: Scalars['String']['output'];
   employees: Array<ReceiptUser>;
   grand_total: Scalars['String']['output'];
@@ -1089,6 +1180,33 @@ export type UpdateBusinessInput = {
   subscription_status?: InputMaybe<SubscriptionStatus>;
 };
 
+export type UpdateCustomerInput = {
+  address_line_1?: InputMaybe<Scalars['String']['input']>;
+  address_line_2?: InputMaybe<Scalars['String']['input']>;
+  city?: InputMaybe<Scalars['String']['input']>;
+  country?: InputMaybe<Scalars['String']['input']>;
+  date_of_birth?: InputMaybe<Scalars['String']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  first_name?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
+  id_document_path?: InputMaybe<Scalars['String']['input']>;
+  id_document_type?: InputMaybe<Scalars['String']['input']>;
+  last_name?: InputMaybe<Scalars['String']['input']>;
+  last_visit_date?: InputMaybe<Scalars['String']['input']>;
+  loyalty_points?: InputMaybe<Scalars['Float']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  postal_code?: InputMaybe<Scalars['String']['input']>;
+  signature_path?: InputMaybe<Scalars['String']['input']>;
+  skin_concerns?: InputMaybe<Array<Scalars['String']['input']>>;
+  skin_type?: InputMaybe<Scalars['String']['input']>;
+  state_province?: InputMaybe<Scalars['String']['input']>;
+  total_spent?: InputMaybe<Scalars['String']['input']>;
+  verification_date?: InputMaybe<Scalars['String']['input']>;
+  verified_by?: InputMaybe<Scalars['String']['input']>;
+  visit_count?: InputMaybe<Scalars['Float']['input']>;
+};
+
 export type UpdateEmployeeClockStatusInput = {
   clocked_in_at?: InputMaybe<Scalars['String']['input']>;
   clocked_out_at?: InputMaybe<Scalars['String']['input']>;
@@ -1166,6 +1284,7 @@ export type UpdateProductInput = {
 };
 
 export type UpdateReceiptInput = {
+  customerId?: InputMaybe<Scalars['String']['input']>;
   discount_total?: InputMaybe<Scalars['String']['input']>;
   employees?: InputMaybe<Array<ReceiptUserInput>>;
   grand_total?: InputMaybe<Scalars['String']['input']>;

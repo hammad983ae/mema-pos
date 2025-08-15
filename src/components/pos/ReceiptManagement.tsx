@@ -43,7 +43,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover.tsx";
 import { cn } from "@/lib/utils.ts";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar.tsx";
 
 export const ReceiptManagement = () => {
@@ -288,13 +288,13 @@ export const ReceiptManagement = () => {
                                   Customer
                                 </div>
                                 <div className="font-medium">
-                                  {order.customers
-                                    ? `${order.customers.first_name} ${order.customers.last_name}`
+                                  {order.customer
+                                    ? `${order.customer.first_name} ${order.customer.last_name}`
                                     : "Walk-in Customer"}
                                 </div>
-                                {order.customers?.phone && (
+                                {order.customer?.phone && (
                                   <div className="text-xs text-muted-foreground">
-                                    {order.customers.phone}
+                                    {order.customer.phone}
                                   </div>
                                 )}
                               </div>

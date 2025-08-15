@@ -65,7 +65,7 @@ export default function CheckoutComplete() {
 
     // Simulate processing the sale
     if (!loading && !orderNumber) processOrder();
-  }, [customerData, paymentData, salesTeamData, navigate]);
+  }, [paymentData, salesTeamData]);
 
   const processOrder = () => {
     const session = PosSession();
@@ -92,6 +92,7 @@ export default function CheckoutComplete() {
           tip_total: cartData.tip.toString(),
           grand_total: cartData.total.toString(),
           storeId: session.store.id,
+          ...(customerData?.id && { customerId: customerData.id }),
         },
       },
     })
@@ -145,6 +146,7 @@ export default function CheckoutComplete() {
   const handleNewOrder = () => {
     // Clear checkout data
     localStorage.removeItem("pos_cart");
+    localStorage.removeItem("guest_checkout");
     localStorage.removeItem("checkout_customer");
     localStorage.removeItem("checkout_payment");
     localStorage.removeItem("checkout_sales_team");

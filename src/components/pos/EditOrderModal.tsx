@@ -141,8 +141,8 @@ export const EditOrderModal = ({
                   <div>
                     <span className="font-medium">Customer:</span>
                     <div>
-                      {order.customers
-                        ? `${order.customers.first_name} ${order.customers.last_name}`
+                      {order.customer
+                        ? `${order.customer.first_name} ${order.customer.last_name}`
                         : "Walk-in Customer"}
                     </div>
                   </div>

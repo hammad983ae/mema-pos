@@ -76,6 +76,7 @@ export const GET_EMPLOYEE_CLOCKS = gql`
         username
         avatar_url
         role
+        position_type
       }
       clocked_in_at
       clocked_out_at
@@ -444,6 +445,20 @@ export const GET_RECEIPTS = gql`
           }
           split_share
         }
+        customer {
+          id
+          first_name
+          last_name
+          email
+          phone
+          address_line_1
+          address_line_2
+          city
+          state_province
+          postal_code
+          country
+          loyalty_points
+        }
         sub_total
         status
         discount_total
@@ -486,6 +501,42 @@ export const GET_NOTIFICATIONS = gql`
       }
       created_at
       updated_at
+    }
+  }
+`;
+
+export const GET_CUSTOMERS = gql`
+  query GetCustomers($pagination: PaginationInput!, $search: String) {
+    getCustomers(pagination: $pagination, search: $search) {
+      data {
+        id
+        first_name
+        last_name
+        email
+        phone
+        address_line_1
+        address_line_2
+        city
+        state_province
+        postal_code
+        country
+        date_of_birth
+        last_visit_date
+        verification_date
+        loyalty_points
+        visit_count
+        total_spent
+        id_document_type
+        id_document_path
+        signature_path
+        verified_by
+        skin_type
+        skin_concerns
+        notes
+        created_at
+        updated_at
+      }
+      count
     }
   }
 `;

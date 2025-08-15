@@ -51,7 +51,6 @@ export const EmployeesStep = ({
   onNext,
   onBack,
 }: EmployeesStepProps) => {
-  const [clockedInPeople, setClockedInPeople] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [salesAllocations, setSalesAllocations] = useState<
@@ -64,13 +63,25 @@ export const EmployeesStep = ({
   const session = PosSession();
   const { data: allEmployeeData, loading: allLoading } = useQuery<
     Query,
-    QueryGetUsersByBusinessArgs
-  >(GET_USERS_BY_BUSINESS, { variables: { search: debouncedSearch } });
+    QueryGetEmployeeClocksByBusinessArgs
+  >(GET_EMPLOYEE_CLOCKS, {
+    variables: {
+      filters: { store_id: session.store.id, search: debouncedSearch },
+    },
+    fetchPolicy: "network-only",
+  });
   const { data: clockedEmployeeData, loading: clockedLoading } = useQuery<
     Query,
     QueryGetEmployeeClocksByBusinessArgs
   >(GET_EMPLOYEE_CLOCKS, {
-    variables: { filters: { is_active: true, store_id: session.store.id } },
+    variables: {
+      filters: {
+        is_active: true,
+        store_id: session.store.id,
+        search: debouncedSearch,
+      },
+    },
+    fetchPolicy: "network-only",
   });
 
   // Get cart data for sales amount calculation
@@ -217,19 +228,13 @@ export const EmployeesStep = ({
     recalculateAllocations(selectedSalesPeople);
   };
 
-  const selectAllClocked = () => {
-    const clockedInIds = clockedInPeople.map((p) => p.id);
-    onSalesPeopleChange(clockedInIds);
-    recalculateAllocations(clockedInIds);
-  };
-
   const clearSelection = () => {
     onSalesPeopleChange([]);
     setSalesAllocations([]);
   };
 
   const filteredPeople = showAll
-    ? (allEmployeeData?.getUsersByBusiness ?? [])
+    ? (allEmployeeData?.getEmployeeClocksByBusiness ?? [])
     : (clockedEmployeeData?.getEmployeeClocksByBusiness ?? []);
 
   const getPositionBadgeVariant = (position: string | null) => {
@@ -246,7 +251,7 @@ export const EmployeesStep = ({
   };
 
   const getEmployeeById = (id: string) =>
-    allEmployeeData?.getUsersByBusiness?.find((p) => p.id === id);
+    allEmployeeData?.getEmployeeClocksByBusiness?.find((p) => p.user.id === id);
 
   const totalAllocatedPercentage = salesAllocations.reduce(
     (sum, allocation) => sum + allocation.percentage,
@@ -307,12 +312,6 @@ export const EmployeesStep = ({
                 {showAll ? "Show Active Only" : "Show All"}
               </Button>
 
-              {!showAll && clockedInPeople.length > 0 && (
-                <Button variant="outline" size="sm" onClick={selectAllClocked}>
-                  Select All Active
-                </Button>
-              )}
-
               <Button
                 variant="outline"
                 size="sm"
@@ -366,32 +365,32 @@ export const EmployeesStep = ({
                   className={`
                     p-4 border rounded-lg cursor-pointer transition-all hover:shadow-sm
                     ${
-                      selectedSalesPeople.includes(person.id)
+                      selectedSalesPeople.includes(person.user.id)
                         ? "border-primary bg-primary/5 shadow-sm"
                         : "border-border hover:border-primary/50"
                     }
                   `}
-                  onClick={() => toggleEmployeeSelection(person.id)}
+                  onClick={() => toggleEmployeeSelection(person.user.id)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div
                         className={`
                         w-3 h-3 rounded-full flex-shrink-0
-                        ${selectedSalesPeople.includes(person.id) ? "bg-primary" : "bg-muted"}
+                        ${selectedSalesPeople.includes(person.user.id) ? "bg-primary" : "bg-muted"}
                       `}
                       />
                       <div>
                         <p className="font-medium">
-                          {person.full_name || person.username}
+                          {person.user.full_name || person.user.username}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          @{person.username}
+                          @{person.user.username}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {person.position_type && (
+                      {person.user.position_type && (
                         <Badge
                           variant={getPositionBadgeVariant(
                             person.position_type,
@@ -400,7 +399,7 @@ export const EmployeesStep = ({
                           {person.position_type}
                         </Badge>
                       )}
-                      {person.is_clocked_in && (
+                      {person.is_active && (
                         <Badge variant="outline" className="text-green-600">
                           <Clock className="h-3 w-3 mr-1" />
                           Active
@@ -492,19 +491,19 @@ export const EmployeesStep = ({
                     <div className="flex items-center justify-between mb-3">
                       <div>
                         <p className="font-medium">
-                          {employee.full_name || employee.username}
+                          {employee.user.full_name || employee.user.username}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          @{employee.username}
+                          @{employee.user.username}
                         </p>
                       </div>
-                      {employee.position_type && (
+                      {employee.user.position_type && (
                         <Badge
                           variant={getPositionBadgeVariant(
-                            employee.position_type,
+                            employee.user.position_type,
                           )}
                         >
-                          {employee.position_type}
+                          {employee.user.position_type}
                         </Badge>
                       )}
                     </div>

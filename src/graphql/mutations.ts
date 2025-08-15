@@ -1,4 +1,4 @@
-import { gql } from '@apollo/client';
+import { gql } from "@apollo/client";
 
 export const LOGIN_BUSINESS_OWNER = gql`
   mutation LoginBusinessOwner($input: LoginInput!) {
@@ -289,5 +289,50 @@ export const CLOCK_IN = gql`
 export const CLOCK_OUT = gql`
   mutation Mutation {
     clockOut
+  }
+`;
+
+export const CREATE_CUSTOMER = gql`
+  mutation CreateCustomer($input: CreateCustomerInput!) {
+    createCustomer(input: $input) {
+      id
+      first_name
+      last_name
+      email
+      phone
+      address_line_1
+      address_line_2
+      city
+      state_province
+      postal_code
+      country
+      date_of_birth
+      last_visit_date
+      verification_date
+      loyalty_points
+      visit_count
+      total_spent
+      id_document_type
+      id_document_path
+      signature_path
+      verified_by
+      skin_type
+      skin_concerns
+      notes
+      created_at
+      updated_at
+    }
+  }
+`;
+
+export const UPDATE_CUSTOMER = gql`
+  mutation UpdateCustomer($input: UpdateCustomerInput!) {
+    updateCustomer(input: $input)
+  }
+`;
+
+export const DELETE_CUSTOMER = gql`
+  mutation DeleteCustomer($deleteCustomerId: String!) {
+    deleteCustomer(id: $deleteCustomerId)
   }
 `;
